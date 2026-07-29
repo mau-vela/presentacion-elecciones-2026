@@ -160,6 +160,8 @@ div_depto_2026 <- div_mpio_2026 %>% mutate(coddepto = as.integer(floor(codmpio/1
 # ---- (C) Exterior por pais 2026 (tu diccionario) -> mapa mundial ----
 dic_pais_ext <- divipol_cong_26 %>% filter(COD_DPTO == 88) %>% distinct(nompuesto, zona) %>%
   mutate(pais = case_when(
+    nompuesto == "Accra Consulado" ~ "Ghana",
+    nompuesto == "Dakar" ~ "Senegal",
     nompuesto=="Abu Dhabi - Consulado"~"Emiratos Árabes Unidos", nompuesto=="Albacete"~"España",
     nompuesto=="Alicante"~"España", nompuesto=="Almería"~"España", nompuesto=="Amsterdam Consulado"~"Países Bajos",
     nompuesto=="Ankara Consulado"~"Turquía", nompuesto=="Antofagasta Consulado"~"Chile", nompuesto=="Argel Consulado"~"Argelia",
@@ -189,7 +191,7 @@ dic_pais_ext <- divipol_cong_26 %>% filter(COD_DPTO == 88) %>% distinct(nompuest
     nompuesto=="Kingston - Consulado"~"Jamaica", nompuesto=="Kualalumpur - Consulado"~"Malasia", nompuesto=="La Habana - Consulado"~"Cuba",
     nompuesto=="La Haya"~"Países Bajos", nompuesto=="La Paz Consulado"~"Bolivia", nompuesto=="Lanzarote"~"España",
     nompuesto=="Lima - Consulado"~"Perú", nompuesto=="Limassol - Chipre"~"Chipre", nompuesto=="Lisboa - Consulado"~"Portugal",
-    nompuesto=="Logroño"~"España", nompuesto=="London"~"Reino Unido", nompuesto=="Londres - Consulado"~"Reino Unido",
+    nompuesto=="Logroño"~"España", nompuesto=="London"~"Canadá", nompuesto=="Londres - Consulado"~"Reino Unido",
     nompuesto=="Londres - Edimburgo"~"Reino Unido", str_detect(nompuesto,"^Los Angeles")~"Estados Unidos", nompuesto=="Lugano"~"Suiza",
     nompuesto=="Lugo"~"España", nompuesto=="Luxemburgo"~"Luxemburgo", nompuesto=="Madrid - Consulado"~"España",
     nompuesto=="Malta - La Valeta"~"Malta", nompuesto=="Managua - Consulado"~"Nicaragua", nompuesto=="Manaos - Consulado"~"Brasil",
@@ -229,7 +231,7 @@ dic_pais_ext <- divipol_cong_26 %>% filter(COD_DPTO == 88) %>% distinct(nompuest
     nompuesto=="Wellington"~"Nueva Zelanda", nompuesto=="Willemstad Consulado"~"Curazao", nompuesto=="Zaragoza"~"España",
     nompuesto=="Zurich"~"Suiza", TRUE ~ NA_character_))
 
-paises_iso <- c("Emiratos Árabes Unidos"="ARE","España"="ESP","Países Bajos"="NLD","Turquía"="TUR","Chile"="CHL",
+paises_iso <- c("Ghana" ~ "GHA","Senegal" ~ "SEN", "Emiratos Árabes Unidos"="ARE","España"="ESP","Países Bajos"="NLD","Turquía"="TUR","Chile"="CHL",
                 "Argelia"="DZA","Paraguay"="PRY","Grecia"="GRC","Estados Unidos"="USA","Nueva Zelanda"="NZL","Azerbaiyán"="AZE",
                 "Tailandia"="THA","Venezuela"="VEN","China"="CHN","Líbano"="LBN","Belice"="BLZ","Brasil"="BRA","Alemania"="DEU",
                 "Suiza"="CHE","Barbados"="BRB","Australia"="AUS","Bélgica"="BEL","Rumania"="ROU","Hungría"="HUN","Argentina"="ARG",
