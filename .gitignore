@@ -1,0 +1,5 @@
+.quarto/
+*_files/
+_quarto_internal_scss_error.scss
+.Rhistory
+datos_informe.rds
