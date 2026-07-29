@@ -1,13 +1,12 @@
 /*-- scss:defaults --*/
 // ============================================================
 //  Tema — Presentacion Elecciones 2026 (Registraduria / Observatorio)
-//  Diseno tipo historia de datos, no informe.
 // ============================================================
 
 $rnec-navy:  #0B2E63;
 $rnec-blue:  #1F5BA6;
-$rnec-cyan:  #38B6C4;   // acento fresco para datos
-$rnec-gold:  #E8A33D;   // resaltados puntuales
+$rnec-cyan:  #38B6C4;
+$rnec-gold:  #E8A33D;
 $azul-2022:  #8BBCE0;
 $azul-2026:  #355C7D;
 $paper:      #F4F6F9;
@@ -20,83 +19,146 @@ $body-color: $ink;
 $link-color: $rnec-blue;
 $headings-color: $rnec-navy;
 $headings-font-weight: 800;
-$toc-color: $rnec-navy;
 
 /*-- scss:rules --*/
 
 body { font-size: 1.06rem; line-height: 1.6; }
 h1, h2, h3 { letter-spacing: -0.01em; }
 
-// --- Portada principal (hero) a pantalla completa -----------
+/* --- Portada principal (hero) --- */
 .hero {
   min-height: 100vh;
-  display: flex; flex-direction: column; justify-content: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   padding: 4rem clamp(1.5rem, 6vw, 8rem);
-  background:
-    radial-gradient(1200px 600px at 80% -10%, rgba(56,182,196,.20), transparent 60%),
-    linear-gradient(160deg, #0d3572 0%, $rnec-navy 55%, #071d40 100%);
-  color: #fff;
-  .hero-kicker { font-family: $headings-font-family; letter-spacing:.3em; text-transform:uppercase;
-    font-size:.9rem; color:$rnec-gold; font-weight:700; margin-bottom:1.5rem; }
-  h1 { color:#fff; font-size: clamp(2.6rem, 7vw, 5.5rem); line-height:.98; margin:0; max-width:16ch; }
-  .hero-sub { font-size: clamp(1.1rem, 2.2vw, 1.5rem); color:rgba(255,255,255,.82);
-    max-width:52ch; margin-top:1.5rem; }
-  .hero-cue { margin-top:3.5rem; font-size:.9rem; color:rgba(255,255,255,.65);
-    animation: bob 1.8s ease-in-out infinite; }
+  background: linear-gradient(160deg, #0d3572 0%, #0B2E63 55%, #071d40 100%);
+  color: #ffffff;
 }
-@keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(8px)} }
+.hero .hero-kicker {
+  font-family: $headings-font-family;
+  letter-spacing: .3em;
+  text-transform: uppercase;
+  font-size: .9rem;
+  color: $rnec-gold;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+}
+.hero h1 {
+  color: #ffffff;
+  font-size: clamp(2.6rem, 7vw, 5.5rem);
+  line-height: .98;
+  margin: 0;
+  max-width: 16ch;
+}
+.hero .hero-sub {
+  font-size: clamp(1.1rem, 2.2vw, 1.5rem);
+  color: rgba(255, 255, 255, .82);
+  max-width: 52ch;
+  margin-top: 1.5rem;
+}
+.hero .hero-cue {
+  margin-top: 3.5rem;
+  font-size: .9rem;
+  color: rgba(255, 255, 255, .65);
+  animation: bob 1.8s ease-in-out infinite;
+}
+@keyframes bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(8px); }
+}
 
-// --- Portada de seccion -------------------------------------
+/* --- Portada de seccion --- */
 .seccion-portada {
   min-height: 78vh;
-  display:flex; flex-direction:column; justify-content:center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   padding: 3rem clamp(1.5rem, 5vw, 6rem);
-  background: linear-gradient(135deg, $rnec-navy 0%, #071d40 100%);
-  color:#fff; border-radius:10px; margin: 3.5rem 0;
-  .eyebrow { font-family:$headings-font-family; font-size:.95rem; letter-spacing:.25em;
-    text-transform:uppercase; color:$rnec-gold; font-weight:700; margin-bottom:1rem; }
-  h1,h2 { color:#fff; font-size:clamp(2rem,5vw,3.6rem); line-height:1.03; margin:0 0 1rem; max-width:18ch; }
-  .lede { font-size:clamp(1.05rem,2vw,1.35rem); color:rgba(255,255,255,.85); max-width:60ch; }
-  .logo-rnec { height:44px; margin-bottom:2.5rem; }
+  background: linear-gradient(135deg, #0B2E63 0%, #071d40 100%);
+  color: #ffffff;
+  border-radius: 10px;
+  margin: 3.5rem 0;
+}
+.seccion-portada .eyebrow {
+  font-family: $headings-font-family;
+  font-size: .95rem;
+  letter-spacing: .25em;
+  text-transform: uppercase;
+  color: $rnec-gold;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+.seccion-portada h1, .seccion-portada h2 {
+  color: #ffffff;
+  font-size: clamp(2rem, 5vw, 3.6rem);
+  line-height: 1.03;
+  margin: 0 0 1rem 0;
+  max-width: 18ch;
+}
+.seccion-portada .lede {
+  font-size: clamp(1.05rem, 2vw, 1.35rem);
+  color: rgba(255, 255, 255, .85);
+  max-width: 60ch;
+}
+.seccion-portada .logo-rnec {
+  height: 44px;
+  margin-bottom: 2.5rem;
 }
 
-// --- Layout de contenido y explorador -----------------------
-.contenido-seccion { max-width:1180px; margin:0 auto; padding:0 1.25rem; }
+/* --- Contenido y explorador --- */
+.contenido-seccion { max-width: 1180px; margin: 0 auto; padding: 0 1.25rem; }
 
-.explorer { display:grid; grid-template-columns: 0.9fr 1.4fr; gap: 2.5rem; align-items:start;
-  margin: 2rem 0 3rem; }
-.explorer .relato h2 { margin-top:0; }
-.explorer .relato p { color:#3a4a63; }
-@media (max-width: 820px){ .explorer { grid-template-columns:1fr; } }
-
-// --- Controles (radios de Observable como segmentos) --------
-.panel-controles { display:flex; gap:1.5rem; flex-wrap:wrap; margin:.5rem 0 1.5rem; }
-.panel-controles form { font-family:$headings-font-family; }
-.panel-controles label { font-weight:600; }
-
-// --- Fichas KPI ---------------------------------------------
-.fichas { display:flex; flex-wrap:wrap; gap:.9rem; margin:1.25rem 0; }
-.ficha { flex:1 1 150px; background:#fff; border:1px solid #e6eaf0;
-  border-top:4px solid $rnec-navy; border-radius:8px; padding:1.1rem 1.2rem;
-  box-shadow:0 2px 10px rgba(11,46,99,.05);
-  .ficha-valor { font-family:$headings-font-family; font-size:2.1rem; font-weight:800;
-    color:$rnec-navy; line-height:1.05; font-variant-numeric:tabular-nums; }
-  .ficha-label { font-size:.82rem; color:#5a6a80; margin-top:.3rem; }
-  .ficha-delta { font-size:.78rem; margin-top:.4rem; font-weight:600; }
-  .ficha-delta.up   { color:#1a7f4b; }
-  .ficha-delta.down { color:#b23b3b; }
+.explorer {
+  display: grid;
+  grid-template-columns: 0.9fr 1.4fr;
+  gap: 2.5rem;
+  align-items: start;
+  margin: 2rem 0 3rem 0;
 }
-.ficha.destacada { border-top-color:$rnec-gold; }
+.explorer .relato h2 { margin-top: 0; }
+.explorer .relato p { color: #3a4a63; }
+@media (max-width: 820px) {
+  .explorer { grid-template-columns: 1fr; }
+}
 
-// --- Mapa a lo ancho ----------------------------------------
-.mapa-full { margin: 1.5rem 0 2.5rem; }
-.leaflet-container { border-radius:10px; box-shadow:0 6px 24px rgba(11,46,99,.12); }
-.panel-tabset { margin-top:1rem; }
+/* --- Controles --- */
+.panel-controles { display: flex; gap: 1.5rem; flex-wrap: wrap; margin: .5rem 0 1.5rem 0; }
+.panel-controles form { font-family: $headings-font-family; }
+.panel-controles label { font-weight: 600; }
 
-// --- Aparicion al hacer scroll ------------------------------
-.reveal { opacity:0; transform:translateY(24px); transition:opacity .7s ease, transform .7s ease; }
-.reveal.is-visible { opacity:1; transform:none; }
+/* --- Fichas KPI --- */
+.fichas { display: flex; flex-wrap: wrap; gap: .9rem; margin: 1.25rem 0; }
+.ficha {
+  flex: 1 1 150px;
+  background: #ffffff;
+  border: 1px solid #e6eaf0;
+  border-top: 4px solid $rnec-navy;
+  border-radius: 8px;
+  padding: 1.1rem 1.2rem;
+  box-shadow: 0 2px 10px rgba(11, 46, 99, .05);
+}
+.ficha .ficha-valor {
+  font-family: $headings-font-family;
+  font-size: 2.1rem;
+  font-weight: 800;
+  color: $rnec-navy;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+.ficha .ficha-label { font-size: .82rem; color: #5a6a80; margin-top: .3rem; }
+.ficha .ficha-delta { font-size: .78rem; margin-top: .4rem; font-weight: 600; }
+.ficha .ficha-delta.up { color: #1a7f4b; }
+.ficha .ficha-delta.down { color: #b23b3b; }
+.ficha.destacada { border-top-color: $rnec-gold; }
 
-// --- Menos pinta de informe ---------------------------------
-#quarto-document-content .quarto-title-block { display:none; } // ocultar titulo tipo informe
-h2 { margin-top:2.5rem; font-size:clamp(1.4rem,3vw,2rem); }
+/* --- Mapa --- */
+.mapa-full { margin: 1.5rem 0 2.5rem 0; }
+.leaflet-container { border-radius: 10px; box-shadow: 0 6px 24px rgba(11, 46, 99, .12); }
+.panel-tabset { margin-top: 1rem; }
+
+/* --- Aparicion al hacer scroll --- */
+.reveal { opacity: 0; transform: translateY(24px); transition: opacity .7s ease, transform .7s ease; }
+.reveal.is-visible { opacity: 1; transform: none; }
+
+h2 { margin-top: 2.5rem; font-size: clamp(1.4rem, 3vw, 2rem); }
