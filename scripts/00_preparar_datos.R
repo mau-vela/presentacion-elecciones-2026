@@ -8,7 +8,7 @@ library(rnaturalearth)   # mapa mundial (install.packages c("rnaturalearth","rna
 Sys.setlocale("LC_ALL", "en_US.UTF-8")
 
 current_path <- getActiveDocumentContext()$path
-setwd(dirname(current_path))
+setwd(dirname(dirname(current_path)))
 
 # ---- RUTAS (AJUSTA) ------------------------------------------------
 ruta_general       <- "../datos generales"
