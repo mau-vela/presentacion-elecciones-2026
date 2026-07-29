@@ -89,9 +89,9 @@ rp <- function(...) file.path(ruta_participacion, "datos", ...)
 
 # 2018 Congreso (fwf UNIFICADO: ya incluye exterior; TRAE mesas)
 censo_congreso_2018 <- read_fwf(rp("DIVIPOL_20180223_111842_01_UNIFICADO.txt"),
-    fwf_widths(c(2,3,2,2,12,30,40,1,8,8,6,102),
-      c("coddepto","codmun","zona","puesto","nomdepto","nommun","nompuesto","flag","mujeres","hombres","mesas","comuna")),
-    locale = locale(encoding = "Latin1"), col_types = cols(.default = col_character())) %>%
+                                fwf_widths(c(2,3,2,2,12,30,40,1,8,8,6,102),
+                                           c("coddepto","codmun","zona","puesto","nomdepto","nommun","nompuesto","flag","mujeres","hombres","mesas","comuna")),
+                                locale = locale(encoding = "Latin1"), col_types = cols(.default = col_character())) %>%
   mutate(coddepto=as.integer(coddepto), codmun=as.integer(codmun), zona=as.integer(zona),
          puesto=str_remove(puesto,"^0+(?!$)"), mujeres=as.integer(mujeres), hombres=as.integer(hombres),
          mesas=as.integer(mesas), censo=mujeres+hombres) %>%
@@ -150,8 +150,9 @@ resumir_mpio <- function(df, eleccion) {
               censo_h=sum(potencial_hombres,na.rm=TRUE), censo_m=sum(potencial_mujeres,na.rm=TRUE), .groups="drop") %>%
     left_join(map_rnec_codmpio, by="code_RNEC") %>% filter(!is.na(codmpio)) %>% mutate(eleccion=eleccion)
 }
-div_mpio_2026 <- bind_rows(resumir_mpio(divipol_cong_26,"Congreso"), resumir_mpio(divipol_pres_26,"Presidencia"))
-div_depto_2026 <- div_mpio_2026 %>% mutate(coddepto=floor(codmpio/1000)) %>%
+div_mpio_2026 <- bind_rows(resumir_mpio(divipol_cong_26,"Congreso"), resumir_mpio(divipol_pres_26,"Presidencia")) %>%
+  mutate(codmpio = as.integer(codmpio))
+div_depto_2026 <- div_mpio_2026 %>% mutate(coddepto = as.integer(floor(codmpio/1000))) %>%
   group_by(eleccion, coddepto) %>%
   summarise(across(c(n_puestos,n_mesas,censo,censo_h,censo_m), \(x) sum(x,na.rm=TRUE)), .groups="drop") %>%
   left_join(map_depto_nom, by="coddepto")
@@ -229,17 +230,17 @@ dic_pais_ext <- divipol_cong_26 %>% filter(COD_DPTO == 88) %>% distinct(nompuest
     nompuesto=="Zurich"~"Suiza", TRUE ~ NA_character_))
 
 paises_iso <- c("Emiratos Árabes Unidos"="ARE","España"="ESP","Países Bajos"="NLD","Turquía"="TUR","Chile"="CHL",
-  "Argelia"="DZA","Paraguay"="PRY","Grecia"="GRC","Estados Unidos"="USA","Nueva Zelanda"="NZL","Azerbaiyán"="AZE",
-  "Tailandia"="THA","Venezuela"="VEN","China"="CHN","Líbano"="LBN","Belice"="BLZ","Brasil"="BRA","Alemania"="DEU",
-  "Suiza"="CHE","Barbados"="BRB","Australia"="AUS","Bélgica"="BEL","Rumania"="ROU","Hungría"="HUN","Argentina"="ARG",
-  "Canadá"="CAN","México"="MEX","Sudáfrica"="ZAF","Panamá"="PAN","Dinamarca"="DNK","Ecuador"="ECU","Catar"="QAT",
-  "Irlanda"="IRL","Egipto"="EGY","Suecia"="SWE","Guyana"="GUY","Austria"="AUT","Guatemala"="GTM","Italia"="ITA",
-  "Vietnam"="VNM","Finlandia"="FIN","Hong Kong"="HKG","Islas Caimán"="CYM","Indonesia"="IDN","Jamaica"="JAM",
-  "Malasia"="MYS","Cuba"="CUB","Bolivia"="BOL","Perú"="PER","Chipre"="CYP","Portugal"="PRT","Reino Unido"="GBR",
-  "Luxemburgo"="LUX","Malta"="MLT","Nicaragua"="NIC","Filipinas"="PHL","Uruguay"="URY","Japón"="JPN","Kenia"="KEN",
-  "Francia"="FRA","India"="IND","Aruba"="ABW","Noruega"="NOR","Chequia"="CZE","Trinidad y Tobago"="TTO","Haití"="HTI",
-  "Marruecos"="MAR","Palestina"="PSE","Arabia Saudita"="SAU","Costa Rica"="CRI","Puerto Rico"="PRI","El Salvador"="SLV",
-  "República Dominicana"="DOM","Corea del Sur"="KOR","Singapur"="SGP","Honduras"="HND","Polonia"="POL","Israel"="ISR","Curazao"="CUW")
+                "Argelia"="DZA","Paraguay"="PRY","Grecia"="GRC","Estados Unidos"="USA","Nueva Zelanda"="NZL","Azerbaiyán"="AZE",
+                "Tailandia"="THA","Venezuela"="VEN","China"="CHN","Líbano"="LBN","Belice"="BLZ","Brasil"="BRA","Alemania"="DEU",
+                "Suiza"="CHE","Barbados"="BRB","Australia"="AUS","Bélgica"="BEL","Rumania"="ROU","Hungría"="HUN","Argentina"="ARG",
+                "Canadá"="CAN","México"="MEX","Sudáfrica"="ZAF","Panamá"="PAN","Dinamarca"="DNK","Ecuador"="ECU","Catar"="QAT",
+                "Irlanda"="IRL","Egipto"="EGY","Suecia"="SWE","Guyana"="GUY","Austria"="AUT","Guatemala"="GTM","Italia"="ITA",
+                "Vietnam"="VNM","Finlandia"="FIN","Hong Kong"="HKG","Islas Caimán"="CYM","Indonesia"="IDN","Jamaica"="JAM",
+                "Malasia"="MYS","Cuba"="CUB","Bolivia"="BOL","Perú"="PER","Chipre"="CYP","Portugal"="PRT","Reino Unido"="GBR",
+                "Luxemburgo"="LUX","Malta"="MLT","Nicaragua"="NIC","Filipinas"="PHL","Uruguay"="URY","Japón"="JPN","Kenia"="KEN",
+                "Francia"="FRA","India"="IND","Aruba"="ABW","Noruega"="NOR","Chequia"="CZE","Trinidad y Tobago"="TTO","Haití"="HTI",
+                "Marruecos"="MAR","Palestina"="PSE","Arabia Saudita"="SAU","Costa Rica"="CRI","Puerto Rico"="PRI","El Salvador"="SLV",
+                "República Dominicana"="DOM","Corea del Sur"="KOR","Singapur"="SGP","Honduras"="HND","Polonia"="POL","Israel"="ISR","Curazao"="CUW")
 dic_pais_ext <- dic_pais_ext %>% mutate(iso3 = unname(paises_iso[pais]))
 
 ext_pais_2026 <- divipol_cong_26 %>% filter(COD_DPTO == 88) %>%
@@ -257,13 +258,22 @@ col_iso <- intersect(c("adm0_a3","gu_a3","iso_a3","sov_a3"), names(mundo))[1]
 ext_mundo_sf <- mundo %>% mutate(iso3 = .data[[col_iso]]) %>%
   select(iso3, name) %>% left_join(ext_pais_2026, by = "iso3")
 
+# ---- (E) Geometrias DENTRO del rds (proyecto autosuficiente) --------
+# Solo se guarda la geometria + la llave; los datos se unen en el .qmd.
+sf_mpios_geom  <- readRDS(file.path(ruta_general, "shapes", "muni_simpl_sanandres_cache.rds"))$sf_obj %>%
+  mutate(codmpio = as.integer(codmpio)) %>% select(codmpio)
+sf_deptos_geom <- readRDS(file.path(ruta_general, "shapes", "departamento_simpl_sanandres_cache.rds"))$sf_obj %>%
+  mutate(coddepto = as.integer(cod_depto)) %>% select(coddepto)
+
 # ---- GUARDAR -------------------------------------------------------
 datos_divipole <- list(
   resumen    = div_resumen,
   mpio_2026  = div_mpio_2026,
   depto_2026 = div_depto_2026,
   ext_mundo  = ext_mundo_sf,
-  n_paises   = n_paises_2026
+  n_paises   = n_paises_2026,
+  sf_mpios   = sf_mpios_geom,
+  sf_deptos  = sf_deptos_geom
 )
 saveRDS(datos_divipole, "datos_divipole.rds")
 message("Listo: datos_divipole.rds  |  paises exterior 2026 = ", n_paises_2026)

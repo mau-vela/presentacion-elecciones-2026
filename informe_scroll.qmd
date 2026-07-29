@@ -20,9 +20,10 @@ execute:
 #| label: setup
 library(dplyr); library(leaflet); library(sf); library(scales); library(htmltools)
 
+# Todo viene de un solo archivo -> el proyecto es autosuficiente (publicable).
 datos_div <- readRDS("datos_divipole.rds")
-sf_mpios  <- readRDS("../datos generales/shapes/muni_simpl_sanandres_cache.rds")$sf_obj
-sf_deptos <- readRDS("../datos generales/shapes/departamento_simpl_sanandres_cache.rds")$sf_obj
+sf_mpios  <- datos_div$sf_mpios
+sf_deptos <- datos_div$sf_deptos
 ```
 
 ::: {.hero}
@@ -156,7 +157,7 @@ mapa_divipole <- function(eleccion_sel) {
   mp <- sf_mpios %>% mutate(codmpio = as.integer(codmpio)) %>%
     left_join(filter(datos_div$mpio_2026, eleccion == eleccion_sel) %>%
                 mutate(codmpio = as.integer(codmpio)), by = "codmpio")
-  dp <- sf_deptos %>% mutate(coddepto = as.integer(cod_depto)) %>%
+  dp <- sf_deptos %>% mutate(coddepto = as.integer(coddepto)) %>%
     left_join(filter(datos_div$depto_2026, eleccion == eleccion_sel) %>%
                 mutate(coddepto = as.integer(coddepto)), by = "coddepto")
 
