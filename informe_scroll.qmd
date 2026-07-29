@@ -1,0 +1,273 @@
+---
+title: "Elecciones 2026"
+format:
+  closeread-html:
+    theme: [default, estilos.scss]
+    toc: false
+    embed-resources: false
+    include-in-header:
+      - text: |
+          <link rel="preconnect" href="https://fonts.googleapis.com">
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+          <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: setup
+library(dplyr); library(leaflet); library(sf); library(scales); library(htmltools)
+
+datos_div <- readRDS("datos_divipole.rds")
+sf_mpios  <- readRDS("../datos generales/shapes/muni_simpl_sanandres_cache.rds")$sf_obj
+sf_deptos <- readRDS("../datos generales/shapes/departamento_simpl_sanandres_cache.rds")$sf_obj
+```
+
+::: {.hero}
+::: {.hero-kicker}
+Registraduría Nacional del Estado Civil · Observatorio
+:::
+# Elecciones 2026 {.center}
+
+::: {.hero-sub}
+Un recorrido interactivo por el proceso electoral de Congreso y Presidencia — desde la arquitectura de la jornada hasta los resultados.
+:::
+
+::: {.hero-cue}
+↓ Desplázate para comenzar
+:::
+:::
+
+
+<!-- ============ SECCION 01 — DIVIPOLE ============ -->
+
+::: {.seccion-portada}
+<img src="assets/rnec_fondos_oscuros.svg" class="logo-rnec" alt="Registraduria"/>
+
+::: {.eyebrow}
+01 · Antes de la jornada
+:::
+
+# La arquitectura de la elección
+
+::: {.lede}
+Dónde se vota, cuántas mesas y puestos se instalaron y cuántas personas quedaron habilitadas para sufragar — en Colombia y en el exterior.
+:::
+:::
+
+
+::: {.contenido-seccion}
+
+```{r}
+#| label: datos-ojs
+ojs_define(resumen_ojs = datos_div$resumen)
+ojs_define(paises_ojs  = data.frame(n = datos_div$n_paises))
+```
+
+::: {.explorer}
+
+::: {.relato}
+## Puestos, mesas y censo
+
+Elige la elección y el año para ver cómo cambió el tamaño del dispositivo electoral. Las cifras incluyen Colombia y el exterior.
+
+::: {.panel-controles}
+```{ojs}
+viewof eleccion = Inputs.radio(["Congreso", "Presidencia"],
+  {value: "Congreso", label: "Elección"})
+viewof anno = Inputs.radio([2018, 2022, 2026].filter(a =>
+    transpose(resumen_ojs).some(d => d.annoh === a)),
+  {value: 2026, label: "Año"})
+```
+:::
+
+```{ojs}
+filas = transpose(resumen_ojs)
+fmt = d => d == null ? "—" : d.toLocaleString("es-CO")
+arr = v => v == null ? "" : (v >= 0 ? "▲" : "▼")
+dfmt = v => v == null ? "—" : Math.abs(v).toLocaleString("es-CO")
+delta = (a, b) => (a != null && b != null) ? a - b : null
+
+d26 = filas.find(d => d.eleccion === eleccion && d.annoh === 2026 && d.ambito === "Total") ?? {}
+d22 = filas.find(d => d.eleccion === eleccion && d.annoh === 2022 && d.ambito === "Total") ?? {}
+
+md`Frente a **2022**, en 2026 hay
+${arr(delta(d26.n_puestos, d22.n_puestos))} **${dfmt(delta(d26.n_puestos, d22.n_puestos))}** puestos,
+${arr(delta(d26.n_mesas, d22.n_mesas))} **${dfmt(delta(d26.n_mesas, d22.n_mesas))}** mesas y
+${arr(delta(d26.censo, d22.censo))} **${dfmt(delta(d26.censo, d22.censo))}** personas habilitadas.`
+```
+:::
+
+::: {.viz}
+```{ojs}
+sel = filas.find(d => d.eleccion === eleccion && d.annoh === anno && d.ambito === "Total") ?? {}
+{
+  const wrap = document.createElement("div");
+  wrap.innerHTML = `
+    <div class="fichas">
+      <div class="ficha"><div class="ficha-valor">${fmt(sel.n_puestos)}</div>
+        <div class="ficha-label">Puestos de votación</div></div>
+      <div class="ficha"><div class="ficha-valor">${fmt(sel.n_mesas)}</div>
+        <div class="ficha-label">Mesas instaladas</div></div>
+      <div class="ficha destacada"><div class="ficha-valor">${fmt(sel.censo)}</div>
+        <div class="ficha-label">Personas habilitadas</div></div>
+    </div>
+    <div class="fichas">
+      <div class="ficha"><div class="ficha-valor">${fmt(sel.censo_h)}</div>
+        <div class="ficha-label">Hombres</div></div>
+      <div class="ficha"><div class="ficha-valor">${fmt(sel.censo_m)}</div>
+        <div class="ficha-label">Mujeres</div></div>
+    </div>`;
+  return wrap;
+}
+```
+
+```{ojs}
+serie = filas.filter(d => d.eleccion === eleccion && d.ambito === "Total")
+Plot.plot({
+  marginLeft: 70, height: 240,
+  x: {label: null, tickFormat: "d"},
+  y: {label: "Censo", grid: true, tickFormat: "s"},
+  marks: [
+    Plot.barY(serie, {x: "annoh", y: "censo",
+      fill: d => d.annoh === anno ? "#0B2E63" : "#8BBCE0", tip: true}),
+    Plot.ruleY([0])
+  ]
+})
+```
+:::
+
+:::
+
+:::
+
+
+## Distribución territorial
+
+::: {.contenido-seccion}
+Pasa el cursor sobre cualquier municipio o departamento para ver su detalle. Cambia entre las dos vistas con el control de capas (la escala de color es logarítmica, para que los municipios pequeños no se pierdan frente a las grandes ciudades).
+
+::: {.mapa-full}
+```{r}
+#| label: mapa-fn
+mapa_divipole <- function(eleccion_sel) {
+  mp <- sf_mpios %>% mutate(codmpio = as.integer(codmpio)) %>%
+    left_join(filter(datos_div$mpio_2026, eleccion == eleccion_sel) %>%
+                mutate(codmpio = as.integer(codmpio)), by = "codmpio")
+  dp <- sf_deptos %>% mutate(coddepto = as.integer(cod_depto)) %>%
+    left_join(filter(datos_div$depto_2026, eleccion == eleccion_sel) %>%
+                mutate(coddepto = as.integer(coddepto)), by = "coddepto")
+
+  pal_mp <- colorNumeric("YlGnBu", domain = log10(mp$censo + 1), na.color = "#eef2f6")
+  pal_dp <- colorNumeric("YlGnBu", domain = log10(dp$censo + 1), na.color = "#eef2f6")
+
+  lab_mp <- sprintf(
+    "<b>%s</b><br>Puestos: %s &nbsp;·&nbsp; Mesas: %s<br>Censo: %s<br>Hombres: %s &nbsp;·&nbsp; Mujeres: %s",
+    mp$Municipio, comma(mp$n_puestos), comma(mp$n_mesas), comma(mp$censo),
+    comma(mp$censo_h), comma(mp$censo_m)) %>% lapply(HTML)
+  lab_dp <- sprintf(
+    "<b>%s</b><br>Puestos: %s &nbsp;·&nbsp; Mesas: %s<br>Censo: %s<br>Hombres: %s &nbsp;·&nbsp; Mujeres: %s",
+    dp$Depto, comma(dp$n_puestos), comma(dp$n_mesas), comma(dp$censo),
+    comma(dp$censo_h), comma(dp$censo_m)) %>% lapply(HTML)
+
+  leaflet() %>%
+    addProviderTiles("CartoDB.Positron") %>%
+    addPolygons(data = mp, weight = 0.3, color = "#ffffff",
+                fillColor = ~pal_mp(log10(censo + 1)), fillOpacity = 0.85,
+                label = lab_mp, group = "Municipios",
+                highlightOptions = highlightOptions(weight = 1.5, color = "#0B2E63", bringToFront = TRUE)) %>%
+    addPolygons(data = dp, weight = 0.6, color = "#ffffff",
+                fillColor = ~pal_dp(log10(censo + 1)), fillOpacity = 0.85,
+                label = lab_dp, group = "Departamentos",
+                highlightOptions = highlightOptions(weight = 2, color = "#0B2E63", bringToFront = TRUE)) %>%
+    addLayersControl(baseGroups = c("Municipios", "Departamentos"),
+                     options = layersControlOptions(collapsed = FALSE))
+}
+```
+
+::: {.panel-tabset}
+### Congreso
+```{r}
+mapa_divipole("Congreso")
+```
+### Presidencia
+```{r}
+mapa_divipole("Presidencia")
+```
+:::
+:::
+:::
+
+
+## Colombianos en el exterior
+
+::: {.contenido-seccion}
+Las cifras cambian con el año seleccionado arriba; el pequeño indicador muestra el cambio frente a 2022. El mapa resalta los países con consulado habilitado en 2026 — pasa el cursor para ver el detalle.
+
+```{ojs}
+selExt = filas.find(d => d.eleccion === eleccion && d.annoh === anno && d.ambito === "Exterior") ?? {}
+e22 = filas.find(d => d.eleccion === eleccion && d.annoh === 2022 && d.ambito === "Exterior") ?? {}
+nPaises = transpose(paises_ojs)[0].n
+
+deltaHtml = (a, b) => {
+  const d = (a != null && b != null) ? a - b : null;
+  if (d == null || d === 0) return "";
+  const up = d > 0;
+  return `<div class="ficha-delta ${up ? 'up' : 'down'}">${up ? '▲' : '▼'} ${Math.abs(d).toLocaleString('es-CO')} vs 2022</div>`;
+}
+{
+  const wrap = document.createElement("div");
+  wrap.className = "fichas";
+  wrap.innerHTML = `
+    <div class="ficha destacada"><div class="ficha-valor">${fmt(selExt.censo)}</div>
+      <div class="ficha-label">Habilitados en el exterior</div>${deltaHtml(selExt.censo, e22.censo)}</div>
+    <div class="ficha"><div class="ficha-valor">${fmt(selExt.n_puestos)}</div>
+      <div class="ficha-label">Puestos</div>${deltaHtml(selExt.n_puestos, e22.n_puestos)}</div>
+    <div class="ficha"><div class="ficha-valor">${fmt(selExt.n_mesas)}</div>
+      <div class="ficha-label">Mesas</div>${deltaHtml(selExt.n_mesas, e22.n_mesas)}</div>
+    <div class="ficha"><div class="ficha-valor">${fmt(nPaises)}</div>
+      <div class="ficha-label">Países (2026)</div></div>`;
+  return wrap;
+}
+```
+
+::: {.mapa-full}
+```{r}
+#| label: mapa-mundo
+ext <- datos_div$ext_mundo
+pal_w <- colorNumeric("YlOrRd", domain = log10(ext$censo + 1), na.color = "#e9edf2")
+lab_w <- ifelse(is.na(ext$censo),
+  sprintf("<b>%s</b><br>Sin consulado habilitado", ext$name),
+  sprintf("<b>%s</b><br>Censo: %s<br>Puestos: %s &nbsp;·&nbsp; Mesas: %s",
+          coalesce(ext$pais, ext$name), comma(ext$censo), comma(ext$n_puestos), comma(ext$n_mesas))) %>%
+  lapply(HTML)
+
+leaflet(ext) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(weight = 0.3, color = "#ffffff",
+              fillColor = ~pal_w(log10(censo + 1)),
+              fillOpacity = ~ifelse(is.na(censo), 0.12, 0.9),
+              label = lab_w,
+              highlightOptions = highlightOptions(weight = 1.5, color = "#0B2E63", bringToFront = TRUE)) %>%
+  setView(lng = 0, lat = 20, zoom = 1)
+```
+:::
+:::
+
+
+<!-- ============ SECCION 02 ira aqui ============ -->
+
+```{=html}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const io = new IntersectionObserver((es) => {
+    es.forEach(e => { if (e.isIntersecting) e.target.classList.add("is-visible"); });
+  }, { threshold: 0.12 });
+  document.querySelectorAll(".explorer, .contenido-seccion > h2").forEach(el => {
+    el.classList.add("reveal"); io.observe(el);
+  });
+});
+</script>
+```
