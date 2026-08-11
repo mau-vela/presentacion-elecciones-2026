@@ -162,3 +162,29 @@ h1, h2, h3 { letter-spacing: -0.01em; }
 .reveal.is-visible { opacity: 1; transform: none; }
 
 h2 { margin-top: 2.5rem; font-size: clamp(1.4rem, 3vw, 2rem); }
+
+.seg-control { display:inline-flex; border:1px solid #cdd6e2; border-radius:10px; overflow:hidden; margin:1rem 0 1.5rem; }
+.seg-btn { border:0; background:#fff; color:#0B2E63; font-family:"Archivo",sans-serif; font-weight:600; font-size:.98rem; padding:.6rem 1.3rem; cursor:pointer; border-right:1px solid #cdd6e2; }
+.seg-btn:last-child { border-right:0; }
+.seg-btn:hover { background:#EAF0F6; }
+.seg-btn.active { background:#0B2E63; color:#fff; }
+
+.cand-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:12px; margin:1.2rem 0; }
+.cand-card { background:#fff; border:1px solid #e6eaf0; border-left:4px solid #0B2E63; border-radius:8px; padding:12px 14px; }
+.cand-nom { font-family:"Archivo",sans-serif; font-weight:700; color:#0B2E63; font-size:1.02rem; line-height:1.15; }
+.cand-part { color:#5a6a80; font-size:.85rem; margin:.25rem 0 .55rem; }
+.cand-gen { font-size:.72rem; padding:2px 9px; border-radius:20px; font-weight:600; }
+.cand-gen.f { background:#f6e6cf; color:#8a5a12; }
+.cand-gen.m { background:#dfe8f2; color:#2a4a70; }
+.img-full img { width:100%; height:auto; border-radius:8px; box-shadow:0 4px 18px rgba(11,46,99,.12); }
+
+.subseccion { border-bottom:3px solid #0B2E63; margin:3.2rem 0 1.6rem; line-height:0; }
+.subseccion h1, .subseccion h2, .subseccion h3 {
+  display:inline-block; background:#0B2E63; color:#fff; font-family:"Archivo",sans-serif;
+  font-weight:800; font-size:1.4rem; padding:.55rem 1.5rem .65rem; border-radius:10px 10px 0 0;
+  margin:0; line-height:1.15; }
+
+.mini-tabla { width:100%; border-collapse:collapse; font-size:12.5px; }
+.mini-tabla th { background:#1F4E79; color:#fff; font-weight:600; padding:7px 9px; text-align:center; }
+.mini-tabla td { padding:6px 9px; text-align:center; border-top:1px solid #e6eaf0; font-variant-numeric:tabular-nums; }
+.mini-tabla td:first-child, .mini-tabla th:first-child { text-align:left; }

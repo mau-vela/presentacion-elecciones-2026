@@ -13,7 +13,7 @@ format:
 execute:
   echo: false
   warning: false
-  message: false
+  message: false  
 ---
 
 ```{r}
@@ -24,6 +24,14 @@ library(dplyr); library(leaflet); library(sf); library(scales); library(htmltool
 datos_div <- readRDS("datos_divipole.rds")
 sf_mpios  <- datos_div$sf_mpios
 sf_deptos <- datos_div$sf_deptos
+
+datos_cand <- readRDS("datos_candidaturas.rds")
+datos_pre <- readRDS("datos_preconteo.rds")
+datos_esc_gral <- readRDS("datos_escrutinio_gral.rds")
+datos_esc_curules <- readRDS("datos_escrutinio_curules.rds")
+datos_part <- readRDS("datos_participacion_final.rds")
+datos_ext <- readRDS("datos_exterior_part.rds")
+
 ```
 
 ::: {.hero}
@@ -33,7 +41,7 @@ Registraduría Nacional del Estado Civil · Observatorio
 # Elecciones 2026 {.center}
 
 ::: {.hero-sub}
-Un recorrido interactivo por el proceso electoral de Congreso y Presidencia — desde la arquitectura de la jornada hasta los resultados.
+Un recorrido por el proceso electoral de Congreso y Presidencia.
 :::
 
 ::: {.hero-cue}
@@ -51,10 +59,10 @@ Un recorrido interactivo por el proceso electoral de Congreso y Presidencia — 
 01 · Antes de la jornada
 :::
 
-# La arquitectura de la elección
+# Divipole
 
 ::: {.lede}
-Dónde se vota, cuántas mesas y puestos se instalaron y cuántas personas quedaron habilitadas para sufragar — en Colombia y en el exterior.
+Censo electoral, total de puestos y mesas en Colombia y en el exterior.
 :::
 :::
 
@@ -70,7 +78,7 @@ ojs_define(paises_ojs  = data.frame(n = datos_div$n_paises))
 ::: {.explorer}
 
 ::: {.relato}
-## Puestos, mesas y censo
+## Divipole
 
 Elige la elección y el año para ver cómo cambió el tamaño del dispositivo electoral. Las cifras incluyen Colombia y el exterior.
 
@@ -78,9 +86,9 @@ Elige la elección y el año para ver cómo cambió el tamaño del dispositivo e
 ```{ojs}
 viewof eleccion = Inputs.radio(["Congreso", "Presidencia"],
   {value: "Congreso", label: "Elección"})
-viewof anno = Inputs.radio([2018, 2022, 2026].filter(a =>
-    transpose(resumen_ojs).some(d => d.annoh === a)),
-  {value: 2026, label: "Año"})
+viewof anno = Inputs.radio(["2018", "2022", "2026"].filter(a =>
+    transpose(resumen_ojs).some(d => d.annoh === Number(a))),
+  {value: "2026", label: "Año"})
 ```
 :::
 
@@ -103,7 +111,8 @@ ${arr(delta(d26.censo, d22.censo))} **${dfmt(delta(d26.censo, d22.censo))}** per
 
 ::: {.viz}
 ```{ojs}
-sel = filas.find(d => d.eleccion === eleccion && d.annoh === anno && d.ambito === "Total") ?? {}
+sel = filas.find(d => d.eleccion === eleccion && d.annoh === Number(anno) && d.ambito === "Total") ?? {}
+
 {
   const wrap = document.createElement("div");
   wrap.innerHTML = `
@@ -128,12 +137,15 @@ sel = filas.find(d => d.eleccion === eleccion && d.annoh === anno && d.ambito ==
 ```{ojs}
 serie = filas.filter(d => d.eleccion === eleccion && d.ambito === "Total")
 Plot.plot({
-  marginLeft: 70, height: 240,
+  marginLeft: 70, height: 260,
   x: {label: null, tickFormat: "d"},
   y: {label: "Censo", grid: true, tickFormat: "s"},
   marks: [
     Plot.barY(serie, {x: "annoh", y: "censo",
       fill: d => d.annoh === anno ? "#0B2E63" : "#8BBCE0", tip: true}),
+    Plot.text(serie, {x: "annoh", y: "censo",
+      text: d => (d.censo/1e6).toFixed(1).replace(".", ",") + " mill",
+      dy: -7, fontSize: 11, fontWeight: 600}),
     Plot.ruleY([0])
   ]
 })
@@ -148,7 +160,7 @@ Plot.plot({
 ## Distribución territorial
 
 ::: {.contenido-seccion}
-Pasa el cursor sobre cualquier municipio o departamento para ver su detalle. Cambia entre las dos vistas con el control de capas (la escala de color es logarítmica, para que los municipios pequeños no se pierdan frente a las grandes ciudades).
+El censo electoral varía enormemente entre territorios.
 
 ::: {.mapa-full}
 ```{r}
@@ -205,10 +217,18 @@ mapa_divipole("Presidencia")
 ## Colombianos en el exterior
 
 ::: {.contenido-seccion}
-Las cifras cambian con el año seleccionado arriba; el pequeño indicador muestra el cambio frente a 2022. El mapa resalta los países con consulado habilitado en 2026 — pasa el cursor para ver el detalle.
+```{ojs}
+{
+  const e26 = filas.find(d => d.eleccion === eleccion && d.annoh === 2026 && d.ambito === "Exterior") ?? {};
+  const e22 = filas.find(d => d.eleccion === eleccion && d.annoh === 2022 && d.ambito === "Exterior") ?? {};
+  const dp = (e26.censo != null && e22.censo != null) ? e26.censo - e22.censo : null;
+  return md`En 2026, **${fmt(e26.censo)}** colombianos quedaron habilitados para votar en el exterior, en **${transpose(paises_ojs)[0].n}** países${dp != null ? ` — ${dp >= 0 ? "un aumento de" : "una caída de"} **${Math.abs(dp).toLocaleString("es-CO")}** frente a 2022` : ""}.`;
+}
+```
+
 
 ```{ojs}
-selExt = filas.find(d => d.eleccion === eleccion && d.annoh === anno && d.ambito === "Exterior") ?? {}
+selExt = filas.find(d => d.eleccion === eleccion && d.annoh === Number(anno) && d.ambito === "Exterior") ?? {}
 e22 = filas.find(d => d.eleccion === eleccion && d.annoh === 2022 && d.ambito === "Exterior") ?? {}
 nPaises = transpose(paises_ojs)[0].n
 
@@ -258,7 +278,1327 @@ leaflet(ext) %>%
 :::
 
 
-<!-- ============ SECCION 02 ira aqui ============ -->
+
+<!-- ============ SECCIÓN 02 — INSCRIPCIÓN DE CANDIDATURAS ============ -->
+
+::: {.seccion-portada}
+::: {.eyebrow}
+02 · Quiénes se presentaron
+:::
+
+# La inscripción de candidaturas
+
+::: {.lede}
+Cuántas candidaturas se inscribieron para el Congreso y la Presidencia, y cuándo lo hicieron.
+:::
+:::
+
+
+::: {.contenido-seccion}
+
+## Candidaturas por corporación, circunscripción y elección
+
+```{r}
+#| label: cand-helpers
+maxc_cc <- datos_cand$tabla_corpcirc %>% filter(!circ %in% c("Subtotal","Total general")) %>%
+  { max(c(.$candidatos_2022, .$candidatos_2026), na.rm = TRUE) }
+barra <- function(v, maxv, fill) {
+  if (is.na(v)) return("—")
+  w <- if (maxv > 0) 100 * v / maxv else 0
+  sprintf('<div style="display:flex;align-items:center;gap:8px;"><span style="min-width:46px;text-align:right;font-variant-numeric:tabular-nums;color:#0B2E63;font-weight:500;">%s</span><div style="flex:1;background:#EAF0F6;border-radius:4px;height:13px;"><div style="width:%.1f%%;background:%s;height:100%%;border-radius:4px;"></div></div></div>',
+          formatC(v, format="d", big.mark="."), w, fill)
+}
+tinte <- function(p) { if (is.na(p)) return("#f6f6f6")
+  t <- max(0, min(1, (p - 0.30) / 0.25))
+  sprintf("#%02X%02X%02X", round(255+t*(188-255)), round(255+t*(220-255)), round(255+t*(154-255))) }
+pctf <- function(p) if (is.na(p)) "—" else gsub("\\.", ",", sprintf("%.1f%%", 100*p))
+
+tarjetas_pres <- function(vuelta_sel) {
+  d <- datos_cand$cand_presidencia %>% filter(vuelta == vuelta_sel)
+  tot <- nrow(d); muj <- sum(d$genero == "F", na.rm = TRUE)
+  cards <- paste(sprintf(
+    '<div class="cand-card"><div class="cand-nom">%s</div><div class="cand-part">%s</div><span class="cand-gen %s">%s</span></div>',
+    d$nomcandi, d$partido, ifelse(d$genero=="F","f","m"), ifelse(d$genero=="F","Mujer","Hombre")), collapse="")
+  htmltools::HTML(sprintf(
+    '<div class="fichas"><div class="ficha destacada"><div class="ficha-valor">%d</div><div class="ficha-label">Candidaturas</div></div><div class="ficha"><div class="ficha-valor">%s%%</div><div class="ficha-label">Mujeres</div></div></div><div class="cand-grid">%s</div>',
+    tot, gsub("\\.", ",", sprintf("%.1f", 100*muj/max(tot,1))), cards))
+}
+```
+
+::: {.panel-tabset}
+
+### Congreso
+```{r}
+#| label: tabla-corpcirc
+tc <- datos_cand$tabla_corpcirc
+fila_cc <- function(r) {
+  if (r$circ %in% c("Subtotal","Total general")) {
+    et <- if (r$circ=="Total general") "Total general" else paste0("Subtotal ", r$corp)
+    bg <- if (r$circ=="Total general") "#DCE6F2" else "#EAF0F6"
+    sprintf('<tr style="background:%s;font-weight:500;border-top:0.5px solid var(--border-strong);"><td style="padding:11px 12px;">%s</td><td style="padding:11px 12px;font-variant-numeric:tabular-nums;">%s</td><td style="padding:11px 12px;font-variant-numeric:tabular-nums;">%s</td><td style="padding:11px 12px;text-align:center;font-variant-numeric:tabular-nums;">%s</td><td style="padding:11px 12px;text-align:center;font-variant-numeric:tabular-nums;">%s</td></tr>',
+      bg, et, formatC(r$candidatos_2022,format="d",big.mark="."), formatC(r$candidatos_2026,format="d",big.mark="."),
+      pctf(r$pct_muj_2022), pctf(r$pct_muj_2026))
+  } else {
+    et <- sprintf('<div style="font-size:11.5px;color:var(--text-secondary);">%s</div><div style="font-weight:500;">%s</div>', r$corp, r$circ)
+    sprintf('<tr style="border-top:0.5px solid var(--border);"><td style="padding:9px 12px;">%s</td><td style="padding:9px 12px;">%s</td><td style="padding:9px 12px;">%s</td><td style="padding:9px 12px;text-align:center;background:%s;font-variant-numeric:tabular-nums;">%s</td><td style="padding:9px 12px;text-align:center;background:%s;font-variant-numeric:tabular-nums;">%s</td></tr>',
+      et, barra(r$candidatos_2022, maxc_cc, "#8BBCE0"), barra(r$candidatos_2026, maxc_cc, "#355C7D"),
+      tinte(r$pct_muj_2022), pctf(r$pct_muj_2022), tinte(r$pct_muj_2026), pctf(r$pct_muj_2026))
+  }
+}
+filas <- paste(vapply(seq_len(nrow(tc)), function(i) fila_cc(tc[i,]), character(1)), collapse="")
+htmltools::HTML(sprintf('<table style="width:100%%;border-collapse:collapse;font-size:13px;border:0.5px solid var(--border);border-radius:12px;overflow:hidden;"><thead><tr style="background:#0B2E63;color:#fff;"><th style="text-align:left;padding:10px 12px;font-weight:500;">Circunscripción</th><th style="text-align:left;padding:10px 12px;font-weight:500;">Candidaturas 2022</th><th style="text-align:left;padding:10px 12px;font-weight:500;">Candidaturas 2026</th><th style="text-align:center;padding:10px 12px;font-weight:500;">%% mujeres 2022</th><th style="text-align:center;padding:10px 12px;font-weight:500;">%% mujeres 2026</th></tr></thead><tbody>%s</tbody></table>', filas))
+```
+
+### Presidencia · 1ª vuelta
+```{r}
+tarjetas_pres("Presidencia 1ª vuelta")
+```
+
+### Presidencia · 2ª vuelta
+```{r}
+tarjetas_pres("Presidencia 2ª vuelta")
+```
+
+:::
+
+
+## Ritmo de inscripción de candidaturas — Congreso
+
+```{ojs}
+{
+  const pico = transpose(fechas_ojs).filter(d => d.annoh === 2026).slice().sort((a,b)=>b.n-a.n)[0];
+  return md`La inscripción se concentró al cierre: solo el **${pico.fecha_txt}** se inscribió el **${(100*pico.pct).toFixed(1).replace(".", ",")}%** de todas las candidaturas de 2026.`;
+}
+```
+
+```{r}
+#| label: fechas-ojs
+ojs_define(fechas_ojs = datos_cand$conteo_fechas)
+```
+
+```{ojs}
+fechas = transpose(fechas_ojs)
+graficaAnio = (anio, titAnio, sub) => {
+  const datos = fechas.filter(d => d.annoh === anio)
+  const etiq = new Map(datos.map(d => [d.dia, d.fecha_txt]))
+  const ticks = datos.filter(d => d.dia % 2 === 0 || d.n > 30).map(d => d.dia)
+  const plot = Plot.plot({
+    marginLeft: 70, marginBottom: 62, height: 340, width: 1000,
+    x: {label: null, ticks: ticks, tickFormat: d => etiq.get(d) ? etiq.get(d) + "\nDía " + d : ""},
+    y: {label: "Candidaturas", grid: true},
+    marks: [
+      Plot.barY(datos, {x: "dia", y: "n", fill: "#1A476F", tip: true,
+        title: d => `${d.fecha_txt} · Día ${d.dia}\n${d.n.toLocaleString("es-CO")} (${(100*d.pct).toFixed(1).replace(".", ",")}%)`}),
+      Plot.text(datos.filter(d => d.n > 0), {x: "dia", y: "n", text: d => d.n.toLocaleString("es-CO"), dy: -7, fontSize: 11, fontWeight: 500}),
+      Plot.ruleY([0])
+    ]
+  })
+  const div = document.createElement("div")
+  div.innerHTML = `<div style="font-family:Archivo,sans-serif;font-weight:700;font-size:1.3rem;color:#0B2E63;margin:1.8rem 0 0;">${titAnio}</div><div style="color:#5a6a80;font-size:.92rem;margin-bottom:.3rem;">${sub}</div>`
+  div.appendChild(plot); return div
+}
+html`<div>${graficaAnio(2026, "Inscripciones 2026", "Del 8 de noviembre al 8 de diciembre de 2025")}${graficaAnio(2022, "Inscripciones 2022", "Del 13 de noviembre al 13 de diciembre de 2021")}</div>`
+```
+
+:::
+
+## Organizaciones con personería jurídica
+
+Al cierre de la inscripción de candidaturas (8 de diciembre de 2025) había 27 organizaciones con personería jurídica. Varias la perdieron después. Algunas por decisiones judiciales o y otras por no superar el umbral. El esquema muestra cuáles la mantienen y cuáles no.
+
+::: {.img-full}
+![](assets/partidos_personeria_juridica_2026.png)
+:::
+
+::: {.nota-cne style="display: flex; align-items: center; background: #F4F7FA; border: 1px solid #DCE6F2; border-left: 4px solid #0B2E63; border-radius: 6px; padding: 16px; margin-top: 24px; gap: 16px;"}
+<img src="assets/defensores_patria.jpg" alt="Logo Defensores de la Patria" style="width: 55px; height: auto; border-radius: 4px; flex-shrink: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+<div style="font-size: 14px; line-height: 1.5; color: #334155;">
+  <span style="font-weight: 600; color: #0B2E63; display: block; margin-bottom: 4px;">Novedad CNE · 3 de agosto de 2026</span>
+  El Consejo Nacional Electoral aprobó la personería jurídica al Grupo Significativo de Ciudadanos <strong>Defensores de la Patria</strong>, movimiento que avaló al presidente electo Abelardo de la Espriella.
+</div>
+:::
+
+
+<!-- ============ SECCIÓN 03 — ELECCIONES A CONGRESO 2026 ============ -->
+
+::: {.seccion-portada}
+::: {.eyebrow}
+03 · Elecciones a Congreso
+:::
+
+# Elecciones a Congreso 2026
+
+::: {.lede}
+Quiénes compitieron por el Congreso, resultados y cómo cambió el panorama frente a 2022.
+:::
+:::
+
+
+::: {.contenido-seccion}
+
+::: {.subseccion}
+### Candidaturas
+:::
+
+## Por tipo de organización
+
+```{r}
+#| label: tipo-ojs
+ojs_define(tipo_ojs = datos_cand$tipo_wide)
+```
+
+```{ojs}
+tipo = transpose(tipo_ojs)
+ordTipo = tipo.slice().sort((a,b) => b.cand_2026 - a.cand_2026).map(d => d.tipo_part)
+tipoLong = tipo.flatMap(d => [
+  {tipo: d.tipo_part, annoh: "2022", n: d.cand_2022, pct: d.pct_2022},
+  {tipo: d.tipo_part, annoh: "2026", n: d.cand_2026, pct: d.pct_2026}
+])
+etq = d => `${d.n.toLocaleString("es-CO")} (${(100*d.pct).toFixed(1).replace(".", ",")}%)`
+Plot.plot({
+  marginLeft: 230, marginRight: 100, height: 60 + ordTipo.length * 62,
+  color: {domain: ["2022","2026"], range: ["#8BBCE0","#355C7D"], legend: true},
+  x: {label: "Candidaturas", grid: true, tickFormat: "s"},
+  fy: {domain: ordTipo, label: null}, y: {axis: null},
+  marks: [
+    Plot.barX(tipoLong, {fy: "tipo", y: "annoh", x: "n", fill: "annoh", tip: true}),
+    Plot.text(tipoLong, {fy: "tipo", y: "annoh", x: "n", text: etq, textAnchor: "start", dx: 4, fontSize: 12}),
+    Plot.ruleX([0])
+  ]
+})
+```
+
+
+## Por tipo de agrupación
+
+¿Cómo se inscribieron las candidaturas el tipo de agrupación?
+
+```{r}
+#| label: filtros-ojs
+ojs_define(hm_ojs = datos_cand$hm_base)
+ojs_define(sincoal_ojs = datos_cand$sincoal)
+ojs_define(citrep_ojs = datos_cand$citrep_cambio)
+ojs_define(npart_ojs = datos_cand$n_part)
+```
+
+```{ojs}
+viewof tema = {
+  const temas = [["GSC","gsc"],["Sin coalición","sincoal"],["Coaliciones","coaliciones"],["CITREP","citrep"]];
+  const el = html`<div class="seg-control">${temas.map(([lab,key],i) =>
+    html`<button type="button" class="seg-btn${i===0?' active':''}" data-k="${key}">${lab}</button>`)}</div>`;
+  el.value = temas[0][1];
+  el.querySelectorAll(".seg-btn").forEach(b => b.onclick = () => {
+    el.querySelectorAll(".seg-btn").forEach(x => x.classList.remove("active"));
+    b.classList.add("active"); el.value = b.dataset.k;
+    el.dispatchEvent(new CustomEvent("input"));
+  });
+  return el;
+}
+```
+
+```{ojs}
+fp = n => n.toLocaleString("es-CO")
+pc = x => (100*x).toFixed(1).replace(".", ",")
+titulo = (txt, plot) => { const d = document.createElement("div");
+  d.innerHTML = `<div style="font-family:Archivo,sans-serif;font-weight:700;font-size:1.2rem;color:#0B2E63;margin:1.6rem 0 .3rem;">${txt}</div>`;
+  d.appendChild(plot); return d; }
+
+plotHM = (tema, anio) => {
+  const d = transpose(hm_ojs).filter(x => x.tema===tema && x.annoh===anio)
+  const porcc = d3.rollup(d, v => d3.sum(v, x=>x.n), x=>x.corpcirc)
+  const orden = [...porcc.entries()].sort((a,b)=>b[1]-a[1]).map(e=>e[0])
+  const totales = [...porcc.entries()].map(([corpcirc,n])=>({corpcirc,n}))
+  const tot = d3.sum(d, x=>x.n), muj = d3.sum(d.filter(x=>x.genero==="Mujeres"), x=>x.n)
+  const plot = Plot.plot({
+    marginLeft: 210, marginRight: 70, width: 940, height: 70 + orden.length*60, style:{fontSize:"13px"},
+    color: {domain:["Hombres","Mujeres"], range:["#355C7D","#E8A33D"], legend:true},
+    x:{label:"Candidaturas", grid:true}, y:{domain:orden, label:null},
+    marks:[
+      Plot.barX(d, {y:"corpcirc", x:"n", fill:"genero", order:["Hombres","Mujeres"], tip:true}),
+      Plot.text(totales, {y:"corpcirc", x:"n", text:d=>fp(d.n), textAnchor:"start", dx:6, fontSize:14, fontWeight:600}),
+      Plot.ruleX([0])
+    ]
+  })
+  return titulo(`${tema==="GSC"?"Movimientos sociales y GSC":"Coaliciones"} ${anio}: ${fp(tot)} candidaturas · ${pc(muj/tot)}% mujeres`, plot)
+}
+
+plotSC = (anio, npart) => {
+  const d = transpose(sincoal_ojs).filter(x => x.annoh===anio)
+  const orden = d.slice().sort((a,b)=>b.n-a.n).map(x=>x.partido)
+  const maxN = d3.max(d, x=>x.n) || 1
+  const plot = Plot.plot({
+    marginLeft: 165, marginRight: 42, width: 480, height: 40 + orden.length*19, style:{fontSize:"12px"},
+    x:{label:null, grid:true, domain:[0, maxN*1.12]}, y:{domain:orden, label:null},
+    marks:[
+      Plot.barX(d, {y:"partido", x:"n", fill:"#1F4E79", tip:true, insetTop:1.5, insetBottom:1.5}),
+      Plot.text(d, {y:"partido", x:"n", text:d=>fp(d.n), textAnchor:"start", dx:4, fontSize:12, fontWeight:600}),
+      Plot.ruleX([0])
+    ]
+  })
+  return titulo(`Congreso ${anio} — ${npart} partidos con personería`, plot)
+}
+
+plotCITREP = () => {
+  const d = transpose(citrep_ojs).sort((a,b)=>a.n_CITREP-b.n_CITREP)
+  const t = {a:d3.sum(d,x=>x.n_2022), b:d3.sum(d,x=>x.n_2026)}
+  const m = (d3.max(d, x=>Math.abs(x.cambio)) || 1), off = m*0.04
+  const plot = Plot.plot({
+    marginLeft: 210, marginRight: 130, width: 950, height: 60 + d.length*26, style:{fontSize:"12.5px"},
+    x:{label:"Cambio 2026 − 2022", domain:[-m*1.2, m*1.25], grid:true},
+    y:{domain:d.map(x=>x.lbl), label:null},
+    color:{domain:["Aumento","Disminución"], range:["#1B7A3A","#C0392B"], legend:true},
+    marks:[
+      Plot.barX(d, {y:"lbl", x:"cambio", fill:d=>d.cambio>=0?"Aumento":"Disminución", tip:true,
+        insetTop:2.5, insetBottom:2.5, title:d=>`${d.lbl}: ${d.n_2022} → ${d.n_2026}`}),
+      Plot.text(d, {y:"lbl", x:d => d.cambio + (d.cambio>=0 ? off : -off),
+        text:d=>(d.cambio>0?"+":"")+d.cambio, textAnchor:d=>d.cambio>=0?"start":"end",
+        fontSize:13, fontWeight:600, fill:"#222"}),
+      Plot.text(d, {y:"lbl", frameAnchor:"right", dx:12, text:d=>`${d.n_2022} → ${d.n_2026}`, fill:"#8a8a8a", fontSize:11.5}),
+      Plot.ruleX([0])
+    ]
+  })
+  return titulo(`Total CITREP: ${t.a} en 2022 → ${t.b} en 2026 (${t.b-t.a>=0?"+":""}${t.b-t.a})`, plot)
+}
+```
+
+```{ojs}
+np = ({a: transpose(npart_ojs).find(d=>d.annoh===2022).n_partidos,
+       b: transpose(npart_ojs).find(d=>d.annoh===2026).n_partidos})
+tema === "gsc" ? html`<div>${plotHM("GSC",2026)}${plotHM("GSC",2022)}</div>`
+: tema === "coaliciones" ? html`<div>${plotHM("Coaliciones",2026)}${plotHM("Coaliciones",2022)}</div>`
+: tema === "sincoal" ? html`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(440px,1fr));gap:28px;align-items:start;">${plotSC(2026,np.b)}${plotSC(2022,np.a)}</div>`
+: plotCITREP()
+```
+
+## Cambio territorial en las candidaturas a Cámara
+
+Diferencia en el número de candidaturas territoriales a Cámara entre 2026 y 2022. Valle del Cauca y Antioquia tuvieron los mayores incrementos de candidaturas en Cámara mientras que Amazonas y Sucre tuvieron las mayores caídas.
+
+::: {.mapa-full}
+```{r}
+#| label: mapa-camara
+cm <- sf_deptos %>% mutate(coddepto = as.integer(coddepto)) %>%
+  left_join(datos_cand$camara_depto, by = "coddepto")
+maxabs <- max(abs(cm$cambio), na.rm = TRUE)
+pal_c <- colorNumeric(c("#2171b5", "#f7f7f7", "#cb181d"), domain = c(-maxabs, maxabs), na.color = "#eeeeee")
+lab_c <- sprintf("<b>%s</b><br>2022: %s &nbsp;·&nbsp; 2026: %s<br>Cambio: %s",
+  cm$Depto, comma(cm$n_2022), comma(cm$n_2026),
+  ifelse(is.na(cm$cambio), "—", sprintf("%+d", cm$cambio))) %>% lapply(htmltools::HTML)
+leaflet(cm) %>% addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(weight = 0.5, color = "#ffffff", fillColor = ~pal_c(cambio), fillOpacity = 0.85,
+              label = lab_c,
+              highlightOptions = highlightOptions(weight = 2, color = "#0B2E63", bringToFront = TRUE)) %>%
+  addLegend(pal = pal_c, values = ~cambio, title = "Cambio 2026 − 2022", position = "bottomright")
+```
+:::
+
+:::
+
+::: {.subseccion}
+### Preconteo
+:::
+
+## Velocidad del preconteo
+
+La gráfica muestra el porcentaje acumulado de mesas reportadas en el preconteo, comparando Senado, Cámara, CITREP y Consultas en las respectivas horas. Senado y Cámara tienen comportamientos muy similares, con un ritmo de reporte casi paralelo durante toda la jornada. CITREP presenta un rezago claro en el reporte, alcanzando altos niveles de consolidación varias horas después que las demás.
+
+
+```{r}
+#| label: preconteo-ojs
+ojs_define(vel_ojs = datos_pre$vel_2026)
+ojs_define(hitos_ojs = datos_pre$hitos_mesas)
+ojs_define(comp_ojs = datos_pre$comp_22_26)
+ojs_define(hitoscomp_ojs = datos_pre$hitos_comp)
+```
+
+```{ojs}
+// Funciones para formatear horas exactas y ejes
+fmtHoraAxis = h => { 
+  const t = (((16 + h) % 24) + 24) % 24; 
+  const ap = t >= 12 ? "PM" : "AM"; 
+  const hh = Math.floor(t) % 12 || 12; 
+  return hh + " " + ap; 
+}
+timeStr = h_num => { 
+  const totalMinutes = Math.round(h_num * 60); 
+  const h_24 = (16 + Math.floor(totalMinutes / 60)) % 24; 
+  const m = totalMinutes % 60; 
+  const ap = h_24 >= 12 ? "PM" : "AM"; 
+  const h_12 = h_24 % 12 || 12; 
+  return `${h_12}:${m.toString().padStart(2, "0")} ${ap}`; 
+}
+
+vel = transpose(vel_ojs)
+hitos = transpose(hitos_ojs)
+hc = transpose(hitoscomp_ojs)
+hc26 = hc.filter(x => x.eleccion.includes("2026"))
+
+corps1 = ["Senado","Cámara","CITREP","Consultas"]
+col1 = ({"Senado":"#1F4E79","Cámara":"#C55A11","CITREP":"#548235","Consultas":"#7F60A8"})
+
+// Cálculo de coordenadas exactas para que las etiquetas del 99% no se toquen (Efecto ggrepel)
+hc26_labels = hc26.map(d => {
+  let dx = 0, dy = 0, align = "start";
+  if(d.corp === "Senado") { dx = -1.1; dy = 0.03; align = "end"; } // Arriba a la izquierda
+  if(d.corp === "Cámara") { dx = 1.0; dy = -0.06; align = "start"; } // Abajo a la derecha
+  if(d.corp === "CITREP") { dx = 1.3; dy = 0.01; align = "start"; }  // Derecha
+  if(d.corp === "Consultas") { dx = -1.2; dy = -0.01; align = "end"; } // Izquierda
+  return {...d, text_x: d.h99_num + dx, text_y: d.porc_99 + dy, align: align};
+})
+
+// Escalonamiento de altura estática para los textos del 50%
+hc26_50 = hc26.map(d => {
+  let dy = 0;
+  if(d.corp === "Consultas") { dy = 0.82; }
+  if(d.corp === "Senado") { dy = 0.62; }
+  if(d.corp === "Cámara") { dy = 0.42; }
+  if(d.corp === "CITREP") { dy = 0.22; }
+  return {...d, text_y: dy};
+})
+```
+
+```{ojs}
+viewof selCorp1 = {
+  const opts = ["Todas", ...corps1];
+  const el = html`<div class="seg-control" style="margin-bottom: 20px;">${opts.map((o,i)=>html`<button type="button" class="seg-btn${i===0?' active':''}" data-c="${o}">${o}</button>`)}</div>`;
+  el.value = null;
+  el.querySelectorAll(".seg-btn").forEach(b=>b.onclick=()=>{
+    el.querySelectorAll(".seg-btn").forEach(x=>x.classList.remove("active"));
+    b.classList.add("active"); el.value = b.dataset.c==="Todas"?null:b.dataset.c;
+    el.dispatchEvent(new CustomEvent("input"));
+  });
+  return el;
+}
+```
+
+```{ojs}
+chart1 = Plot.plot({
+  width: 780, height: 440, marginLeft: 50, marginRight: 155, marginBottom: 40,
+  x: {label: "Hora", tickFormat: fmtHoraAxis, ticks: 6},
+  y: {label: "Porcentaje acumulado de mesas", grid: true, tickFormat: d => Math.round(d * 100) + "%", domain: [0, 1.06]},
+  color: {domain: Object.keys(col1), range: Object.values(col1), legend: true},
+  marks: [
+    // Líneas del 50% y sus textos escalonados
+    Plot.ruleX(hc26, {x: "h50_num", stroke: "corp", strokeDasharray: "4 4", strokeOpacity: 0.4, filter: d => selCorp1 == null || d.corp === selCorp1}),
+    Plot.text(hc26_50, {x: "h50_num", y: "text_y", text: d => `50% ${d.corp}\n${timeStr(d.h50_num)}`, fill: "corp", textAnchor: "start", dx: 6, fontSize: 10, stroke: "white", strokeWidth: 4, filter: d => selCorp1 == null || d.corp === selCorp1}),
+    
+    // Curvas principales
+    Plot.lineY(vel, {x: "hora_num", y: "porc_mesas", stroke: "eleccion", strokeWidth: 2.8, strokeOpacity: d => (selCorp1 == null || d.eleccion === selCorp1) ? 0.95 : 0.1}),
+    
+    // Interactividad nativa de las líneas
+    Plot.tip(vel, Plot.pointer({
+      x: "hora_num", 
+      y: "porc_mesas", 
+      title: d => `${d.eleccion}\n${timeStr(d.hora_num)}\n${(d.porc_mesas*100).toFixed(1).replace(".",",")}% de mesas`,
+      filter: d => selCorp1 == null || d.eleccion === selCorp1
+    })),
+
+    // Puntos del 99%, líneas conectoras y textos separados
+    Plot.dot(hc26, {x: "h99_num", y: "porc_99", fill: "corp", r: 4, filter: d => selCorp1 == null || d.corp === selCorp1}),
+    Plot.link(hc26_labels, {x1: "text_x", y1: "text_y", x2: "h99_num", y2: "porc_99", stroke: "corp", strokeWidth: 1.2, strokeOpacity: 0.6, filter: d => selCorp1 == null || d.corp === selCorp1}),
+    
+    // Textos divididos por alineación para no superponer la línea conectora
+    Plot.text(hc26_labels.filter(d => d.align === "start"), {x: "text_x", y: "text_y", text: d => `${(d.porc_99*100).toFixed(1).replace(".",",")}% ${d.corp}\n${timeStr(d.h99_num)}`, fill: "corp", textAnchor: "start", dx: 4, fontSize: 10.5, fontWeight: "bold", stroke: "white", strokeWidth: 4, filter: d => selCorp1 == null || d.corp === selCorp1}),
+    Plot.text(hc26_labels.filter(d => d.align === "end"), {x: "text_x", y: "text_y", text: d => `${(d.porc_99*100).toFixed(1).replace(".",",")}% ${d.corp}\n${timeStr(d.h99_num)}`, fill: "corp", textAnchor: "end", dx: -4, fontSize: 10.5, fontWeight: "bold", stroke: "white", strokeWidth: 4, filter: d => selCorp1 == null || d.corp === selCorp1}),
+    
+    Plot.ruleY([0])
+  ]
+})
+```
+
+```{ojs}
+tabla1 = html`
+<div style="background:#fff; border:1px solid #EAF0F6; border-radius:8px; padding:16px; box-shadow:0 2px 4px rgba(0,0,0,0.03);">
+  <div style="font-size:11.5px; font-weight:700; color:#0B2E63; margin-bottom:12px; text-transform:uppercase; letter-spacing:0.5px;">Hora al alcanzar cada %</div>
+  <table style="width:100%; border-collapse:collapse; font-size:12px; text-align:center;">
+    <thead>
+      <tr style="border-bottom:2px solid #DCE6F2; color:#5a6a80; font-weight:500;">
+        <th style="text-align:left; padding:8px 2px;">Elección</th>
+        <th style="padding:8px 2px;">25%</th><th style="padding:8px 2px;">50%</th><th style="padding:8px 2px;">75%</th><th style="padding:8px 2px;">90%</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${hitos.map(r=>`
+      <tr style="border-bottom:1px solid #F4F7FA;">
+        <td style="text-align:left; padding:10px 2px; font-weight:600; color:${col1[r.eleccion]||'#333'};">${r.eleccion}</td>
+        <td style="color:#334155; white-space:nowrap; font-size:11px;">${r.h25}</td>
+        <td style="color:#334155; white-space:nowrap; font-size:11px;">${r.h50}</td>
+        <td style="color:#334155; white-space:nowrap; font-size:11px;">${r.h75}</td>
+        <td style="color:#334155; font-weight:500; white-space:nowrap; font-size:11px;">${r.h90}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>
+</div>`
+
+html`<div style="display:grid;grid-template-columns:minmax(0,2.5fr) minmax(0,1fr);gap:20px;align-items:start;">${chart1}${tabla1}</div>`
+```
+
+## Comparación con 2022
+
+En todas las elecciones, 2026 alcanza el 50% antes que 2022, lo que indica un arranque más rápido del preconteo. También se llega al 99% en menos tiempo en 2026, especialmente en Senado y CITREP, donde la diferencia es más visible. La mejora no es solo al inicio, sino durante todo el proceso, ya que las curvas de 2026 están consistentemente adelantadas frente a 2022.
+
+
+```{ojs}
+comp = transpose(comp_ojs)
+corps2 = ["Senado","Cámara","CITREP","Consultas"]
+cols2226 = ({
+  "Senado 2022":"#56B4E9","Senado 2026":"#0072B2","Cámara 2022":"#F6A04D","Cámara 2026":"#D55E00",
+  "CITREP 2022":"#8CCB5E","CITREP 2026":"#3B7A2A","Consulta Centro Esperanza 2022":"#C7A6FF",
+  "Consulta Equipo Colombia 2022":"#9B6BD3","Consulta Pacto Histórico 2022":"#5B2A86","Consultas 2026":"#E75480"
+})
+
+viewof selCorp2 = {
+  const el = html`<div class="seg-control" style="margin-bottom: 20px;">${corps2.map((o,i)=>html`<button type="button" class="seg-btn${i===0?' active':''}" data-c="${o}">${o}</button>`)}</div>`;
+  el.value = "Senado";
+  el.querySelectorAll(".seg-btn").forEach(b=>b.onclick=()=>{
+    el.querySelectorAll(".seg-btn").forEach(x=>x.classList.remove("active"));
+    b.classList.add("active"); el.value = b.dataset.c;
+    el.dispatchEvent(new CustomEvent("input"));
+  });
+  return el;
+}
+```
+
+```{ojs}
+d2 = comp.filter(x => x.corp === selCorp2)
+elecs2 = [...new Set(d2.map(x=>x.eleccion))]
+hc2_data = hc.filter(x => x.corp === selCorp2)
+
+// Lógica de separación de etiquetas y líneas conectoras para Comparación 2022 vs 2026
+hc2_labels = hc2_data.map(d => {
+  const is2022 = d.eleccion.includes("2022");
+  const dx = is2022 ? -1.0 : 1.0;
+  const dy = is2022 ? 0.04 : -0.04;
+  const align = is2022 ? "end" : "start";
+  return {...d, text_x: d.h99_num + dx, text_y: d.porc_99 + dy, align: align};
+})
+
+hc2_50 = hc2_data.map(d => {
+  const is2022 = d.eleccion.includes("2022");
+  return {...d, text_y: is2022 ? 0.75 : 0.45};
+})
+
+Plot.plot({
+  width: 900, height: 480, marginLeft: 50, marginRight: 220, marginBottom: 45,
+  x: {label: "Hora", tickFormat: fmtHoraAxis, ticks: 7},
+  y: {label: "Porcentaje acumulado de mesas", grid: true, tickFormat: d => Math.round(d * 100) + "%", domain: [0, 1.06]},
+  color: {domain: elecs2, range: elecs2.map(e=>cols2226[e]), legend: true},
+  marks: [
+    Plot.ruleX(hc2_data, {x: "h50_num", stroke: "eleccion", strokeDasharray: "4 4", strokeOpacity: 0.5}),
+    Plot.text(hc2_50, {x: "h50_num", y: "text_y", text: d => `50%  ${timeStr(d.h50_num)}`, fill: "eleccion", textAnchor: "start", dx: 6, fontSize: 11, stroke: "white", strokeWidth: 4}),
+    
+    Plot.lineY(d2, {x: "hora_num", y: "porc_mesas", stroke: "eleccion", strokeWidth: 2.8, curve: "monotone-x"}),
+    
+    Plot.tip(d2, Plot.pointer({
+      x: "hora_num", 
+      y: "porc_mesas", 
+      title: d => `${d.eleccion}\n${timeStr(d.hora_num)}\n${(d.porc_mesas*100).toFixed(1).replace(".",",")}% de mesas`
+    })),
+
+    Plot.dot(hc2_data, {x: "h99_num", y: "porc_99", fill: "eleccion", r: 4.5}),
+    Plot.link(hc2_labels, {x1: "text_x", y1: "text_y", x2: "h99_num", y2: "porc_99", stroke: "eleccion", strokeWidth: 1.2, strokeOpacity: 0.6}),
+    
+    Plot.text(hc2_labels.filter(d => d.align === "start"), {x: "text_x", y: "text_y", text: d => `${(d.porc_99*100).toFixed(1).replace(".",",")}%  ${d.eleccion}\n${timeStr(d.h99_num)}`, fill: "eleccion", textAnchor: "start", dx: 4, fontSize: 11.5, fontWeight: "bold", stroke: "white", strokeWidth: 4}),
+    Plot.text(hc2_labels.filter(d => d.align === "end"), {x: "text_x", y: "text_y", text: d => `${(d.porc_99*100).toFixed(1).replace(".",",")}%  ${d.eleccion}\n${timeStr(d.h99_num)}`, fill: "eleccion", textAnchor: "end", dx: -4, fontSize: 11.5, fontWeight: "bold", stroke: "white", strokeWidth: 4}),
+    
+    Plot.ruleY([0])
+  ]
+})
+```
+
+## Comparación territorial — Senado
+
+Hora en que cada departamento llega al 99% de votos en Senado. Los cierres más tardíos (12 a.m.–2 a.m.) son Chocó y Vichada; también cierran tarde Amazonas y Guaviare. La mayor parte del país llega antes de las 10 p.m. El rezago se concentra en zonas periféricas, no en los grandes centros. 
+
+::: {.mapa-full}
+```{r}
+#| label: mapa-preconteo-senado
+dep <- sf_deptos %>% mutate(coddepto = as.integer(coddepto)) %>%
+  left_join(datos_pre$dep_senado %>% mutate(coddepto = as.integer(coddepto)), by = "coddepto")
+ord_hora <- c("4PM–6PM","6PM–8PM","8PM–9PM","9PM–10PM","10PM–12AM","12AM–2AM","2AM o más")
+pal_base <- c("#DCE6F1","#BDD7EE","#9BC2E6","#7FB3E6","#5B9BD5","#2F75B5","#1F4E79")
+
+dep$cat_f <- factor(dep$cat_hora, levels = ord_hora)
+pal_h <- colorFactor(pal_base, levels = ord_hora, na.color = "#eeeeee")
+
+lab_s <- sprintf("<b>%s</b><br>99%% a las %s", dep$Depto,
+                 ifelse(is.na(dep$hora_99_txt), "—", dep$hora_99_txt)) %>% lapply(htmltools::HTML)
+
+leaflet(dep) %>% addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(weight = 0.5, color = "#ffffff", fillColor = ~pal_h(cat_f), fillOpacity = 0.88,
+              label = lab_s,
+              highlightOptions = highlightOptions(weight = 2, color = "#0B2E63", bringToFront = TRUE)) %>%
+  addLegend(pal = pal_h, values = factor(ord_hora, levels = ord_hora), title = "Hora de llegada al 99%", position = "bottomright")
+```
+:::
+
+
+<!-- ============ SECCIÓN 04 — ESCRUTINIO VS PRECONTEO ============ -->
+::: {.subseccion}
+### Comparación de preconteo y escrutinio
+:::
+
+## Cambios generales
+
+```{r}
+#| label: esc
+ojs_define(esc_gral_ojs = datos_esc_gral)
+```
+
+```{ojs}
+// Formatos
+fmtN = d => d == null ? "—" : d.toLocaleString("es-CO")
+fmtP = d => d == null ? "—" : (d > 0 ? "+" : "") + d.toFixed(2).replace(".", ",") + "%"
+
+// Datos dinámicos para el texto
+d_cong_26 = transpose(esc_gral_ojs).find(d => d.anno === 2026 && d.circ_tabla === "Subtotal Congreso") ?? {}
+d_cong_22 = transpose(esc_gral_ojs).find(d => d.anno === 2022 && d.circ_tabla === "Subtotal Congreso") ?? {}
+```
+
+```{ojs}
+md`A nivel agregado para todo el Congreso, en **2026** se registró un cambio neto de **${fmtN(d_cong_26.Cambio_neto_mesas_comparables)}** votos en las mesas comparables, lo que representa una diferencia del **${fmtP(d_cong_26.Cambio_neto_pct)}** frente al total del preconteo. A modo de comparación, en las elecciones de **2022** la diferencia neta en el Congreso fue de **${fmtN(d_cong_22.Cambio_neto_mesas_comparables)}** votos (**${fmtP(d_cong_22.Cambio_neto_pct)}**).`
+```
+
+```{ojs}
+// Filtro de Año (Ubicado abajo del texto descriptivo)
+viewof esc_anno = Inputs.radio([2026, 2022, 2018], {label: "Año de elección", value: 2026, format: x => x.toString()})
+
+esc_filtro = transpose(esc_gral_ojs).filter(d => d.anno === esc_anno)
+rowspans = d3.rollup(esc_filtro, v => v.length, d => d.corp_tabla)
+```
+
+```{ojs}
+html`
+<div style="background:#fff; border:1px solid #EAF0F6; border-radius:8px; margin-top:24px; margin-bottom: 40px; box-shadow:0 2px 4px rgba(0,0,0,0.03); overflow-x: auto;">
+  <table style="width:100%; border-collapse:collapse; font-size:12.5px; text-align:center;">
+    <thead>
+      <tr style="font-weight:600;">
+        <th style="padding:12px 6px; border:1px solid #DDDDDD; text-align:left; background:#1F4E79; color:#fff;">Corporación</th>
+        <th style="padding:12px 6px; border:1px solid #DDDDDD; text-align:left; background:#1F4E79; color:#fff;">Circunscripción</th>
+        <th style="padding:12px 6px; border:1px solid #DDDDDD; background:#1F4E79; color:#fff;">Votos preconteo<br>(Total)</th>
+        <th style="padding:12px 6px; border:1px solid #DDDDDD; background:#1F4E79; color:#fff;">Votos escrutinio<br>(Total)</th>
+        <th style="padding:12px 6px; border:1px solid #DDDDDD; background:#295f8f; color:#fff;">Preconteo<br>(Comparable)</th>
+        <th style="padding:12px 6px; border:1px solid #DDDDDD; background:#295f8f; color:#fff;">Escrutinio<br>(Comparable)</th>
+        <th style="padding:12px 6px; border:1px solid #DDDDDD; background:#3470a3; color:#fff;">Cambio neto<br>(Mesas comparables)</th>
+        <th style="padding:12px 6px; border:1px solid #DDDDDD; background:#3470a3; color:#fff;">Cambio neto sobre<br>preconteo comparable</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${(() => {
+        let tableRows = "";
+        let currentCorp = "";
+        
+        for (let i = 0; i < esc_filtro.length; i++) {
+          let row = esc_filtro[i];
+          let isSubtotal = row.circ_tabla === "Subtotal";
+          let isTotalCongreso = row.circ_tabla === "Subtotal Congreso";
+          
+          let bg = isTotalCongreso ? "#1F4E79" : (isSubtotal ? "#D9E2F3" : "#FFFFFF");
+          let color = isTotalCongreso ? "#FFFFFF" : "#333333";
+          let weight = (isSubtotal || isTotalCongreso) ? "bold" : "normal";
+          let bottomBorder = isTotalCongreso ? "2px solid #1F1F1F" : (isSubtotal ? "1.5px solid #A6A6A6" : "1px solid #DDDDDD");
+          
+          tableRows += `<tr style="background:${bg}; color:${color}; font-weight:${weight}; border-bottom:${bottomBorder};">`;
+          
+          if (row.corp_tabla !== currentCorp) {
+            let rspan = rowspans.get(row.corp_tabla);
+            tableRows += `<td rowspan="${rspan}" style="padding:8px; border:1px solid #DDDDDD; text-align:left; vertical-align:middle; background:#FFFFFF; color:#333333; font-weight:bold;">${row.corp_tabla}</td>`;
+            currentCorp = row.corp_tabla;
+          }
+          
+          tableRows += `<td style="padding:8px; border:1px solid #DDDDDD; text-align:left;">${row.circ_tabla}</td>`;
+          tableRows += `<td style="padding:8px; border:1px solid #DDDDDD;">${fmtN(row.Votos_preconteo)}</td>`;
+          tableRows += `<td style="padding:8px; border:1px solid #DDDDDD;">${fmtN(row.Votos_escrutinio)}</td>`;
+          
+          tableRows += `<td style="padding:8px; border:1px solid #DDDDDD; background:${isTotalCongreso ? '#1F4E79' : (isSubtotal ? '#cedaf0' : '#f8fafd')}; color:${isTotalCongreso ? '#FFFFFF' : '#333333'};">${fmtN(row.Votos_preconteo_comparable)}</td>`;
+          tableRows += `<td style="padding:8px; border:1px solid #DDDDDD; background:${isTotalCongreso ? '#1F4E79' : (isSubtotal ? '#cedaf0' : '#f8fafd')}; color:${isTotalCongreso ? '#FFFFFF' : '#333333'};">${fmtN(row.Votos_escrutinio_comparable)}</td>`;
+          
+          let colorCambio = row.Cambio_neto_mesas_comparables > 0 ? "#1F4E79" : (row.Cambio_neto_mesas_comparables < 0 ? "#C00000" : color);
+          if (isTotalCongreso) colorCambio = "#FFFFFF";
+          
+          tableRows += `<td style="padding:8px; border:1px solid #DDDDDD; color:${colorCambio};">${row.Cambio_neto_mesas_comparables > 0 ? "+" : ""}${fmtN(row.Cambio_neto_mesas_comparables)}</td>`;
+          tableRows += `<td style="padding:8px; border:1px solid #DDDDDD; color:${colorCambio};">${fmtP(row.Cambio_neto_pct)}</td>`;
+          tableRows += `</tr>`;
+        }
+        return tableRows;
+      })()}
+    </tbody>
+  </table>
+</div>
+`
+```
+
+## Comparación de curules por partido
+
+```{r}
+#| label: curules-ojs
+ojs_define(curules_gral_ojs = datos_esc_curules)
+```
+
+```{ojs}
+// Filtros Interactivos
+viewof cur_anno = Inputs.radio([2026, 2022, 2018], {label: "Año de elección", value: 2026, format: x => x.toString()})
+viewof cur_corp = Inputs.radio(["Senado", "Cámara"], {label: "Corporación", value: "Senado"})
+
+cur_filtro = transpose(curules_gral_ojs).filter(d => d.anno === parseInt(cur_anno) && d.corp === cur_corp)
+cur_rowspans = d3.rollup(cur_filtro, v => v.length, d => d.Circunscripcion)
+
+// Cálculo automático de total de curules que cambiaron (Suma de diferencias absolutas / 2)
+total_cambio = d3.sum(cur_filtro, d => Math.abs(d.diferencia)) / 2;
+```
+
+```{ojs}
+html`
+<div style="background:#F4F7FA; border:1px solid #DCE6F2; border-left:4px solid #0B2E63; border-radius:6px; padding:16px; margin-top: 16px; margin-bottom:24px; display:flex; align-items:center; gap:12px;">
+  <div style="font-size:24px;">🔄</div>
+  <div>
+    <div style="font-size:12.5px; color:#5a6a80; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Impacto del escrutinio</div>
+    <div style="font-size:15px; color:#1F1F1F;">Total de curules que cambiaron de partido en ${cur_corp}: <strong style="font-size:16px; color:#0B2E63;">${total_cambio}</strong></div>
+  </div>
+</div>
+
+<div style="max-height: 480px; overflow-y: auto; background:#fff; border:1px solid #EAF0F6; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.03);">
+  <table style="width:100%; border-collapse:collapse; font-size:12.5px; text-align:center;">
+    <thead style="position: sticky; top: 0; z-index: 1;">
+      <tr style="font-weight:600;">
+        <th style="padding:12px 6px; border:1px solid #DDDDDD; text-align:left; background:#1F4E79; color:#fff;">Circunscripción</th>
+        <th style="padding:12px 6px; border:1px solid #DDDDDD; text-align:left; background:#1F4E79; color:#fff;">Partido</th>
+        ${cur_corp === "Cámara" ? '<th style="padding:12px 6px; border:1px solid #DDDDDD; text-align:left; background:#1F4E79; color:#fff;">Territorio</th>' : ''}
+        <th style="padding:12px 6px; border:1px solid #DDDDDD; background:#1F4E79; color:#fff;">Curules<br>preconteo</th>
+        <th style="padding:12px 6px; border:1px solid #DDDDDD; background:#1F4E79; color:#fff;">Curules<br>escrutinio</th>
+        <th style="padding:12px 6px; border:1px solid #DDDDDD; background:#3470a3; color:#fff;">Diferencia</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${(() => {
+        let tableRows = "";
+        let currentCirc = "";
+        
+        for (let i = 0; i < cur_filtro.length; i++) {
+          let row = cur_filtro[i];
+          let isChange = row.diferencia !== 0;
+          let bg = isChange ? "#FFF2CC" : "#FFFFFF"; // Fondo amarillo si hay cambio
+          
+          tableRows += `<tr style="background:${bg}; border-bottom:1px solid #DDDDDD;">`;
+          
+          // Fusionar celdas de Circunscripción
+          if (row.Circunscripcion !== currentCirc) {
+            let rspan = cur_rowspans.get(row.Circunscripcion);
+            tableRows += `<td rowspan="${rspan}" style="padding:8px; border:1px solid #DDDDDD; text-align:left; vertical-align:middle; background:#FFFFFF; color:#333333; font-weight:bold;">${row.Circunscripcion}</td>`;
+            currentCirc = row.Circunscripcion;
+          }
+          
+          tableRows += `<td style="padding:8px; border:1px solid #DDDDDD; text-align:left;">${row.Partido}</td>`;
+          
+          if (cur_corp === "Cámara") {
+            tableRows += `<td style="padding:8px; border:1px solid #DDDDDD; text-align:left; font-size:11.5px;">${row.Territorio || ''}</td>`;
+          }
+          
+          tableRows += `<td style="padding:8px; border:1px solid #DDDDDD;">${row.curules_pre}</td>`;
+          tableRows += `<td style="padding:8px; border:1px solid #DDDDDD;">${row.curules_esc}</td>`;
+          
+          let colorCambio = row.diferencia > 0 ? "#1F4E79" : (row.diferencia < 0 ? "#C00000" : "#333333");
+          let fontWeight = isChange ? "bold" : "normal";
+          
+          tableRows += `<td style="padding:8px; border:1px solid #DDDDDD; color:${colorCambio}; font-weight:${fontWeight};">${row.diferencia > 0 ? "+" : ""}${row.diferencia}</td>`;
+          tableRows += `</tr>`;
+        }
+        return tableRows;
+      })()}
+    </tbody>
+  </table>
+</div>
+`
+```
+
+
+<!-- ============ SECCIÓN 05 — Participación electoral ============ -->
+
+<br>
+
+::: {.subseccion}
+### Participación Electoral
+:::
+
+## Participación a nivel nacional
+
+```{ojs}
+md`La participación en el Congreso 2026 fue de **${fmtPct(part_cong_26)}**, ${part_cong_26 >= part_cong_22 ? "por encima" : "por debajo"} del **${fmtPct(part_cong_22)}** de 2022 (**${fmtCambio(part_cong_26 - part_cong_22)}**). El indicador se calcula con el máximo de votos por mesa entre Senado y Cámara, para no contar dos veces a quien votó en ambas.`
+```
+
+
+```{r}
+#| label: part-ojs
+ojs_define(part_nac_ojs = datos_part$nacional)
+ojs_define(part_total_ojs = datos_part$total_congreso)
+ojs_define(part_dep_ojs = datos_part$departamental)
+```
+
+```{ojs}
+// Formatos
+fmtPct = d => d == null ? "—" : d.toFixed(1).replace(".", ",") + "%"
+fmtCambio = d => d == null ? "—" : (d > 0 ? "+" : "") + d.toFixed(1).replace(".", ",") + " pp"
+
+// Datos Total Congreso
+congreso_data = transpose(part_total_ojs)
+part_cong_26 = congreso_data.find(d => d.annoh === 2026)?.part_congreso ?? 0
+part_cong_22 = congreso_data.find(d => d.annoh === 2022)?.part_congreso ?? 0
+```
+
+```{ojs}
+html`
+<div style="width:100%; box-sizing:border-box; background:#F8FAFC; border:1px solid #E2E8F0; border-left:5px solid #0B2E63; border-radius:6px; padding:18px 26px; margin-bottom:24px; display:flex; align-items:center; gap:38px; box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+  <div style="flex:0 0 auto;">
+    <div style="font-size:12px; color:#64748B; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px;">Participación Definitiva Congreso 2026</div>
+    <div style="font-size:42px; font-weight:900; color:#0B2E63; line-height:1;">${fmtPct(part_cong_26)}</div>
+  </div>
+  <div style="flex:0 0 auto; border-left:1px solid #CBD5E1; padding-left:30px;">
+    <div style="font-size:11.5px; color:#64748B; text-transform:uppercase; letter-spacing:.5px; font-weight:700; margin-bottom:3px;">Frente a 2022</div>
+    <div style="font-size:24px; font-weight:800; color:${part_cong_26 > part_cong_22 ? '#1B7A3A' : '#C00000'};">${fmtCambio(part_cong_26 - part_cong_22)}</div>
+  </div>
+  <div style="flex:0 1 400px; margin-left:auto; border-left:1px solid #CBD5E1; padding-left:30px; font-size:11.5px; color:#94A3B8; font-style:italic; line-height:1.35;">
+    * Calculado considerando el máximo de votos emitidos por mesa entre Senado y Cámara para evitar el doble conteo de electores.
+  </div>
+</div>
+`
+```
+
+```{ojs}
+// Filtro corporación
+viewof part_corp = Inputs.radio(["Senado", "Cámara"], {label: html`<b style="font-size:14px; color:#1F2937;">Corporación Seleccionada:</b>`, value: "Senado"})
+
+// Preparar datos filtrados
+part_nac_data = transpose(part_nac_ojs).filter(d => d.corp_tabla === part_corp)
+part_2026_val = part_nac_data.find(d => d.annoh === 2026)?.participacion ?? 0
+part_2022_val = part_nac_data.find(d => d.annoh === 2022)?.participacion ?? 0
+```
+
+```{ojs}
+html`
+<div style="display:flex; gap:32px; align-items:center; margin-bottom: 48px; margin-top: 16px;">
+  <!-- Grafica Histórica -->
+  <div style="flex:2;">
+    ${Plot.plot({
+      width: 550, height: 230, marginLeft: 40, marginBottom: 30,
+      x: {label: null, type: "band", tickFormat: d => String(d)},
+      y: {label: "Participación (%)", grid: true, domain: [0, 100]},
+      marks: [
+        Plot.barY(part_nac_data, {x: "annoh", y: "participacion", fill: d => d.annoh === 2026 ? "#0B2E63" : "#8BBCE0", rx: 3}),
+        Plot.text(part_nac_data, {x: "annoh", y: "participacion", text: d => fmtPct(d.participacion), dy: -12, fontWeight: "bold", fontSize: 12}),
+        Plot.ruleY([0])
+      ]
+    })}
+  </div>
+  
+  <!-- KPI Corporación -->
+  <div style="flex:1.2; background:#FFFFFF; border:1px solid #EAF0F6; border-left:4px solid #8BBCE0; border-radius:6px; padding:20px; box-shadow:0 2px 5px rgba(0,0,0,0.03);">
+    <div style="font-size:11.5px; color:#5a6a80; font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">Detalle Corporación:<br><span style="color:#0B2E63; font-size:13px;">${part_corp.toUpperCase()}</span></div>
+    <div style="font-size:34px; font-weight:800; color:#0B2E63; line-height:1; margin: 12px 0;">${fmtPct(part_2026_val)}</div>
+    <div style="font-size:13px; color:#334155;">Cambio vs 2022: <strong style="color:${part_2026_val > part_2022_val ? '#1B7A3A' : '#C00000'}; font-size:15px;">${fmtCambio(part_2026_val - part_2022_val)}</strong></div>
+  </div>
+</div>
+`
+```
+
+## Participación departamental
+
+```{ojs}
+viewof part_corp_dep = Inputs.radio(["Senado", "Cámara"], {label: html`<b style="font-size:14px; color:#1F2937;">Corporación:</b>`, value: "Senado"})
+part_dep_data = transpose(part_dep_ojs).filter(d => d.corp_tabla === part_corp_dep)
+```
+El aumento se concentra en el Caribe, destacandose también Chocó y Caquetá. Las caídas fuertes se dieron especialmente en Guainía, Arauca, Huila y Putumayo.
+
+
+```{ojs}
+{
+  const d = part_dep_data.filter(x => x.part_2026 != null);
+  const top = d.slice().sort((a,b) => b.part_2026 - a.part_2026)[0];
+  const sube = d.filter(x => x.cambio_22 != null).sort((a,b) => b.cambio_22 - a.cambio_22)[0];
+  return md`En **${part_corp_dep}**, la participación departamental más alta en 2026 fue la de **${top.Depto}** con **${fmtPct(top.part_2026)}**. Frente a 2022, el mayor aumento se dio en **${sube.Depto}** (**${fmtCambio(sube.cambio_22)}**).`;
+}
+```
+
+:::: {.columns}
+
+::: {.column width="55%"}
+```{r}
+#| label: mapa-part-dep
+sf_dep <- datos_part$sf_deptos %>% mutate(coddepto = as.integer(coddepto))
+part_dep <- datos_part$departamental %>% filter(corp_tabla == "Senado") %>%
+  mutate(coddepto = as.integer(coddepto))
+mp <- sf_dep %>% left_join(part_dep, by = "coddepto")
+
+mapa_dep <- function(var, titulo, es_cambio) {
+  vals <- mp[[var]]
+  if (es_cambio) {
+    m <- max(abs(vals), na.rm = TRUE)
+    pal <- colorNumeric(c("#cb181d", "#f7f7f7", "#2171b5"), domain = c(-m, m), na.color = "#eeeeee")
+  } else {
+    pal <- colorNumeric("Blues", domain = vals, na.color = "#eeeeee")
+  }
+  lab <- sprintf("<b>%s</b><br>2026: %s%%<br>vs 2022: %s pp &nbsp;·&nbsp; vs 2018: %s pp",
+    mp$Depto, formatC(mp$part_2026, 1, format = "f"),
+    formatC(mp$cambio_22, 1, format = "f"), formatC(mp$cambio_18, 1, format = "f")) %>%
+    lapply(htmltools::HTML)
+  leaflet(mp, height = 540) %>% addProviderTiles("CartoDB.Positron") %>%
+    addPolygons(weight = 0.6, color = "#ffffff", fillColor = pal(vals), fillOpacity = 0.88,
+                label = lab,
+                highlightOptions = highlightOptions(weight = 2, color = "#0B2E63", bringToFront = TRUE)) %>%
+    { if (es_cambio) {
+        addLegend(., pal = pal, values = vals, title = titulo, position = "bottomright",
+                  bins = 5, opacity = 0.9, labFormat = labelFormat(suffix = " pp"))
+      } else {
+        addLegend(., pal = pal, values = vals, title = titulo, position = "bottomright",
+                  labFormat = labelFormat(suffix = "%"))
+      } }
+}
+```
+
+::: {.panel-tabset}
+### Nivel 2026
+```{r}
+mapa_dep("part_2026", "Participación 2026 (%)", FALSE)
+```
+### Cambio vs 2022
+```{r}
+mapa_dep("cambio_22", "Cambio 2026 − 2022 (pp)", TRUE)
+```
+### Cambio vs 2018
+```{r}
+mapa_dep("cambio_18", "Cambio 2026 − 2018 (pp)", TRUE)
+```
+:::
+:::
+
+::: {.column width="45%"}
+```{ojs}
+tabla_render = {
+  const data = part_dep_data.slice().sort((a,b)=> (b.part_2026 ?? -1) - (a.part_2026 ?? -1));
+  const th = "padding:9px 8px; background:#0B2E63; color:#ffffff; font-weight:600; font-size:11.5px; position:sticky; top:0;";
+  const rows = data.map((d,i) => {
+    const c22 = d.cambio_22>0?"#1B7A3A":(d.cambio_22<0?"#C00000":"#94A3B8");
+    const c18 = d.cambio_18>0?"#1B7A3A":(d.cambio_18<0?"#C00000":"#94A3B8");
+    return html`<tr style="border-bottom:1px solid #EEF2F6; background:${i%2?'#F8FAFC':'#ffffff'};">
+      <td style="padding:7px 10px; text-align:left; color:#1F2937;">${d.Depto}</td>
+      <td style="padding:7px 8px; text-align:right; font-weight:700; color:#0B2E63; font-variant-numeric:tabular-nums;">${fmtPct(d.part_2026)}</td>
+      <td style="padding:7px 8px; text-align:right; color:${c22}; font-weight:600; white-space:nowrap; font-variant-numeric:tabular-nums;">${fmtCambio(d.cambio_22)}</td>
+      <td style="padding:7px 8px; text-align:right; color:${c18}; font-weight:600; white-space:nowrap; font-variant-numeric:tabular-nums;">${fmtCambio(d.cambio_18)}</td>
+    </tr>`;
+  });
+  const cont = document.createElement("div");
+  cont.style = "max-height:600px; overflow-y:auto; border:1px solid #E2E8F0; border-radius:8px; box-shadow:0 1px 4px rgba(11,46,99,.06);";
+  cont.appendChild(html`<table style="width:100%; border-collapse:collapse; font-size:12.5px;">
+    <thead><tr>
+      <th style="${th} text-align:left;">Departamento</th>
+      <th style="${th} text-align:right;">2026</th>
+      <th style="${th} text-align:right;">vs 2022</th>
+      <th style="${th} text-align:right;">vs 2018</th>
+    </tr></thead><tbody>${rows}</tbody></table>`);
+  return cont;
+}
+html`${tabla_render}`
+```
+:::
+
+::::
+
+
+## Participación municipal
+
+```{r}
+#| label: part-muni-ojs
+ojs_define(muni_ojs = datos_part$municipal)
+ojs_define(muni_dif_ojs = datos_part$municipal_dif)
+```
+
+```{r}
+#| label: mapa-muni-fn
+sf_mpi <- datos_part$sf_mpios %>% mutate(codmpio = as.integer(codmpio))
+muni_all <- datos_part$municipal %>% mutate(codmpio = as.integer(codmpio))
+muni_dif_r <- datos_part$municipal_dif %>% mutate(codmpio = as.integer(codmpio))
+
+mapa_muni <- function(corp_sel, tipo) {
+  if (tipo == "dif") {
+    mp <- sf_mpi %>% left_join(muni_dif_r, by = "codmpio")
+    vals <- mp$dif_sc; m <- max(abs(vals), na.rm = TRUE)
+    pal <- colorNumeric(c("#cb181d", "#f7f7f7", "#2171b5"), domain = c(-m, m), na.color = "#eeeeee")
+    lab <- sprintf("<b>%s</b> <span style='color:#888'>(%s)</span><br>Senado: %s%% &nbsp; Cámara: %s%%<br>Sen − Cám: <b>%s pp</b>",
+      mp$Municipio, mp$Depto, formatC(mp$part_sen, 1, format = "f"),
+      formatC(mp$part_cam, 1, format = "f"), formatC(mp$dif_sc, 1, format = "f")) %>% lapply(htmltools::HTML)
+    titulo <- "Sen − Cám (pp)"; suf <- " pp"; usebins <- TRUE
+  } else {
+    d <- muni_all %>% filter(corp_tabla == corp_sel)
+    mp <- sf_mpi %>% left_join(d, by = "codmpio") %>%
+      left_join(muni_dif_r %>% select(codmpio, dif_sc), by = "codmpio")
+    if (tipo == "nivel") {
+      var <- "part_2026"; pal <- colorNumeric("Blues", domain = mp$part_2026, na.color = "#eeeeee")
+      titulo <- "Participación 2026 (%)"; suf <- "%"; usebins <- FALSE
+    } else if (tipo == "c22") {
+      var <- "cambio_22"; m <- max(abs(mp$cambio_22), na.rm = TRUE)
+      pal <- colorNumeric(c("#cb181d", "#f7f7f7", "#2171b5"), domain = c(-m, m), na.color = "#eeeeee")
+      titulo <- "Cambio vs 2022 (pp)"; suf <- " pp"; usebins <- TRUE
+    } else {
+      var <- "cambio_18"; m <- max(abs(mp$cambio_18), na.rm = TRUE)
+      pal <- colorNumeric(c("#cb181d", "#f7f7f7", "#2171b5"), domain = c(-m, m), na.color = "#eeeeee")
+      titulo <- "Cambio vs 2018 (pp)"; suf <- " pp"; usebins <- TRUE
+    }
+    vals <- mp[[var]]
+    lab <- sprintf("<b>%s</b> <span style='color:#888'>(%s)</span><br>2026: %s%% &nbsp; vs 2022: %s pp &nbsp; vs 2018: %s pp<br>Sen − Cám: %s pp",
+      mp$Municipio, mp$Depto, formatC(mp$part_2026, 1, format = "f"),
+      formatC(mp$cambio_22, 1, format = "f"), formatC(mp$cambio_18, 1, format = "f"),
+      formatC(mp$dif_sc, 1, format = "f")) %>% lapply(htmltools::HTML)
+  }
+  leyenda <- if (usebins) function(x) addLegend(x, pal = pal, values = vals, title = titulo,
+            position = "bottomleft", bins = 5, labFormat = labelFormat(suffix = suf))
+         else function(x) addLegend(x, pal = pal, values = vals, title = titulo,
+            position = "bottomleft", labFormat = labelFormat(suffix = suf))
+  leaflet(mp, height = 540) %>% addProviderTiles("CartoDB.Positron") %>%
+    addPolygons(weight = 0.2, color = "#ffffff", fillColor = pal(vals), fillOpacity = 0.9, label = lab,
+                highlightOptions = highlightOptions(weight = 1.5, color = "#0B2E63", bringToFront = TRUE)) %>%
+    leyenda()
+}
+```
+
+```{ojs}
+viewof muni_corp = Inputs.radio(["Senado", "Cámara", "Comparación S-C"], {value: "Senado"})
+viewof muni_modo = Inputs.radio(["Nivel 2026", "Cambio vs 2022", "Cambio vs 2018"], {value: "Nivel 2026"})
+viewof muni_top = Inputs.select(["Top 20 más alto", "Top 20 más bajo"], {value: "Top 20 más alto"})
+```
+
+```{ojs}
+html`
+<div style="display: flex; gap: 32px; background: #F8FAFC; padding: 12px 20px; border-radius: 8px; border: 1px solid #E2E8F0; align-items: center; margin-bottom: 16px;">
+  <div style="display: flex; align-items: center; gap: 12px;">
+    <b style="font-size:14px; color:#1F2937;">Corporación:</b>
+    ${viewof muni_corp}
+  </div>
+  <div style="display: ${muni_corp === 'Comparación S-C' ? 'none' : 'flex'}; align-items: center; gap: 12px; border-left: 1px solid #CBD5E1; padding-left: 32px;">
+    <b style="font-size:14px; color:#1F2937;">Criterio:</b>
+    ${viewof muni_modo}
+  </div>
+</div>
+`
+```
+
+```{ojs}
+{
+  let texto = "";
+  if (muni_corp === "Comparación S-C") {
+    texto = "Se observa una alta coincidencia territorial, aunque existen focos específicos donde una corporación supera claramente a la otra (valores positivos indican mayor fuerza del Senado, y negativos, de la Cámara). Ciertas regiones periféricas muestran las brechas más pronunciadas a favor del Senado.";
+  } else if (muni_modo === "Nivel 2026") {
+    texto = "El patrón municipal confirma que la región Caribe no solo sobresale en promedios departamentales, sino también por una extensión amplia de municipios con niveles altos de participación. Se observan focos de participación alta en áreas como el Chocó, mientras que en la Amazonía el comportamiento es más heterogéneo. La más baja participación se evidencia en el norte de Antioquia y el Bajo Cauca antioqueño.";
+  } else if (muni_modo === "Cambio vs 2022") {
+    texto = "Los mayores aumentos se concentran en municipios con niveles iniciales bajos, con incrementos fuertemente marcados (superiores a +15 pp), lo que sugiere cambios de movilización sin una sola región dominante (distribuidos en Amazonas, Nariño, Cauca, Norte de Santander y Chocó). Las caídas son más dispersas, con presencia marcada en Boyacá, Huila, Casanare y Amazonía.";
+  } else if (muni_modo === "Cambio vs 2018") {
+    texto = "Frente a 2018, los mayores aumentos (entre +10 y +20 pp) se evidencian fuertemente en Chocó, Amazonas, Córdoba, Cauca y Nariño, con alta coincidencia territorial entre corporaciones. Las caídas más fuertes superan los -20 pp y se focalizan en Boyacá, Huila y Nariño. Se destacan municipios en Guainía con fuertes caídas pero exclusivamente en el Senado.";
+  }
+  return html`<p style="font-size: 15.5px; color: #334155; line-height: 1.55; margin-bottom: 24px;">${texto}</p>`;
+}
+```
+
+:::: {style="display: flex; gap: 24px; align-items: flex-start;"}
+
+::: {style="flex: 0 0 54%; width: 54%; position: relative; height: 540px; border: 1px solid #EAF0F6; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.03);"}
+
+::: {#mapa-senado-nivel .muni-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
+```{r}
+mapa_muni("Senado", "nivel")
+```
+:::
+::: {#mapa-senado-c22 .muni-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
+```{r}
+mapa_muni("Senado", "c22")
+```
+:::
+::: {#mapa-senado-c18 .muni-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
+```{r}
+mapa_muni("Senado", "c18")
+```
+:::
+
+::: {#mapa-camara-nivel .muni-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
+```{r}
+mapa_muni("Cámara", "nivel")
+```
+:::
+::: {#mapa-camara-c22 .muni-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
+```{r}
+mapa_muni("Cámara", "c22")
+```
+:::
+::: {#mapa-camara-c18 .muni-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
+```{r}
+mapa_muni("Cámara", "c18")
+```
+:::
+
+::: {#mapa-dif .muni-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
+```{r}
+mapa_muni(NA, "dif")
+```
+:::
+
+```{ojs}
+update_map = {
+  const layers = document.querySelectorAll(".muni-mapa");
+  layers.forEach(el => {
+    el.style.opacity = "0";
+    el.style.pointerEvents = "none";
+    el.style.zIndex = "0";
+  });
+  
+  let targetId = "";
+  if (muni_corp === "Comparación S-C") {
+    targetId = "mapa-dif";
+  } else {
+    const c = muni_corp === "Senado" ? "senado" : "camara";
+    const m = muni_modo === "Nivel 2026" ? "nivel" : (muni_modo === "Cambio vs 2022" ? "c22" : "c18");
+    targetId = "mapa-" + c + "-" + m;
+  }
+  
+  const target = document.getElementById(targetId);
+  if (target) {
+    target.style.opacity = "1";
+    target.style.pointerEvents = "auto";
+    target.style.zIndex = "10";
+  }
+}
+```
+:::
+
+::: {style="flex: 0 0 46%; width: 46%;"}
+```{ojs}
+tabla_muni = {
+  const esDif = muni_corp === "Comparación S-C";
+  const th = "padding:10px 8px; background:#5E7C99; color:#ffffff; font-weight:600; font-size:11.5px; position:sticky; top:0; z-index:2;";
+  const colr = v => v>0?"#1B7A3A":(v<0?"#C00000":"#5a6a80");
+  let data, vk, head, rowFn;
+  
+  if (esDif) {
+    data = transpose(muni_dif_ojs).filter(d => d.dif_sc != null); vk = "dif_sc";
+    head = "<tr><th style='" + th + " text-align:left;'>Municipio</th><th style='" + th + " text-align:right;'>Senado</th><th style='" + th + " text-align:right;'>Cámara</th><th style='" + th + " text-align:right;'>Sen−Cám</th></tr>";
+    rowFn = (d,i) => "<tr style='border-bottom:1px solid #E2E8F0; background:" + (i%2?'#F8FAFC':'#ffffff') + ";'><td style='padding:8px 10px; text-align:left;'><strong style='color:#1F2937; font-size:12px;'>" + d.Municipio + "</strong><div style='font-size:10.5px; color:#94A3B8;'>" + d.Depto + "</div></td><td style='padding:8px 6px; text-align:right; font-variant-numeric:tabular-nums; color:#334155; font-size:12px;'>" + fmtPct(d.part_sen) + "</td><td style='padding:8px 6px; text-align:right; font-variant-numeric:tabular-nums; color:#334155; font-size:12px;'>" + fmtPct(d.part_cam) + "</td><td style='padding:8px 8px; text-align:right; font-weight:700; color:" + colr(d.dif_sc) + "; font-variant-numeric:tabular-nums; font-size:12.5px;'>" + fmtCambio(d.dif_sc) + "</td></tr>";
+  } else {
+    data = transpose(muni_ojs).filter(d => d.corp_tabla === muni_corp);
+    vk = muni_modo === "Nivel 2026" ? "part_2026" : (muni_modo === "Cambio vs 2022" ? "cambio_22" : "cambio_18");
+    data = data.filter(d => d[vk] != null);
+    head = "<tr><th style='" + th + " text-align:left;'>Municipio</th><th style='" + th + " text-align:right;'>2026</th><th style='" + th + " text-align:right;'>Δ '22</th><th style='" + th + " text-align:right;'>Δ '18</th></tr>";
+    rowFn = (d,i) => "<tr style='border-bottom:1px solid #E2E8F0; background:" + (i%2?'#F8FAFC':'#ffffff') + ";'><td style='padding:8px 10px; text-align:left;'><strong style='color:#1F2937; font-size:12px;'>" + d.Municipio + "</strong><div style='font-size:10.5px; color:#94A3B8;'>" + d.Depto + "</div></td><td style='padding:8px 6px; text-align:right; font-weight:700; color:#0B2E63; font-variant-numeric:tabular-nums; font-size:12px;'>" + fmtPct(d.part_2026) + "</td><td style='padding:8px 6px; text-align:right; color:" + colr(d.cambio_22) + "; font-weight:600; font-variant-numeric:tabular-nums; font-size:12px;'>" + fmtCambio(d.cambio_22) + "</td><td style='padding:8px 8px; text-align:right; color:" + colr(d.cambio_18) + "; font-weight:600; font-variant-numeric:tabular-nums; font-size:12px;'>" + fmtCambio(d.cambio_18) + "</td></tr>";
+  }
+  
+  data = data.slice().sort((a,b) => b[vk] - a[vk]);
+  const top = muni_top === "Top 20 más alto" ? data.slice(0,20) : data.slice(-20).reverse();
+  const rows = top.map(rowFn).join("");
+  
+  return html`
+  <div style="background:#fff; border:1px solid #EAF0F6; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,0.04); display:flex; flex-direction:column; height: 540px; overflow:hidden;">
+    <!-- ENCABEZADO Y FILTRO INTEGRADO -->
+    <div style="padding: 10px 16px; border-bottom: 1px solid #CBD5E1; display:flex; justify-content:space-between; align-items:center; background:#F1F5F9;">
+      <div style="font-weight:800; color:#0B2E63; font-size:13px; text-transform:uppercase;">Municipios destacados</div>
+      <div style="font-size:12px;">
+        ${viewof muni_top}
+      </div>
+    </div>
+    <!-- TABLA CON SCROLL -->
+    <div style="overflow-y: auto; flex: 1;">
+      <table style="width:100%; border-collapse:collapse; font-family:sans-serif;">
+        <thead>${head}</thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  </div>
+  `;
+}
+```
+:::
+
+::::
+
+## Participación de colombianos en el exterior
+
+```{r}
+#| label: datos-ext-ojs
+datos_ext <- readRDS("datos_exterior_part.rds")
+ojs_define(ext_hist_ojs = datos_ext$part_ext_congreso)
+ojs_define(ext_dia_ojs = datos_ext$votos_ext_dia)
+ojs_define(censo_ext_ojs = datos_ext$censo_ext)
+```
+
+```{ojs}
+viewof ext_corp = Inputs.radio(["Senado", "Cámara"], {value: "Senado", label: html`<b style="font-size:14px; color:#1F2937;">Corporación:</b>`})
+```
+
+```{ojs}
+// Formatos locales
+fmtN_ext = d => d == null ? "—" : d.toLocaleString("es-CO")
+fmtPct_ext = d => d == null ? "—" : d.toFixed(1).replace(".", ",") + "%"
+fmtCambio_ext = d => d == null ? "—" : (d > 0 ? "+" : "") + d.toFixed(1).replace(".", ",") + " pp"
+
+// Extraer datos reactivos y calcular crecimiento dinámico
+censo_ext_data = transpose(censo_ext_ojs)
+censo_ext_26_val = censo_ext_data.find(d => d.annoh === 2026)?.censo ?? 0
+censo_ext_22_val = censo_ext_data.find(d => d.annoh === 2022)?.censo ?? 0
+crecimiento_pct = (censo_ext_26_val - censo_ext_22_val) / censo_ext_22_val * 100
+
+ext_hist_data_kpi = transpose(ext_hist_ojs).filter(d => d.corp === ext_corp)
+part_ext_26_val = ext_hist_data_kpi.find(d => d.annoh === "2026")?.part_pct ?? 0
+part_ext_22_val = ext_hist_data_kpi.find(d => d.annoh === "2022")?.part_pct ?? 0
+```
+
+```{ojs}
+md`El censo electoral en el exterior creció un **${fmtPct_ext(crecimiento_pct)}** en 2026 (llegando a **${fmtN_ext(censo_ext_26_val)}** personas), impulsando una recuperación en la participación frente a la caída observada en 2022. Este aumento en la movilización está directamente asociado a la mayor inscripción de cédulas.`
+```
+
+```{ojs}
+html`
+<div style="background:#F8FAFC; border:1px solid #E2E8F0; border-left:5px solid #0B2E63; border-radius:4px; padding:18px 24px; margin-top:16px; margin-bottom:24px; display:flex; align-items:center; gap:32px; box-shadow:0 1px 3px rgba(0,0,0,0.02);">
+  <div style="flex:0 0 auto;">
+    <div style="font-size:12.5px; color:#64748B; font-weight:800; text-transform:uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">Participación Exterior 2026</div>
+    <div style="font-size:42px; font-weight:900; color:#0B2E63; line-height:1;">${fmtPct_ext(part_ext_26_val)}</div>
+  </div>
+  <div style="flex:1; border-left: 1px solid #CBD5E1; padding-left:32px; display:flex; flex-direction:column; justify-content:center;">
+    <div style="font-size:15px; color:#334155; font-weight:500; margin-bottom:4px;">Frente a 2022: <strong style="color:${part_ext_26_val > part_ext_22_val ? '#1B7A3A' : '#C00000'}; font-size:16px;">${fmtCambio_ext(part_ext_26_val - part_ext_22_val)}</strong></div>
+    <div style="font-size:11.5px; color:#94A3B8; font-style:italic; line-height:1.2; max-width: 320px;">* Indicadores dinámicos. Ajusta el filtro de corporación arriba para ver los datos de Senado o Cámara.</div>
+  </div>
+</div>
+`
+```
+
+Aunque el voto anticipado está habilitado toda la semana previa, la votación entre semana es baja y gradual. El sábado presenta un salto importante, pero el domingo sigue concentrando la inmensa mayoría de la afluencia.
+
+:::: {style="display: flex; gap: 24px; align-items: stretch; margin-top: 20px; margin-bottom: 40px;"}
+
+::: {style="flex: 1; background:#fff; border:1px solid #EAF0F6; border-radius:8px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,0.02);"}
+<div style="font-weight:800; color:#0B2E63; margin-bottom:12px; text-align:center; font-size:13.5px;">Participación histórica</div>
+```{ojs}
+ext_hist_data = transpose(ext_hist_ojs).filter(d => d.corp === ext_corp)
+Plot.plot({
+  width: 450, height: 260, marginLeft: 50,
+  x: {label: "Participación (%)", grid: true, domain: [0, 25]},
+  y: {label: null, type: "band"},
+  color: {domain: ["2018", "2022", "2026"], range: ["#C7D3E3", "#6F8FB8", "#1F4E79"]},
+  marks: [
+    Plot.barX(ext_hist_data, {
+      x: "part_pct", y: "annoh", fill: "annoh", tip: true,
+      title: d => `Año: ${d.annoh}\nParticipación: ${d.part_pct.toFixed(1).replace(".",",")}\%\nVotos: ${d.votos.toLocaleString("es-CO")}`
+    }),
+    Plot.text(ext_hist_data, {
+      x: "part_pct", y: "annoh", text: d => d.part_pct.toFixed(1).replace(".",",") + "%",
+      textAnchor: "start", dx: 5, fill: "#333", fontSize: 11, fontWeight: "bold"
+    }),
+    Plot.ruleX([0])
+  ]
+})
+```
+:::
+
+::: {style="flex: 1; background:#fff; border:1px solid #EAF0F6; border-radius:8px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,0.02);"}
+<div style="font-weight:800; color:#0B2E63; margin-bottom:12px; text-align:center; font-size:13.5px;">Distribución de votos por día (Voto anticipado)</div>
+```{ojs}
+ext_dia_data = transpose(ext_dia_ojs).filter(d => d.corp === ext_corp)
+Plot.plot({
+  width: 450, height: 260, marginBottom: 40,
+  x: {label: null, type: "band", domain: ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]},
+  y: {label: "Proporción de votos (%)", grid: true},
+  color: {domain: ["Lunes a sábado", "Domingo"], range: ["#B8C6D8", "#1F4E79"]},
+  marks: [
+    Plot.barY(ext_dia_data, {
+      x: "dia", y: "prop_pct", fill: "resaltar", tip: true,
+      title: d => `Día: ${d.dia}\nProporción: ${d.prop_pct.toFixed(1).replace(".",",")}\%\nVotos: ${d.votos.toLocaleString("es-CO")}`
+    }),
+    Plot.text(ext_dia_data, {
+      x: "dia", y: "prop_pct", text: d => d.prop_pct.toFixed(1).replace(".",",") + "%",
+      dy: -8, fill: "#333", fontSize: 10, fontWeight: "bold"
+    }),
+    Plot.ruleY([0])
+  ]
+})
+```
+:::
+
+::::
+
+### Distribución de la votación por país
+
+```{ojs}
+viewof ext_mapa_crit = Inputs.radio(["Proporción del total de votos", "Participación sobre censo"], {value: "Proporción del total de votos", label: html`<b style="font-size:14px; color:#1F2937;">Mostrar en el mapa:</b>`})
+```
+
+```{r}
+#| label: mapa-ext-funciones
+mapa_ext_base <- datos_ext$mapa_mundo
+
+crear_mapa_ext <- function(corp_sel, tipo_dato) {
+  df_mapa <- mapa_ext_base %>% filter(corp == corp_sel)
+  
+  if (tipo_dato == "participacion") {
+    var <- "participacion_pct"
+    pal <- colorNumeric("YlGnBu", domain = c(0, max(df_mapa[[var]], na.rm=T)), na.color = "#e9edf2")
+    lab <- sprintf("<b>%s</b><br>Participación: %s%%", coalesce(df_mapa$pais, df_mapa$name), formatC(df_mapa[[var]], 1, format="f", decimal.mark=",")) %>% lapply(htmltools::HTML)
+    tit <- "Participación (%)"
+  } else {
+    var <- "prop_votos_pct"
+    cortes <- c(0, 1, 3, 10, 25, ceiling(max(df_mapa[[var]], na.rm=T) + 0.1))
+    pal <- colorBin("YlOrRd", domain = df_mapa[[var]], bins = unique(cortes), na.color = "#e9edf2")
+    lab <- sprintf("<b>%s</b><br>Proporción de votos: %s%%", coalesce(df_mapa$pais, df_mapa$name), formatC(df_mapa[[var]], 1, format="f", decimal.mark=",")) %>% lapply(htmltools::HTML)
+    tit <- "Proporción (%)"
+  }
+  
+  leaflet(df_mapa, height = 480) %>%
+    addProviderTiles("CartoDB.Positron") %>%
+    addPolygons(weight = 0.5, color = "#ffffff", fillColor = ~pal(get(var)), fillOpacity = 0.85,
+                label = lab, highlightOptions = highlightOptions(weight = 2, color = "#0B2E63", bringToFront = TRUE)) %>%
+    addLegend(pal = pal, values = ~get(var), title = tit, position = "bottomleft", labFormat = labelFormat(suffix = "%")) %>%
+    setView(lng = 0, lat = 20, zoom = 1.5)
+}
+```
+
+:::: {style="position: relative; height: 480px; width: 100%; border: 1px solid #EAF0F6; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.02);"}
+
+::: {#mapa-ext-senado-prop .ext-mapa style="position:absolute; width:100%; height:100%; top:0; left:0; transition: opacity 0.3s;"}
+```{r}
+crear_mapa_ext("Senado", "proporcion")
+```
+:::
+::: {#mapa-ext-senado-part .ext-mapa style="position:absolute; width:100%; height:100%; top:0; left:0; transition: opacity 0.3s;"}
+```{r}
+crear_mapa_ext("Senado", "participacion")
+```
+:::
+::: {#mapa-ext-camara-prop .ext-mapa style="position:absolute; width:100%; height:100%; top:0; left:0; transition: opacity 0.3s;"}
+```{r}
+crear_mapa_ext("Cámara", "proporcion")
+```
+:::
+::: {#mapa-ext-camara-part .ext-mapa style="position:absolute; width:100%; height:100%; top:0; left:0; transition: opacity 0.3s;"}
+```{r}
+crear_mapa_ext("Cámara", "participacion")
+```
+:::
+
+::::
+
+```{ojs}
+update_ext_map = {
+  const layers = document.querySelectorAll(".ext-mapa");
+  layers.forEach(el => {
+    el.style.opacity = "0";
+    el.style.pointerEvents = "none";
+    el.style.zIndex = "0";
+  });
+  
+  const c = ext_corp === "Senado" ? "senado" : "camara";
+  const m = ext_mapa_crit === "Participación sobre censo" ? "part" : "prop";
+  const targetId = "mapa-ext-" + c + "-" + m;
+  
+  const target = document.getElementById(targetId);
+  if (target) {
+    target.style.opacity = "1";
+    target.style.pointerEvents = "auto";
+    target.style.zIndex = "10";
+  }
+}
+```
 
 ```{=html}
 <script>
