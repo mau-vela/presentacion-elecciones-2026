@@ -1796,6 +1796,14 @@ sf_use_s2(TRUE)
 saveRDS(list(regional = part_reg_all, municipal = part_mun_all, sf_citrep = sf_citrep), "datos_especiales_part.rds")
 message("Listo: datos_especiales_part.rds generados con éxito")
 
+# Geometrías a geojson para el mapa interactivo en ojs (no consumen memoria al render)
+st_write(readRDS(file.path(ruta_general,"shapes","muni_simpl_sanandres_cache.rds"))$sf_obj %>%
+           mutate(codmpio = as.integer(codmpio)) %>% select(codmpio) %>% st_transform(4326),
+         "geo_mpios.geojson", delete_dsn = TRUE)
+st_write(readRDS(file.path(ruta_general,"shapes","departamento_simpl_sanandres_cache.rds"))$sf_obj %>%
+           mutate(coddepto = as.integer(cod_depto)) %>% select(coddepto) %>% st_transform(4326),
+         "geo_deptos.geojson", delete_dsn = TRUE)
+st_write(sf_citrep %>% select(CTEP) %>% st_transform(4326), "geo_citrep.geojson", delete_dsn = TRUE)
 
 # =====================================================================3
 #  SECCION 03-7 BRECHA CITREP Y PARTICIPACIÓN RURAL/URBANA ----

@@ -1670,186 +1670,110 @@ html`
 }
 ```
 
-```{r}
-#| label: mapa-esp-funciones
-sf_mpios_esp <- datos_part$sf_mpios %>% mutate(codmpio = as.integer(codmpio)) %>% st_transform(4326)
-sf_deptos_esp <- datos_part$sf_deptos %>% mutate(coddepto = as.integer(coddepto)) %>% st_transform(4326)
-sf_citrep_esp <- datos_esp$sf_citrep %>% mutate(CTEP = as.integer(CTEP)) %>% st_transform(4326)
+```{ojs}
+//| label: leaflet-setup-esp
+L_esp = require("leaflet@1.9.4")
+```
 
-crear_mapa_esp <- function(elec_sel, nivel_sel, crit_sel) {
-  if (nivel_sel == "Regional") {
-    d <- datos_esp$regional %>% filter(eleccion == elec_sel)
-    if (elec_sel == "CITREP") {
-      mp <- sf_citrep_esp %>% left_join(d, by = c("CTEP" = "id_region"))
-      lab_nombre <- mp$nombre_region
-    } else {
-      mp <- sf_deptos_esp %>% left_join(d, by = c("coddepto" = "id_region"))
-      lab_nombre <- mp$nombre_region
-    }
-  } else {
-    d <- datos_esp$municipal %>% filter(eleccion == elec_sel)
-    mp <- sf_mpios_esp %>% left_join(d, by = "codmpio")
-    lab_nombre <- mp$Municipio
-  }
-  
-  if (crit_sel == "Nivel 2026") {
-    var <- "part_2026"
-    # Uso de colorBin para distribuir equitativamente los tonos de azul y evitar que quede todo igual
-    pal <- colorBin("Blues", domain = mp[[var]], bins = 5, na.color = "#eeeeee")
-    titulo <- "Participación 2026 (%)"; suf <- "%"
-  } else if (crit_sel == "Cambio vs 2022") {
-    var <- "cambio_22"; m <- max(abs(mp[[var]]), na.rm = TRUE)
-    pal <- colorNumeric(c("#cb181d", "#f7f7f7", "#2171b5"), domain = c(-m, m), na.color = "#eeeeee")
-    titulo <- "Cambio vs 2022 (pp)"; suf <- " pp"
-  } else {
-    var <- "cambio_18"; m <- max(abs(mp[[var]]), na.rm = TRUE)
-    pal <- colorNumeric(c("#cb181d", "#f7f7f7", "#2171b5"), domain = c(-m, m), na.color = "#eeeeee")
-    titulo <- "Cambio vs 2018 (pp)"; suf <- " pp"
-  }
-  
-  vals <- mp[[var]]
-  
-  if (elec_sel == "CITREP") {
-    lab <- sprintf("<b>%s</b><br>2026: %s%%<br>vs 2022: %s pp",
-      lab_nombre, formatC(mp$part_2026, 1, format = "f", decimal.mark = ","),
-      formatC(mp$cambio_22, 1, format = "f", decimal.mark = ",")) %>% lapply(htmltools::HTML)
-  } else {
-    lab <- sprintf("<b>%s</b><br>2026: %s%%<br>vs 2022: %s pp &nbsp;·&nbsp; vs 2018: %s pp",
-      lab_nombre, formatC(mp$part_2026, 1, format = "f", decimal.mark = ","),
-      formatC(mp$cambio_22, 1, format = "f", decimal.mark = ","),
-      formatC(mp$cambio_18, 1, format = "f", decimal.mark = ",")) %>% lapply(htmltools::HTML)
-  }
-  
-  leaflet(mp, height = 540) %>% addProviderTiles("CartoDB.Positron") %>%
-    addPolygons(weight = 0.3, color = "#ffffff", fillColor = pal(vals), fillOpacity = 0.9, label = lab,
-                highlightOptions = highlightOptions(weight = 1.5, color = "#0B2E63", bringToFront = TRUE)) %>%
-    addLegend(pal = pal, values = vals, title = titulo, position = "bottomleft", labFormat = labelFormat(suffix = suf))
+```{ojs}
+html`<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">`
+```
+
+```{ojs}
+geo_mpios_esp = FileAttachment("geo_mpios.geojson").json()
+geo_deptos_esp = FileAttachment("geo_deptos.geojson").json()
+geo_citrep_esp = FileAttachment("geo_citrep.geojson").json()
+```
+
+::: {style="display: flex; gap: 24px; align-items: stretch;"}
+
+::: {style="flex: 0 0 54%; width: 54%;"}
+```{ojs}
+mapa_esp_L = {
+  const div = html`<div style="height:540px; border:1px solid #EAF0F6; border-radius:8px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.03);"></div>`;
+  const map = L_esp.map(div, { scrollWheelZoom: false }).setView([4.4, -73.5], 5);
+  L_esp.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+    { subdomains: "abcd", attribution: "© OpenStreetMap © CARTO" }).addTo(map);
+  invalidation.then(() => map.remove());
+  setTimeout(() => map.invalidateSize(), 200);
+  div.value = map;
+  return div;
 }
 ```
 
-:::: {style="display: flex; gap: 24px; align-items: stretch;"}
+```{ojs}
+// Redibuja la capa según los filtros (side-effect, no muestra nada)
+esp_layer_update = {
+  const map = mapa_esp_L.value;
+  if (map._dl) map.removeLayer(map._dl);
+  if (map._legend) map._legend.remove();
 
-::: {style="flex: 0 0 54%; width: 54%; position: relative; height: 540px; border: 1px solid #EAF0F6; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.03);"}
+  const esDif = esp_crit !== "Nivel 2026";
+  const varKey = esp_crit === "Nivel 2026" ? "part_2026"
+    : (esp_crit === "Cambio vs 2022" ? "cambio_22" : "cambio_18");
 
-<!-- BLOQUES DE MAPAS PRE-RENDERIZADOS OCULTOS -->
-::: {#mapa-esp-citrep-reg-26 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
-```{r}
-crear_mapa_esp("CITREP", "Regional", "Nivel 2026")
-```
-:::
-::: {#mapa-esp-citrep-reg-c22 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
-```{r}
-crear_mapa_esp("CITREP", "Regional", "Cambio vs 2022")
-```
-:::
-::: {#mapa-esp-citrep-mun-26 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
-```{r}
-crear_mapa_esp("CITREP", "Municipal", "Nivel 2026")
-```
-:::
-::: {#mapa-esp-citrep-mun-c22 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
-```{r}
-crear_mapa_esp("CITREP", "Municipal", "Cambio vs 2022")
-```
-:::
+  let geo, codeProp, dataArr, dataKey;
+  if (esp_nivel === "Municipal") {
+    geo = geo_mpios_esp; codeProp = "codmpio";
+    dataArr = transpose(esp_mun_ojs).filter(d => d.eleccion === esp_elec); dataKey = "codmpio";
+  } else if (esp_elec === "CITREP") {
+    geo = geo_citrep_esp; codeProp = "CTEP";
+    dataArr = transpose(esp_reg_ojs).filter(d => d.eleccion === esp_elec); dataKey = "id_region";
+  } else {
+    geo = geo_deptos_esp; codeProp = "coddepto";
+    dataArr = transpose(esp_reg_ojs).filter(d => d.eleccion === esp_elec); dataKey = "id_region";
+  }
+  const lookup = new Map(dataArr.map(d => [+d[dataKey], d]));
+  const vals = dataArr.map(d => d[varKey]).filter(v => v != null);
 
-::: {#mapa-esp-camafro-reg-26 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
-```{r}
-crear_mapa_esp("Cámara Afro", "Regional", "Nivel 2026")
-```
-:::
-::: {#mapa-esp-camafro-reg-c22 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
-```{r}
-crear_mapa_esp("Cámara Afro", "Regional", "Cambio vs 2022")
-```
-:::
-::: {#mapa-esp-camafro-reg-c18 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
-```{r}
-crear_mapa_esp("Cámara Afro", "Regional", "Cambio vs 2018")
-```
-:::
-::: {#mapa-esp-camafro-mun-26 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
-```{r}
-crear_mapa_esp("Cámara Afro", "Municipal", "Nivel 2026")
-```
-:::
-::: {#mapa-esp-camafro-mun-c22 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
-```{r}
-crear_mapa_esp("Cámara Afro", "Municipal", "Cambio vs 2022")
-```
-:::
-::: {#mapa-esp-camafro-mun-c18 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
-```{r}
-crear_mapa_esp("Cámara Afro", "Municipal", "Cambio vs 2018")
-```
-:::
+  let color;
+  if (esDif) {
+    const m = d3.max(vals.map(Math.abs)) || 1;
+    color = d3.scaleDiverging([-m, 0, m], t => d3.interpolateRdBu(t));
+  } else {
+    color = d3.scaleSequential([d3.min(vals) ?? 0, d3.max(vals) ?? 1], d3.interpolateBlues);
+  }
+  const colorOf = v => v == null ? "#eeeeee" : color(v);
+  const pf = v => v == null ? "—" : v.toFixed(1).replace(".", ",");
 
-::: {#mapa-esp-senind-reg-26 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
-```{r}
-crear_mapa_esp("Senado Indígena", "Regional", "Nivel 2026")
-```
-:::
-::: {#mapa-esp-senind-reg-c22 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
-```{r}
-crear_mapa_esp("Senado Indígena", "Regional", "Cambio vs 2022")
-```
-:::
-::: {#mapa-esp-senind-reg-c18 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
-```{r}
-crear_mapa_esp("Senado Indígena", "Regional", "Cambio vs 2018")
-```
-:::
-::: {#mapa-esp-senind-mun-26 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
-```{r}
-crear_mapa_esp("Senado Indígena", "Municipal", "Nivel 2026")
-```
-:::
-::: {#mapa-esp-senind-mun-c22 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
-```{r}
-crear_mapa_esp("Senado Indígena", "Municipal", "Cambio vs 2022")
-```
-:::
-::: {#mapa-esp-senind-mun-c18 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
-```{r}
-crear_mapa_esp("Senado Indígena", "Municipal", "Cambio vs 2018")
-```
-:::
+  const layer = L_esp.geoJSON(geo, {
+    style: f => {
+      const d = lookup.get(+f.properties[codeProp]);
+      return { weight: 0.4, color: "#ffffff", fillColor: colorOf(d ? d[varKey] : null), fillOpacity: 0.9 };
+    },
+    onEachFeature: (f, lyr) => {
+      const d = lookup.get(+f.properties[codeProp]);
+      const nom = (d && (d.nombre_region ?? d.Municipio)) ?? "";
+      const dep = (d && d.Depto) ? ` <span style='color:#888'>(${d.Depto})</span>` : "";
+      let t = `<b>${nom}</b>${dep}<br>2026: ${pf(d && d.part_2026)}% · vs 2022: ${pf(d && d.cambio_22)} pp`;
+      if (esp_elec !== "CITREP") t += ` · vs 2018: ${pf(d && d.cambio_18)} pp`;
+      lyr.bindTooltip(t, { sticky: true });
+      lyr.on("mouseover", () => lyr.setStyle({ weight: 2, color: "#0B2E63" }));
+      lyr.on("mouseout", () => lyr.setStyle({ weight: 0.4, color: "#ffffff" }));
+    }
+  }).addTo(map);
+  map._dl = layer;
 
-::: {#mapa-esp-camind-reg-26 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
-```{r}
-crear_mapa_esp("Cámara Indígena", "Regional", "Nivel 2026")
+  const legend = L_esp.control({ position: "bottomleft" });
+  legend.onAdd = () => {
+    const dv = L_esp.DomUtil.create("div");
+    dv.style = "background:#fff; padding:8px 10px; border-radius:6px; box-shadow:0 1px 4px rgba(0,0,0,.2); font-size:11px; line-height:1.5;";
+    const titulo = esDif ? (esp_crit === "Cambio vs 2022" ? "Cambio vs 2022 (pp)" : "Cambio vs 2018 (pp)") : "Participación 2026 (%)";
+    const m = d3.max(vals.map(Math.abs)) || 1;
+    const stops = esDif ? [-m, -m/2, 0, m/2, m] : [d3.min(vals) ?? 0, ((d3.min(vals) ?? 0)+(d3.max(vals) ?? 1))/2, d3.max(vals) ?? 1];
+    let inner = `<div style="font-weight:700;color:#0B2E63;margin-bottom:4px;">${titulo}</div>`;
+    stops.forEach(s => inner += `<div style="display:flex;align-items:center;gap:6px;"><span style="width:14px;height:14px;background:${colorOf(s)};display:inline-block;border:1px solid #ccc;"></span>${s.toFixed(1).replace(".", ",")}${esDif ? " pp" : "%"}</div>`);
+    dv.innerHTML = inner;
+    return dv;
+  };
+  legend.addTo(map);
+  map._legend = legend;
+  return md``;
+}
 ```
-:::
-::: {#mapa-esp-camind-reg-c22 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
-```{r}
-crear_mapa_esp("Cámara Indígena", "Regional", "Cambio vs 2022")
-```
-:::
-::: {#mapa-esp-camind-reg-c18 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
-```{r}
-crear_mapa_esp("Cámara Indígena", "Regional", "Cambio vs 2018")
-```
-:::
-::: {#mapa-esp-camind-mun-26 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
-```{r}
-crear_mapa_esp("Cámara Indígena", "Municipal", "Nivel 2026")
-```
-:::
-::: {#mapa-esp-camind-mun-c22 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
-```{r}
-crear_mapa_esp("Cámara Indígena", "Municipal", "Cambio vs 2022")
-```
-:::
-::: {#mapa-esp-camind-mun-c18 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
-```{r}
-crear_mapa_esp("Cámara Indígena", "Municipal", "Cambio vs 2018")
-```
-:::
-
 :::
 
 ::: {style="flex: 0 0 46%; width: 46%;"}
-
 ```{ojs}
 tabla_esp_render = {
   // Lógica segura de variables
@@ -1914,10 +1838,10 @@ tabla_esp_render = {
   `;
 }
 ```
+:::
 
 :::
 
-::::
 
 ```{ojs}
 // Lógica para alternar mapas
@@ -1951,7 +1875,7 @@ update_esp_map = {
   }
 }
 ```
-::: {.content-hidden}
+
 ### Brecha de participación: CITREP vs Cámara Rural
 
 ```{r}
@@ -2083,7 +2007,7 @@ html`${tabla_brecha_render}`
 :::
 
 ::::
-:::
+
 
 ## Participación rural y urbana
 
