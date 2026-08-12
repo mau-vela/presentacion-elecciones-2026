@@ -1481,6 +1481,46 @@
         "RemoteSha.Version": "1.0.5"
       }
     },
+    "lubridate": {
+      "Source": "CRAN",
+      "Repository": "https://cran.rstudio.com",
+      "description": {
+        "Type": "Package",
+        "Package": "lubridate",
+        "Title": "Make Dealing with Dates a Little Easier",
+        "Version": "1.9.5",
+        "Authors@R": "c(\n    person(\"Vitalie\", \"Spinu\", , \"spinuvit@gmail.com\", role = c(\"aut\", \"cre\")),\n    person(\"Garrett\", \"Grolemund\", role = \"aut\"),\n    person(\"Hadley\", \"Wickham\", role = \"aut\"),\n    person(\"Davis\", \"Vaughan\", role = \"ctb\"),\n    person(\"Ian\", \"Lyttle\", role = \"ctb\"),\n    person(\"Imanuel\", \"Costigan\", role = \"ctb\"),\n    person(\"Jason\", \"Law\", role = \"ctb\"),\n    person(\"Doug\", \"Mitarotonda\", role = \"ctb\"),\n    person(\"Joseph\", \"Larmarange\", role = \"ctb\"),\n    person(\"Jonathan\", \"Boiser\", role = \"ctb\"),\n    person(\"Chel Hee\", \"Lee\", role = \"ctb\")\n  )",
+        "Maintainer": "Vitalie Spinu <spinuvit@gmail.com>",
+        "Description": "Functions to work with date-times and time-spans: fast and\n    user friendly parsing of date-time data, extraction and updating of\n    components of a date-time (years, months, days, hours, minutes, and\n    seconds), algebraic manipulation on date-time and time-span objects.\n    The 'lubridate' package has a consistent and memorable syntax that\n    makes working with dates easy and fun.",
+        "License": "MIT + file LICENSE",
+        "URL": "https://lubridate.tidyverse.org,\nhttps://github.com/tidyverse/lubridate",
+        "BugReports": "https://github.com/tidyverse/lubridate/issues",
+        "Depends": "methods, R (>= 3.2)",
+        "Imports": "generics, timechange (>= 0.4.0)",
+        "Suggests": "covr, knitr, rmarkdown, testthat (>= 2.1.0), vctrs (>= 0.6.5)",
+        "Enhances": "chron, data.table, timeDate, tis, zoo",
+        "VignetteBuilder": "knitr",
+        "Config/Needs/website": "tidyverse/tidytemplate",
+        "Config/testthat/edition": "3",
+        "Encoding": "UTF-8",
+        "LazyData": "true",
+        "RoxygenNote": "7.3.3",
+        "SystemRequirements": "A system with zoneinfo data (e.g.\n/usr/share/zoneinfo). On Windows the zoneinfo included with R\nis used.",
+        "Collate": "'Dates.r' 'POSIXt.r' 'util.r' 'parse.r' 'timespans.r'\n'intervals.r' 'difftimes.r' 'durations.r' 'periods.r'\n'accessors-date.R' 'accessors-day.r' 'accessors-dst.r'\n'accessors-hour.r' 'accessors-minute.r' 'accessors-month.r'\n'accessors-quarter.r' 'accessors-second.r' 'accessors-tz.r'\n'accessors-week.r' 'accessors-year.r' 'am-pm.r' 'time-zones.r'\n'numeric.r' 'coercion.r' 'constants.r' 'cyclic_encoding.r'\n'data.r' 'decimal-dates.r' 'deprecated.r' 'format_ISO8601.r'\n'guess.r' 'hidden.r' 'instants.r' 'leap-years.r'\n'ops-addition.r' 'ops-compare.r' 'ops-division.r'\n'ops-integer-division.r' 'ops-m+.r' 'ops-modulo.r'\n'ops-multiplication.r' 'ops-subtraction.r' 'package.r'\n'pretty.r' 'round.r' 'stamp.r' 'tzdir.R' 'update.r' 'vctrs.R'\n'zzz.R'",
+        "NeedsCompilation": "yes",
+        "Packaged": "2026-02-03 09:30:08 UTC; vitalie",
+        "Author": "Vitalie Spinu [aut, cre],\n  Garrett Grolemund [aut],\n  Hadley Wickham [aut],\n  Davis Vaughan [ctb],\n  Ian Lyttle [ctb],\n  Imanuel Costigan [ctb],\n  Jason Law [ctb],\n  Doug Mitarotonda [ctb],\n  Joseph Larmarange [ctb],\n  Jonathan Boiser [ctb],\n  Chel Hee Lee [ctb]",
+        "Repository": "CRAN",
+        "Date/Publication": "2026-02-04 09:00:02 UTC",
+        "Built": "R 4.6.1; x86_64-w64-mingw32; 2026-07-07 02:28:49 UTC; windows",
+        "Archs": "x64",
+        "RemoteType": "standard",
+        "RemotePkgRef": "lubridate",
+        "RemoteRef": "lubridate",
+        "RemoteRepos": "https://cran.rstudio.com",
+        "RemoteSha.Version": "1.9.5"
+      }
+    },
     "magrittr": {
       "Source": "CRAN",
       "Repository": "https://cran.rstudio.com",
@@ -2585,6 +2625,39 @@
         "RemoteSha.Version": "1.2.1"
       }
     },
+    "timechange": {
+      "Source": "CRAN",
+      "Repository": "https://cran.rstudio.com",
+      "description": {
+        "Package": "timechange",
+        "Title": "Efficient Manipulation of Date-Times",
+        "Version": "0.4.0",
+        "Authors@R": "c(person(\"Vitalie\", \"Spinu\", email = \"spinuvit@gmail.com\", role = c(\"aut\", \"cre\")),\n             person(\"Google Inc.\", role = c(\"ctb\", \"cph\")))",
+        "Description": "Efficient routines for manipulation of date-time objects while\n   accounting for time-zones and daylight saving times. The package includes\n   utilities for updating of date-time components (year, month, day etc.),\n   modification of time-zones, rounding of date-times, period addition and\n   subtraction etc. Parts of the 'CCTZ' source code, released under the Apache\n   2.0 License, are included in this package. See\n   <https://github.com/google/cctz> for more details.",
+        "Depends": "R (>= 3.3)",
+        "License": "GPL (>= 3)",
+        "Encoding": "UTF-8",
+        "LinkingTo": "cpp11 (>= 0.2.7)",
+        "Suggests": "testthat (>= 0.7.1.99), knitr",
+        "SystemRequirements": "A system with zoneinfo data (e.g.\n/usr/share/zoneinfo). On Windows the zoneinfo included with R\nis used.",
+        "BugReports": "https://github.com/vspinu/timechange/issues",
+        "URL": "https://github.com/vspinu/timechange/",
+        "RoxygenNote": "7.2.1",
+        "NeedsCompilation": "yes",
+        "Packaged": "2026-01-29 08:59:34 UTC; vitalie",
+        "Author": "Vitalie Spinu [aut, cre],\n  Google Inc. [ctb, cph]",
+        "Maintainer": "Vitalie Spinu <spinuvit@gmail.com>",
+        "Repository": "CRAN",
+        "Date/Publication": "2026-01-29 22:20:08 UTC",
+        "Built": "R 4.6.1; x86_64-w64-mingw32; 2026-07-07 02:20:46 UTC; windows",
+        "Archs": "x64",
+        "RemoteType": "standard",
+        "RemotePkgRef": "timechange",
+        "RemoteRef": "timechange",
+        "RemoteRepos": "https://cran.rstudio.com",
+        "RemoteSha.Version": "0.4.0"
+      }
+    },
     "tinytex": {
       "Source": "CRAN",
       "Repository": "https://cran.rstudio.com",
@@ -2750,7 +2823,7 @@
         "Maintainer": "Davis Vaughan <davis@posit.co>",
         "Repository": "CRAN",
         "Date/Publication": "2026-04-11 06:20:03 UTC",
-        "Built": "R 4.6.1; x86_64-w64-mingw32; 2026-07-07 02:28:51 UTC; windows",
+        "Built": "R 4.6.1; x86_64-w64-mingw32; 2026-07-28 03:25:00 UTC; windows",
         "Archs": "x64",
         "RemoteType": "standard",
         "RemotePkgRef": "vctrs",
@@ -3018,41 +3091,197 @@
     "_extensions/qmd-lab/closeread/spacer.lua": {
       "checksum": "30de0e4f8b74c7897517547771e46d7c"
     },
+    "_freeze/informe_scroll/execute-results/html.json": {
+      "checksum": "18b231cdb6db9b9a6625cc1d1805f42f"
+    },
+    "_freeze/informe_scroll/libs/bootstrap/bootstrap-ff7fdbfe937b61284fa1557d37dfad1c.min.css": {
+      "checksum": "ff7fdbfe937b61284fa1557d37dfad1c"
+    },
+    "_freeze/informe_scroll/libs/bootstrap/bootstrap-icons.css": {
+      "checksum": "886da841d7421705f715f600c5ff11bb"
+    },
+    "_freeze/informe_scroll/libs/bootstrap/bootstrap-icons.woff": {
+      "checksum": "efe54401ef52214fd3b701e23ff88c5f"
+    },
+    "_freeze/informe_scroll/libs/bootstrap/bootstrap.min.js": {
+      "checksum": "e2b09c06f0e714b6144a6788a28e3950"
+    },
+    "_freeze/informe_scroll/libs/clipboard/clipboard.min.js": {
+      "checksum": "15f52a1ee547f2bdd46e56747332ca2d"
+    },
+    "_freeze/informe_scroll/libs/htmltools-fill-0.5.9/fill.css": {
+      "checksum": "0c307b2ce7a3fa7f260a0451457c809f"
+    },
+    "_freeze/informe_scroll/libs/htmlwidgets-1.6.4/htmlwidgets.js": {
+      "checksum": "237f59bc086ccf24f39be55311023b91"
+    },
+    "_freeze/informe_scroll/libs/jquery-3.6.0/jquery-3.6.0.js": {
+      "checksum": "2849239b95f5a9a2aea3f6ed9420bb88"
+    },
+    "_freeze/informe_scroll/libs/jquery-3.6.0/jquery-3.6.0.min.js": {
+      "checksum": "8fb8fee4fcc3cc86ff6c724154c49c42"
+    },
+    "_freeze/informe_scroll/libs/jquery-3.6.0/jquery-3.6.0.min.map": {
+      "checksum": "6efc5d663aaacac2024153fa0d4bafcd"
+    },
+    "_freeze/informe_scroll/libs/leaflet-1.3.1/images/layers-2x.png": {
+      "checksum": "4f0283c6ce28e888000e978e537a6a56"
+    },
+    "_freeze/informe_scroll/libs/leaflet-1.3.1/images/layers.png": {
+      "checksum": "a6137456ed160d7606981aa57c559898"
+    },
+    "_freeze/informe_scroll/libs/leaflet-1.3.1/images/marker-icon-2x.png": {
+      "checksum": "401d815dc206b8dc1b17cd0e37695975"
+    },
+    "_freeze/informe_scroll/libs/leaflet-1.3.1/images/marker-icon.png": {
+      "checksum": "2273e3d8ad9264b7daa5bdbf8e6b47f8"
+    },
+    "_freeze/informe_scroll/libs/leaflet-1.3.1/images/marker-shadow.png": {
+      "checksum": "44a526eed258222515aa21eaffd14a96"
+    },
+    "_freeze/informe_scroll/libs/leaflet-1.3.1/leaflet.css": {
+      "checksum": "58da535d4980b4c71b74a41bbee8a510"
+    },
+    "_freeze/informe_scroll/libs/leaflet-1.3.1/leaflet.js": {
+      "checksum": "af438f3b0ec09c81bc8fb9959de88155"
+    },
+    "_freeze/informe_scroll/libs/leaflet-binding-2.2.3/leaflet.js": {
+      "checksum": "7b0d68b050b79c5699a9f361b697b6ef"
+    },
+    "_freeze/informe_scroll/libs/leaflet-providers-3.0.0/leaflet-providers.js": {
+      "checksum": "e7f9d0928e9be4a2b45732d897850a39"
+    },
+    "_freeze/informe_scroll/libs/leaflet-providers-plugin-2.2.3/leaflet-providers-plugin.js": {
+      "checksum": "8fb426b3cfaa7d730f3b56a104012882"
+    },
+    "_freeze/informe_scroll/libs/leafletfix-1.0.0/leafletfix.css": {
+      "checksum": "6a38c873de948d8a1458ec0429aa0063"
+    },
+    "_freeze/informe_scroll/libs/proj4-2.6.2/proj4.min.js": {
+      "checksum": "4c6ef5a940694e1acc5c9ef66572fa79"
+    },
+    "_freeze/informe_scroll/libs/Proj4Leaflet-1.0.1/proj4leaflet.js": {
+      "checksum": "4c72a5a790e066510f9eb68541280646"
+    },
+    "_freeze/informe_scroll/libs/quarto-contrib/closeread-0.1.0/closeread.js": {
+      "checksum": "067b10bc1e30269d4d4eb8b4a136c8d4"
+    },
+    "_freeze/informe_scroll/libs/quarto-contrib/intersection-observer-polyfill-1.0.0/intersection-observer.js": {
+      "checksum": "d961074bdb0f7163d4f4565fcab3455f"
+    },
+    "_freeze/informe_scroll/libs/quarto-contrib/scrollama-3.2.0/scrollama.min.js": {
+      "checksum": "a61b284d238bcd95ed4b788a3232a5e4"
+    },
+    "_freeze/informe_scroll/libs/quarto-html/anchor.min.js": {
+      "checksum": "91bcf6cd1fd88fec3f109811e5fc3546"
+    },
+    "_freeze/informe_scroll/libs/quarto-html/popper.min.js": {
+      "checksum": "3a4a291ccf3f1ea0f82b641542fd3827"
+    },
+    "_freeze/informe_scroll/libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css": {
+      "checksum": "64a204ab8560d761af7679ceaba22944"
+    },
+    "_freeze/informe_scroll/libs/quarto-html/quarto.js": {
+      "checksum": "6f4245742deb3cc92337dbe2701ccfe1"
+    },
+    "_freeze/informe_scroll/libs/quarto-html/tabsets/tabsets.js": {
+      "checksum": "e8d6a8862b33ccc461f8fd532e05b365"
+    },
+    "_freeze/informe_scroll/libs/quarto-html/tippy.css": {
+      "checksum": "ebd6f8ce46a677e1a4f5f8a8317109a9"
+    },
+    "_freeze/informe_scroll/libs/quarto-html/tippy.umd.min.js": {
+      "checksum": "d828775275749701b48bd9d958814111"
+    },
+    "_freeze/informe_scroll/libs/quarto-ojs/quarto-ojs-runtime.js": {
+      "checksum": "18a7c9f39c1a1b82b4f0b1c72d5f6c0d"
+    },
+    "_freeze/informe_scroll/libs/quarto-ojs/quarto-ojs.css": {
+      "checksum": "8645f556f692a33c4645eeb25d3d4122"
+    },
+    "_freeze/informe_scroll/libs/rstudio_leaflet-1.3.1/images/1px.png": {
+      "checksum": "978c1bee49d7ad5fc1a4d81099b13e18"
+    },
+    "_freeze/informe_scroll/libs/rstudio_leaflet-1.3.1/rstudio_leaflet.css": {
+      "checksum": "49b23a276edf8677e7bb779525d2be7d"
+    },
     "_quarto_internal_scss_error.scss": {
       "checksum": "d7e02953056b0c3d1a7f7118d360574e"
+    },
+    "assets/defensores_patria.jpg": {
+      "checksum": "b88da3e376c039df854f4fca4bdfefa0"
+    },
+    "assets/partidos_personeria_juridica_2026.png": {
+      "checksum": "7453fa305ee3af66077f138aee3528f6"
     },
     "assets/rnec_fondos_oscuros.svg": {
       "checksum": "ea1ed22f28111e72b228483290bd13ef"
     },
+    "citrep_mapa.geojson": {
+      "checksum": "3016d1fe89e9cb6e1e32358cb9b39e81"
+    },
+    "datos_candidaturas.rds": {
+      "checksum": "1d7ddd359aa4dec0d6a795a77857b928"
+    },
     "datos_divipole.rds": {
-      "checksum": "cbf9b69e824d92e005d4aa2544040a50"
+      "checksum": "d3bea2f9f6a7a27ed7c71bce73d445b3"
+    },
+    "datos_escrutinio_curules.rds": {
+      "checksum": "f40f1938ec2c8a963f6256dfa67534b0"
+    },
+    "datos_escrutinio_gral.rds": {
+      "checksum": "479983db26f612a27f473c023f0fcb51"
+    },
+    "datos_especiales_part.rds": {
+      "checksum": "8b51960297cd5666e309b5ad5447f372"
+    },
+    "datos_exterior_part.rds": {
+      "checksum": "d19307496dfee5fca4e280c88b092eca"
+    },
+    "datos_impacto_puestos.rds": {
+      "checksum": "649e73d49e4a92c62fe7c476539a421e"
     },
     "datos_informe.rds": {
       "checksum": "da5f9627b3cac236b752271f9b5aecaa"
     },
+    "datos_participacion_final.rds": {
+      "checksum": "48d7a2a69259efcaab150e68470c2b77"
+    },
+    "datos_preconteo.rds": {
+      "checksum": "d688b8a7382e6f56b703d2c14aa86434"
+    },
+    "datos_rural_urbano.rds": {
+      "checksum": "1375ab0be07e0901650302959a4bd123"
+    },
     "estilos.scss": {
-      "checksum": "7573ce6d5e324ecc65db24fca521cf49"
+      "checksum": "fc489b584dacdb8afc92bde037b521a9"
     },
     "ESTRUCTURA PÁGINA RESULTADOS 2026.docx": {
-      "checksum": "1e46f1e319e1cc41e96eb42e0a7fd03d"
+      "checksum": "43b658b1cc9a897ffdca97c76c21d8d5"
     },
     "informe_files/libs/quarto-ojs/quarto-ojs.css": {
       "checksum": "8645f556f692a33c4645eeb25d3d4122"
     },
     "informe_scroll.html": {
-      "checksum": "23e7c6922120bae4a56246db0ee426dc"
+      "checksum": "de400ceaa29adf66413f9b9f26811131"
     },
     "informe_scroll.qmd": {
-      "checksum": "611aad9c9b8062d955c6e516445302f8"
+      "checksum": "13a1171474d157b3f84b1c4f8e422ec3"
     },
-    "informe_scroll_files/libs/bootstrap/bootstrap-a6c2044d94b80f8c29db04d09548bb13.min.css": {
-      "checksum": "a6c2044d94b80f8c29db04d09548bb13"
+    "informe_scroll_files/figure-html/chart-ext-dia-1.png": {
+      "checksum": "77a16ceeadb9ba310b9a59880fb92db8"
     },
-    "informe_scroll_files/libs/bootstrap/bootstrap-c6ed19d29068f43e86d7aee67dd514db.min.css": {
-      "checksum": "c6ed19d29068f43e86d7aee67dd514db"
+    "informe_scroll_files/figure-html/chart-ext-historico-1.png": {
+      "checksum": "f892e3d7a81952a7a038a4d761f8f39b"
     },
-    "informe_scroll_files/libs/bootstrap/bootstrap-ef3eb1c5c08ba2b95fe4a505463711aa.min.css": {
-      "checksum": "ef3eb1c5c08ba2b95fe4a505463711aa"
+    "informe_scroll_files/figure-html/mapa-ext-1-1.png": {
+      "checksum": "a76d5f943fa2cf108a9830de79f7ca8f"
+    },
+    "informe_scroll_files/figure-html/mapa-ext-2-1.png": {
+      "checksum": "37f96a56218cd04e4cb41c507e9cc010"
+    },
+    "informe_scroll_files/libs/bootstrap/bootstrap-ff7fdbfe937b61284fa1557d37dfad1c.min.css": {
+      "checksum": "ff7fdbfe937b61284fa1557d37dfad1c"
     },
     "informe_scroll_files/libs/bootstrap/bootstrap-icons.css": {
       "checksum": "886da841d7421705f715f600c5ff11bb"
@@ -3065,9 +3294,6 @@
     },
     "informe_scroll_files/libs/clipboard/clipboard.min.js": {
       "checksum": "15f52a1ee547f2bdd46e56747332ca2d"
-    },
-    "informe_scroll_files/libs/htmltools-fill-0.5.8.1/fill.css": {
-      "checksum": "0c307b2ce7a3fa7f260a0451457c809f"
     },
     "informe_scroll_files/libs/htmltools-fill-0.5.9/fill.css": {
       "checksum": "0c307b2ce7a3fa7f260a0451457c809f"
@@ -3105,20 +3331,11 @@
     "informe_scroll_files/libs/leaflet-1.3.1/leaflet.js": {
       "checksum": "af438f3b0ec09c81bc8fb9959de88155"
     },
-    "informe_scroll_files/libs/leaflet-binding-2.2.2/leaflet.js": {
-      "checksum": "7b0d68b050b79c5699a9f361b697b6ef"
-    },
     "informe_scroll_files/libs/leaflet-binding-2.2.3/leaflet.js": {
       "checksum": "7b0d68b050b79c5699a9f361b697b6ef"
     },
-    "informe_scroll_files/libs/leaflet-providers-2.0.0/leaflet-providers_2.0.0.js": {
-      "checksum": "b65600ab8d380d9a3100e9d1c92cb4bb"
-    },
     "informe_scroll_files/libs/leaflet-providers-3.0.0/leaflet-providers.js": {
       "checksum": "e7f9d0928e9be4a2b45732d897850a39"
-    },
-    "informe_scroll_files/libs/leaflet-providers-plugin-2.2.2/leaflet-providers-plugin.js": {
-      "checksum": "8fb426b3cfaa7d730f3b56a104012882"
     },
     "informe_scroll_files/libs/leaflet-providers-plugin-2.2.3/leaflet-providers-plugin.js": {
       "checksum": "8fb426b3cfaa7d730f3b56a104012882"
@@ -3174,8 +3391,11 @@
     "informe_scroll_files/libs/rstudio_leaflet-1.3.1/rstudio_leaflet.css": {
       "checksum": "49b23a276edf8677e7bb779525d2be7d"
     },
+    "mpios_mapa.geojson": {
+      "checksum": "9adbc744b3170e106e812f81f5858898"
+    },
     "scripts/00_preparar_datos.R": {
-      "checksum": "68b0d7db80327db38c2f16b2585014c0"
+      "checksum": "2289216c3455d29766479012f41a1882"
     }
   },
   "users": null

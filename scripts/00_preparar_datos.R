@@ -2,7 +2,7 @@
 # 00_preparar_datos.R   —   Preparacion de datos del informe ----
 # Rutas RELATIVAS a: ...\Presentacion elecciones 2026
 # =====================================================================3
-library(dplyr); library(tidyr); library(stringr); library(readr)
+library(dplyr); library(tidyr); library(stringr); library(readr);library(readxl)
 library(readxl); library(sf); library(rstudioapi); library(stringr)
 library(rnaturalearth)   # mapa mundial (install.packages c("rnaturalearth","rnaturalearthdata"))
 library(lubridate);library(purrr)
@@ -1257,7 +1257,6 @@ saveRDS(curules_gral, "datos_escrutinio_curules.rds")
 message("Listo: datos_escrutinio_curules.rds")
 
 
-
 #######################################################################3
 # SECCION 03-3 PARTICIPACIÓN ELECTORAL ----
 #######################################################################3
@@ -1272,7 +1271,6 @@ base_dep_part <- base_congreso %>%
       (corp == "CAMARA" & codcirc %in% c(1, 4, 5))
   ) %>%
   mutate(
-    # Tu misma lógica para id_puesto
     id_puesto = paste0(
       str_pad(as.character(code_RNEC), 5, pad = "0"), "-",
       str_pad(as.character(zona), 2, pad = "0"), "-",
@@ -1286,14 +1284,21 @@ base_dep_part <- base_congreso %>%
   ) %>%
   filter(!is.na(corp_mapa))
 
-# Censo Nacional y Departamental (Usando distinct de id_puesto y censo como en tu código)
-censo_nac <- base_dep_part %>%
-  distinct(annoh, id_puesto, censo) %>%
+# Censo Nacional, Departamental y Municipal (Convirtiendo código RNEC a código DANE)
+censo_divipol_hist <- bind_rows(
+  cong_2018 %>% mutate(annoh = 2018),
+  cong_2022 %>% mutate(annoh = 2022),
+  divipol_cong_26 %>% mutate(annoh = 2026)
+) %>%
+  left_join(map_rnec_codmpio %>% select(code_RNEC, codmpio), by = "code_RNEC") %>%
+  mutate(coddepto = floor(codmpio / 1000)) %>%
+  filter(!is.na(codmpio))
+
+censo_nac <- censo_divipol_hist %>%
   group_by(annoh) %>%
   summarise(censo_total = sum(censo, na.rm = TRUE), .groups = "drop")
 
-censo_dep <- base_dep_part %>%
-  distinct(annoh, coddepto, id_puesto, censo) %>%
+censo_dep <- censo_divipol_hist %>%
   group_by(annoh, coddepto) %>%
   summarise(censo_total = sum(censo, na.rm = TRUE), .groups = "drop")
 
@@ -1338,7 +1343,7 @@ part_dep_comp <- part_dep %>%
     cambio_18 = part_2026 - part_2018
   ) %>% arrange(coddepto)
 
-# 2. PARTICIPACIÓN TOTAL CONGRESO (Usando tu lógica pmax por llave_mesa leyendo los escrutinios)
+# 2. PARTICIPACIÓN TOTAL CONGRESO
 calc_total_congreso_mesa <- function(anno_val) {
   
   if (anno_val == 2026) {
@@ -1356,7 +1361,6 @@ calc_total_congreso_mesa <- function(anno_val) {
       df <- bind_rows(df, ctp)
     }
     
-    # Lógica de tu Rmd para crear llave_mesa en 2022
     df <- df %>%
       mutate(
         c_dpto = if("COD_DPTO" %in% names(.)) COD_DPTO else coddepto,
@@ -1376,7 +1380,6 @@ calc_total_congreso_mesa <- function(anno_val) {
     cam <- readRDS("../Congreso 2026/datos/2018/ESCRUTINIO/escrutinio_2018_cam_partido.rds") %>% mutate(grupo_total = "Cámara")
     df <- bind_rows(sen, cam)
     
-    # Lógica de tu Rmd para crear llave_mesa en 2018
     df <- df %>%
       mutate(
         c_dpto = if("COD_DPTO" %in% names(.)) COD_DPTO else coddepto,
@@ -1423,18 +1426,16 @@ sf_dep_part <- readRDS(file.path(ruta_general, "shapes", "departamento_simpl_san
 
 # =====================================================================3
 #  SECCION 03-4 PARTICIPACIÓN MUNICIPAL ----
-#Reutiliza base_dep_part, censo/votos, todos_municipios y ruta_general del departamental
 # =====================================================================3
 
-
-censo_mpio <- base_dep_part %>%
-  distinct(annoh, codmpio, id_puesto, censo) %>%
-  group_by(annoh, codmpio) %>% summarise(censo_total = sum(censo, na.rm = TRUE), .groups = "drop")
+censo_mpio <- censo_divipol_hist %>%
+  group_by(annoh, codmpio) %>% 
+  summarise(censo_total = sum(censo, na.rm = TRUE), .groups = "drop")
 
 votos_mpio <- base_dep_part %>%
   group_by(annoh, corp_mapa, codmpio) %>% summarise(votos_total = sum(votos, na.rm = TRUE), .groups = "drop")
 
-muni_info <- rnec_dane_mpio %>% distinct(codmpio, Municipio, Depto)
+muni_info <- todos_municipios %>% distinct(codmpio, Municipio, Depto)
 grilla_mpio <- expand_grid(annoh = c(2018, 2022, 2026),
                            corp_tabla = c("Senado", "Cámara"),
                            codmpio = sort(unique(muni_info$codmpio)))
@@ -1635,4 +1636,365 @@ saveRDS(list(
 
 message("Listo: datos_exterior_part.rds generados con Senado y Cámara")
 
+# =====================================================================3
+#  SECCION 03-6 PARTICIPACIÓN ESPECIALES ----
+# =====================================================================3
 
+sf_use_s2(FALSE)
+
+quitar_huecos_sf <- function(sf_obj, area_min_hueco = 5e7) {
+  crs_obj <- st_crs(sf_obj)
+  quitar_huecos_geom <- function(g) {
+    if (inherits(g, "MULTIPOLYGON")) {
+      polys <- lapply(g, function(p) {
+        if (length(p) == 0) return(p)
+        exterior <- p[1]
+        holes <- p[-1]
+        if (length(holes) == 0) return(p)
+        holes_ok <- holes[sapply(holes, function(r) {
+          hole_poly <- st_polygon(list(r))
+          as.numeric(st_area(st_sfc(hole_poly, crs = crs_obj))) >= area_min_hueco
+        })]
+        c(exterior, holes_ok)
+      })
+      st_multipolygon(polys)
+    } else if (inherits(g, "POLYGON")) {
+      if (length(g) == 0) return(g)
+      exterior <- g[1]
+      holes <- g[-1]
+      if (length(holes) == 0) return(g)
+      holes_ok <- holes[sapply(holes, function(r) {
+        hole_poly <- st_polygon(list(r))
+        as.numeric(st_area(st_sfc(hole_poly, crs = crs_obj))) >= area_min_hueco
+      })]
+      st_polygon(c(exterior, holes_ok))
+    } else { g }
+  }
+  sf_obj %>% mutate(geometry = st_sfc(lapply(st_geometry(.), quitar_huecos_geom), crs = crs_obj)) %>% st_as_sf()
+}
+
+# 1. Censo Total Municipal y Departamental (Usando base_congreso distinct para evitar NAs)
+censo_mun_total <- base_congreso %>%
+  filter(annoh %in% c(2018, 2022, 2026)) %>%
+  mutate(coddepto = floor(codmpio / 1000)) %>%
+  distinct(annoh, codmpio, coddepto, code_RNEC, zona, puesto, censo)
+
+censo_dep_tot <- censo_mun_total %>% group_by(annoh, coddepto) %>% summarise(censo = sum(censo, na.rm=TRUE), .groups="drop")
+censo_mun_tot <- censo_mun_total %>% group_by(annoh, codmpio) %>% summarise(censo = sum(censo, na.rm=TRUE), .groups="drop")
+
+# 2. Votos y Censo CITREP (Usando su lógica exacta)
+base_citrep <- base_congreso %>%
+  filter(annoh %in% c(2022, 2026), codcirc == 9, zona == 99, !is.na(CTEP), CTEP != 0)
+
+censo_citrep_reg <- base_citrep %>% distinct(annoh, CTEP, code_RNEC, zona, puesto, censo) %>% group_by(annoh, CTEP) %>% summarise(censo = sum(censo, na.rm=TRUE), .groups="drop")
+votos_citrep_reg <- base_citrep %>% group_by(annoh, CTEP) %>% summarise(votos = sum(votos, na.rm=TRUE), .groups="drop")
+
+censo_citrep_mun <- base_citrep %>% distinct(annoh, codmpio, code_RNEC, zona, puesto, censo) %>% group_by(annoh, codmpio) %>% summarise(censo = sum(censo, na.rm=TRUE), .groups="drop")
+votos_citrep_mun <- base_citrep %>% group_by(annoh, codmpio) %>% summarise(votos = sum(votos, na.rm=TRUE), .groups="drop")
+
+# 3. Votos Afro e Indígena (Municipal y Departamental)
+votos_esp_base <- base_congreso %>%
+  filter(annoh %in% c(2018, 2022, 2026)) %>%
+  mutate(
+    coddepto = floor(codmpio / 1000),
+    eleccion = case_when(
+      corp == "SENADO" & codcirc == 4 ~ "Senado Indígena",
+      corp == "CAMARA" & codcirc == 4 ~ "Cámara Indígena",
+      corp == "CAMARA" & codcirc == 5 ~ "Cámara Afro",
+      TRUE ~ NA_character_
+    )
+  ) %>% filter(!is.na(eleccion))
+
+votos_esp_mun <- votos_esp_base %>% group_by(eleccion, annoh, codmpio) %>% summarise(votos = sum(votos, na.rm=TRUE), .groups="drop")
+votos_esp_dep <- votos_esp_base %>% group_by(eleccion, annoh, coddepto) %>% summarise(votos = sum(votos, na.rm=TRUE), .groups="drop")
+
+# 4. Grillas y Consolidación MUNICIPAL
+mpios_validos <- todos_municipios %>% select(codmpio, Municipio, Depto, CTEP) %>% distinct()
+
+grilla_mun_esp <- expand_grid(
+  eleccion = c("Senado Indígena", "Cámara Indígena", "Cámara Afro"),
+  annoh = c(2018, 2022, 2026),
+  codmpio = unique(mpios_validos$codmpio)
+)
+part_mun_esp <- grilla_mun_esp %>%
+  left_join(votos_esp_mun, by=c("eleccion","annoh","codmpio")) %>%
+  left_join(censo_mun_tot, by=c("annoh","codmpio")) %>%
+  mutate(votos = replace_na(votos, 0), part = if_else(!is.na(censo) & censo > 0, 100 * votos / censo, NA_real_))
+
+grilla_mun_citrep <- expand_grid(
+  eleccion = "CITREP",
+  annoh = c(2022, 2026),
+  codmpio = unique(mpios_validos$codmpio[!is.na(mpios_validos$CTEP) & mpios_validos$CTEP != 0])
+)
+part_mun_citrep <- grilla_mun_citrep %>%
+  left_join(votos_citrep_mun, by=c("annoh","codmpio")) %>%
+  left_join(censo_citrep_mun, by=c("annoh","codmpio")) %>%
+  mutate(votos = replace_na(votos, 0), part = if_else(!is.na(censo) & censo > 0, 100 * votos / censo, NA_real_))
+
+part_mun_all <- bind_rows(part_mun_esp, part_mun_citrep) %>%
+  select(eleccion, annoh, codmpio, part) %>%
+  pivot_wider(names_from = annoh, values_from = part, names_prefix = "part_")
+
+if(!"part_2018" %in% names(part_mun_all)) part_mun_all$part_2018 <- NA_real_
+
+part_mun_all <- part_mun_all %>%
+  mutate(cambio_22 = part_2026 - part_2022, cambio_18 = if_else(eleccion == "CITREP", NA_real_, part_2026 - part_2018)) %>%
+  left_join(mpios_validos %>% select(codmpio, Municipio, Depto), by="codmpio")
+
+# 5. Grillas y Consolidación REGIONAL
+deptos_validos <- map_depto_nom %>% distinct()
+
+grilla_dep_esp <- expand_grid(
+  eleccion = c("Senado Indígena", "Cámara Indígena", "Cámara Afro"),
+  annoh = c(2018, 2022, 2026),
+  coddepto = unique(deptos_validos$coddepto)
+)
+part_dep_esp <- grilla_dep_esp %>%
+  left_join(votos_esp_dep, by=c("eleccion","annoh","coddepto")) %>%
+  left_join(censo_dep_tot, by=c("annoh","coddepto")) %>%
+  mutate(votos = replace_na(votos, 0), part = if_else(!is.na(censo) & censo > 0, 100 * votos / censo, NA_real_), id_region = coddepto) %>%
+  select(eleccion, annoh, id_region, part)
+
+grilla_reg_citrep <- expand_grid(eleccion = "CITREP", annoh = c(2022, 2026), CTEP = 1:16)
+part_reg_citrep <- grilla_reg_citrep %>%
+  left_join(votos_citrep_reg, by=c("annoh","CTEP")) %>%
+  left_join(censo_citrep_reg, by=c("annoh","CTEP")) %>%
+  mutate(votos = replace_na(votos, 0), part = if_else(!is.na(censo) & censo > 0, 100 * votos / censo, NA_real_), id_region = CTEP) %>%
+  select(eleccion, annoh, id_region, part)
+
+part_reg_all <- bind_rows(part_dep_esp, part_reg_citrep) %>%
+  pivot_wider(names_from = annoh, values_from = part, names_prefix = "part_")
+
+if(!"part_2018" %in% names(part_reg_all)) part_reg_all$part_2018 <- NA_real_
+
+map_citrep_lbl <- tibble::tribble(
+  ~CTEP, ~lbl,
+  1L, "1. Cauca-Nariño-Valle", 2L, "2. Arauca", 3L, "3. Bajo Cauca", 4L, "4. Catatumbo",
+  5L, "5. Caquetá-Huila", 6L, "6. Chocó", 7L, "7. Sur de Meta-Guaviare", 8L, "8. Montes de María",
+  9L, "9. Pacífico Cauca-Valle", 10L, "10. Pacífico Nariño", 11L, "11. Putumayo", 12L, "12. Cesar-Guajira-Magdalena",
+  13L, "13. Sur de Bolívar", 14L, "14. Sur de Córdoba", 15L, "15. Sur de Tolima", 16L, "16. Urabá"
+)
+
+part_reg_all <- part_reg_all %>%
+  mutate(cambio_22 = part_2026 - part_2022, cambio_18 = if_else(eleccion == "CITREP", NA_real_, part_2026 - part_2018)) %>%
+  left_join(deptos_validos %>% rename(id_region = coddepto, nombre_region = Depto) %>% mutate(is_citrep=FALSE), by="id_region") %>%
+  left_join(map_citrep_lbl %>% rename(id_region_citrep = CTEP, nombre_citrep = lbl), by=c("id_region"="id_region_citrep")) %>%
+  mutate(nombre_region = if_else(eleccion == "CITREP", nombre_citrep, nombre_region)) %>%
+  select(-nombre_citrep, -is_citrep) %>% filter(!is.na(nombre_region))
+
+# 6. Geometría CITREP
+sf_citrep <- readRDS(file.path(ruta_general, "shapes", "muni_simpl_sanandres_cache.rds"))$sf_obj %>%
+  mutate(codmpio = as.integer(codmpio)) %>%
+  left_join(mpios_validos %>% select(codmpio, CTEP), by = "codmpio") %>%
+  filter(!is.na(CTEP), CTEP != 0) %>%
+  group_by(CTEP) %>% summarise(do_union = TRUE, .groups = "drop") %>%
+  st_make_valid() %>% st_collection_extract("POLYGON") %>% st_cast("MULTIPOLYGON") %>%
+  quitar_huecos_sf(area_min_hueco = 5e7)
+
+sf_use_s2(TRUE)
+
+saveRDS(list(regional = part_reg_all, municipal = part_mun_all, sf_citrep = sf_citrep), "datos_especiales_part.rds")
+message("Listo: datos_especiales_part.rds generados con éxito")
+
+
+# =====================================================================3
+#  SECCION 03-7 BRECHA CITREP Y PARTICIPACIÓN RURAL/URBANA ----
+# =====================================================================3
+
+# --- 1. BRECHA CÁMARA RURAL VS CITREP (2026) ---
+
+# Censo Rural (zona 99) 2026
+censo_rb_mun_26 <- censo_divipol_hist  %>% 
+  filter(annoh == 2026, zona == 99) %>%
+  group_by(codmpio) %>%
+  summarise(censo = sum(censo, na.rm = TRUE), .groups = "drop") %>%
+  left_join(todos_municipios %>% select(codmpio, CTEP) %>% distinct(), by = "codmpio")
+
+# Votos Cámara Rural y CITREP 2026
+votos_cam_citrep <- base_congreso %>% filter(annoh == 2026, corp == "CAMARA", codcirc %in% c(1,4,5), zona == 99) %>% group_by(codmpio) %>% summarise(votos_cam = sum(votos, na.rm=TRUE), .groups="drop")
+votos_citrep_solo <- base_congreso %>% filter(annoh == 2026, codcirc == 9, zona == 99) %>% group_by(codmpio) %>% summarise(votos_citrep = sum(votos, na.rm=TRUE), .groups="drop")
+
+# Consolidado de Diferencias a nivel Municipal
+diff_citrep_camara <- censo_rb_mun_26 %>% 
+  filter(!is.na(CTEP), CTEP != 0) %>%
+  left_join(votos_cam_citrep, by="codmpio") %>%
+  left_join(votos_citrep_solo, by="codmpio") %>%
+  mutate(
+    votos_cam = replace_na(votos_cam, 0),
+    votos_citrep = replace_na(votos_citrep, 0),
+    part_cam = if_else(censo > 0, 100 * votos_cam / censo, NA_real_),
+    part_citrep = if_else(censo > 0, 100 * votos_citrep / censo, NA_real_),
+    diff_pp = part_cam - part_citrep
+  ) %>%
+  left_join(todos_municipios %>% select(codmpio, Municipio, Depto) %>% distinct(), by="codmpio") %>%
+  filter(!is.na(diff_pp)) %>%
+  arrange(desc(diff_pp))
+
+# KPIs (Sumatorias absolutas para la franja superior)
+kpi_citrep <- sum(diff_citrep_camara$votos_citrep, na.rm=T) / sum(diff_citrep_camara$censo, na.rm=T) * 100
+kpi_cam_en_citrep <- sum(diff_citrep_camara$votos_cam, na.rm=T) / sum(diff_citrep_camara$censo, na.rm=T) * 100
+
+censo_no_citrep <- censo_rb_mun_26 %>% filter(is.na(CTEP) | CTEP == 0)
+votos_cam_no_citrep <- votos_cam_citrep %>% filter(codmpio %in% censo_no_citrep$codmpio)
+kpi_cam_no_citrep <- sum(votos_cam_no_citrep$votos_cam, na.rm=T) / sum(censo_no_citrep$censo, na.rm=T) * 100
+
+kpis_brecha <- tibble(
+  metrica = c("CITREP", "Cámara rural en municipios CITREP", "Cámara rural en el resto del país"),
+  valor = c(kpi_citrep, kpi_cam_en_citrep, kpi_cam_no_citrep)
+)
+
+
+# --- 2. PARTICIPACIÓN RURAL Y URBANA HISTÓRICA ---
+
+# Censo por zona (Rural = 99, Urbano = otros)
+censo_rb_hist <- censo_divipol_hist  %>%
+  mutate(zona_rb = if_else(zona == 99, "Rural", "Urbano")) %>%
+  group_by(annoh, zona_rb) %>%
+  summarise(censo = sum(censo, na.rm=TRUE), .groups="drop")
+
+censo_citrep_hist <- censo_citrep_mun %>%
+  mutate(zona_rb = "Rural") %>%
+  group_by(annoh, zona_rb) %>%
+  summarise(censo = sum(censo, na.rm=TRUE), .groups="drop")
+
+# Votos por zona
+votos_rb_nac <- base_congreso %>%
+  filter(annoh %in% c(2018, 2022, 2026)) %>%
+  mutate(
+    zona_rb = if_else(zona == 99, "Rural", "Urbano"),
+    Eleccion = case_when(
+      corp == "SENADO" & codcirc %in% c(0,4) ~ "Senado",
+      corp == "CAMARA" & codcirc %in% c(1,4,5) ~ "Cámara",
+      codcirc == 9 & zona == 99 & CTEP != 0 ~ "CITREP",
+      TRUE ~ NA_character_
+    )
+  ) %>% filter(!is.na(Eleccion)) %>%
+  group_by(annoh, Eleccion, zona_rb) %>%
+  summarise(votos = sum(votos, na.rm=TRUE), .groups="drop")
+
+# Consolidado
+part_rb_nac <- votos_rb_nac %>%
+  left_join(
+    bind_rows(
+      censo_rb_hist %>% mutate(Eleccion = "Senado"),
+      censo_rb_hist %>% mutate(Eleccion = "Cámara"),
+      censo_citrep_hist %>% mutate(Eleccion = "CITREP")
+    ), by = c("annoh", "Eleccion", "zona_rb")
+  ) %>%
+  mutate(part = if_else(censo > 0, 100 * votos / censo, NA_real_)) %>%
+  arrange(annoh, Eleccion, zona_rb)
+
+part_rb_nac_wide <- part_rb_nac %>%
+  select(annoh, Eleccion, zona_rb, part) %>%
+  pivot_wider(names_from = zona_rb, values_from = part) %>%
+  filter(!is.na(Rural) & !is.na(Urbano))
+
+# Guardar todo
+saveRDS(list(
+  kpis_brecha = kpis_brecha,
+  diff_citrep_camara = diff_citrep_camara,
+  part_rb_nac = part_rb_nac,
+  part_rb_nac_wide = part_rb_nac_wide
+), "datos_rural_urbano.rds")
+
+message("Listo: datos_rural_urbano.rds generados con éxito")
+
+# =====================================================================3
+#  SECCION 03-8 IMPACTO NUEVOS PUESTOS RURALES ----
+# =====================================================================3
+
+# 1. Leer puestos nuevos desde Excel
+puestos_nuevos_26 <- read_excel("../Inscripción de cédulas/Match codigos puestos 2023 y 2026.xlsx") %>%
+  mutate(id_puesto = str_replace(codpuesto26, "^(\\d{2})-(\\d{3})-(\\d{2})-(\\d{2})$", "\\1\\2-\\3-\\4")) %>%
+  filter(flag_nuevo_26 == TRUE) %>%
+  select(id_puesto) %>%
+  distinct()
+
+# 2. Filtrar base rural y mapear a códigos DANE para evitar NAs
+base_rural <- base_congreso %>%
+  filter(annoh %in% c(2022, 2026), corp %in% c("SENADO", "CAMARA"), zona == 99) %>%
+  filter(!is.na(codmpio)) %>%
+  mutate(
+    id_puesto = paste0(
+      str_pad(as.character(code_RNEC), 5, pad = "0"), "-",
+      str_pad(as.character(zona), 2, pad = "0"), "-",
+      str_pad(as.character(puesto), 2, pad = "0")
+    ),
+    grupo = case_when(
+      corp == "SENADO" & codcirc %in% c(0, 4) ~ "Senado",
+      corp == "CAMARA" & codcirc %in% c(1, 4, 5) ~ "Cámara",
+      corp == "CAMARA" & codcirc == 9 & CTEP != 0 ~ "CITREP",
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  filter(!is.na(grupo))
+
+# 3. Calcular el Neto de Nuevos Puestos Rurales
+puestos_rural_22 <- base_rural %>% filter(annoh == 2022) %>% distinct(id_puesto) %>% nrow()
+puestos_rural_26 <- base_rural %>% filter(annoh == 2026) %>% distinct(id_puesto) %>% nrow()
+neto_nuevos_rurales <- puestos_rural_26 - puestos_rural_22
+
+# 4. Cálculo de Censo y Votos
+censo_rural_sc <- base_rural %>% filter(grupo %in% c("Senado", "Cámara")) %>% distinct(annoh, codmpio, id_puesto, censo)
+censo_rural_citrep <- base_rural %>% filter(grupo == "CITREP") %>% distinct(annoh, codmpio, id_puesto, censo)
+
+part_sc <- base_rural %>%
+  filter(grupo %in% c("Senado", "Cámara")) %>%
+  group_by(annoh, grupo, codmpio) %>%
+  summarise(votos = sum(votos, na.rm = TRUE), .groups = "drop") %>%
+  left_join(
+    censo_rural_sc %>% group_by(annoh, codmpio) %>% summarise(censo = sum(censo, na.rm = TRUE), .groups = "drop"),
+    by = c("annoh", "codmpio")
+  ) %>% mutate(part_pct = 100 * votos / censo)
+
+part_citrep <- base_rural %>%
+  filter(grupo == "CITREP") %>%
+  group_by(annoh, grupo, codmpio) %>%
+  summarise(votos = sum(votos, na.rm = TRUE), .groups = "drop") %>%
+  left_join(
+    censo_rural_citrep %>% group_by(annoh, codmpio) %>% summarise(censo = sum(censo, na.rm = TRUE), .groups = "drop"),
+    by = c("annoh", "codmpio")
+  ) %>% mutate(part_pct = 100 * votos / censo)
+
+# 5. Deltas y Cruce con Puestos Nuevos
+part_mun_rural <- bind_rows(part_sc, part_citrep)
+
+delta_part_rural <- part_mun_rural %>%
+  select(annoh, grupo, codmpio, part_pct) %>%
+  pivot_wider(names_from = annoh, values_from = part_pct, names_prefix = "part_") %>%
+  mutate(delta_part_pp = part_2026 - part_2022) %>%
+  select(grupo, codmpio, delta_part_pp)
+
+puestos_nuevos_mun <- base_rural %>%
+  filter(annoh == 2026) %>%
+  distinct(codmpio, id_puesto) %>%
+  semi_join(puestos_nuevos_26, by = "id_puesto") %>%
+  count(codmpio, name = "puestos_nuevos")
+
+df_plot_puestos <- delta_part_rural %>%
+  left_join(puestos_nuevos_mun, by = "codmpio") %>%
+  mutate(
+    puestos_nuevos = replace_na(puestos_nuevos, 0L),
+    bin_puestos = case_when(
+      puestos_nuevos == 0 ~ "0",
+      puestos_nuevos == 1 ~ "1",
+      puestos_nuevos == 2 ~ "2",
+      puestos_nuevos >= 3 ~ "3 o más",
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  filter(!is.na(bin_puestos), !is.na(delta_part_pp)) %>%
+  group_by(grupo, bin_puestos) %>%
+  summarise(
+    delta_part_pp = mean(delta_part_pp, na.rm = TRUE),
+    n_mun = n(),
+    .groups = "drop"
+  )
+
+# 6. Guardar Resultados
+saveRDS(list(
+  df_plot = df_plot_puestos,
+  neto_nuevos = neto_nuevos_rurales
+), "datos_impacto_puestos.rds")
+
+message("Listo: datos_impacto_puestos.rds generados con éxito")

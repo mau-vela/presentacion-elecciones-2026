@@ -31,7 +31,8 @@ datos_esc_gral <- readRDS("datos_escrutinio_gral.rds")
 datos_esc_curules <- readRDS("datos_escrutinio_curules.rds")
 datos_part <- readRDS("datos_participacion_final.rds")
 datos_ext <- readRDS("datos_exterior_part.rds")
-
+datos_esp <- readRDS("datos_especiales_part.rds")
+datos_rb <- readRDS("datos_rural_urbano.rds")
 ```
 
 ::: {.hero}
@@ -1023,7 +1024,7 @@ html`
 ## Participación a nivel nacional
 
 ```{ojs}
-md`La participación en el Congreso 2026 fue de **${fmtPct(part_cong_26)}**, ${part_cong_26 >= part_cong_22 ? "por encima" : "por debajo"} del **${fmtPct(part_cong_22)}** de 2022 (**${fmtCambio(part_cong_26 - part_cong_22)}**). El indicador se calcula con el máximo de votos por mesa entre Senado y Cámara, para no contar dos veces a quien votó en ambas.`
+md`La participación en el Congreso 2026 fue de **${fmtPct(part_cong_26)}**, ${part_cong_26 >= part_cong_22 ? "por encima" : "por debajo"} del **${fmtPct(part_cong_22)}** de 2022 (**${fmtCambio(part_cong_26 - part_cong_22)}**).`
 ```
 
 
@@ -1108,7 +1109,6 @@ part_dep_data = transpose(part_dep_ojs).filter(d => d.corp_tabla === part_corp_d
 ```
 El aumento se concentra en el Caribe, destacandose también Chocó y Caquetá. Las caídas fuertes se dieron especialmente en Guainía, Arauca, Huila y Putumayo.
 
-
 ```{ojs}
 {
   const d = part_dep_data.filter(x => x.part_2026 != null);
@@ -1134,11 +1134,11 @@ mapa_dep <- function(var, titulo, es_cambio) {
     m <- max(abs(vals), na.rm = TRUE)
     pal <- colorNumeric(c("#cb181d", "#f7f7f7", "#2171b5"), domain = c(-m, m), na.color = "#eeeeee")
   } else {
-    pal <- colorNumeric("Blues", domain = vals, na.color = "#eeeeee")
+    pal <- colorBin("Blues", domain = vals, bins = 5, na.color = "#eeeeee")
   }
   lab <- sprintf("<b>%s</b><br>2026: %s%%<br>vs 2022: %s pp &nbsp;·&nbsp; vs 2018: %s pp",
-    mp$Depto, formatC(mp$part_2026, 1, format = "f"),
-    formatC(mp$cambio_22, 1, format = "f"), formatC(mp$cambio_18, 1, format = "f")) %>%
+    mp$Depto, formatC(mp$part_2026, 1, format = "f", decimal.mark = ","),
+    formatC(mp$cambio_22, 1, format = "f", decimal.mark = ","), formatC(mp$cambio_18, 1, format = "f", decimal.mark = ",")) %>%
     lapply(htmltools::HTML)
   leaflet(mp, height = 540) %>% addProviderTiles("CartoDB.Positron") %>%
     addPolygons(weight = 0.6, color = "#ffffff", fillColor = pal(vals), fillOpacity = 0.88,
@@ -1223,15 +1223,15 @@ mapa_muni <- function(corp_sel, tipo) {
     vals <- mp$dif_sc; m <- max(abs(vals), na.rm = TRUE)
     pal <- colorNumeric(c("#cb181d", "#f7f7f7", "#2171b5"), domain = c(-m, m), na.color = "#eeeeee")
     lab <- sprintf("<b>%s</b> <span style='color:#888'>(%s)</span><br>Senado: %s%% &nbsp; Cámara: %s%%<br>Sen − Cám: <b>%s pp</b>",
-      mp$Municipio, mp$Depto, formatC(mp$part_sen, 1, format = "f"),
-      formatC(mp$part_cam, 1, format = "f"), formatC(mp$dif_sc, 1, format = "f")) %>% lapply(htmltools::HTML)
+      mp$Municipio, mp$Depto, formatC(mp$part_sen, 1, format = "f", decimal.mark=","),
+      formatC(mp$part_cam, 1, format = "f", decimal.mark=","), formatC(mp$dif_sc, 1, format = "f", decimal.mark=",")) %>% lapply(htmltools::HTML)
     titulo <- "Sen − Cám (pp)"; suf <- " pp"; usebins <- TRUE
   } else {
     d <- muni_all %>% filter(corp_tabla == corp_sel)
     mp <- sf_mpi %>% left_join(d, by = "codmpio") %>%
       left_join(muni_dif_r %>% select(codmpio, dif_sc), by = "codmpio")
     if (tipo == "nivel") {
-      var <- "part_2026"; pal <- colorNumeric("Blues", domain = mp$part_2026, na.color = "#eeeeee")
+      var <- "part_2026"; pal <- colorBin("Blues", domain = mp$part_2026, bins = 5, na.color = "#eeeeee")
       titulo <- "Participación 2026 (%)"; suf <- "%"; usebins <- FALSE
     } else if (tipo == "c22") {
       var <- "cambio_22"; m <- max(abs(mp$cambio_22), na.rm = TRUE)
@@ -1244,9 +1244,9 @@ mapa_muni <- function(corp_sel, tipo) {
     }
     vals <- mp[[var]]
     lab <- sprintf("<b>%s</b> <span style='color:#888'>(%s)</span><br>2026: %s%% &nbsp; vs 2022: %s pp &nbsp; vs 2018: %s pp<br>Sen − Cám: %s pp",
-      mp$Municipio, mp$Depto, formatC(mp$part_2026, 1, format = "f"),
-      formatC(mp$cambio_22, 1, format = "f"), formatC(mp$cambio_18, 1, format = "f"),
-      formatC(mp$dif_sc, 1, format = "f")) %>% lapply(htmltools::HTML)
+      mp$Municipio, mp$Depto, formatC(mp$part_2026, 1, format = "f", decimal.mark=","),
+      formatC(mp$cambio_22, 1, format = "f", decimal.mark=","), formatC(mp$cambio_18, 1, format = "f", decimal.mark=","),
+      formatC(mp$dif_sc, 1, format = "f", decimal.mark=",")) %>% lapply(htmltools::HTML)
   }
   leyenda <- if (usebins) function(x) addLegend(x, pal = pal, values = vals, title = titulo,
             position = "bottomleft", bins = 5, labFormat = labelFormat(suffix = suf))
@@ -1262,7 +1262,6 @@ mapa_muni <- function(corp_sel, tipo) {
 ```{ojs}
 viewof muni_corp = Inputs.radio(["Senado", "Cámara", "Comparación S-C"], {value: "Senado"})
 viewof muni_modo = Inputs.radio(["Nivel 2026", "Cambio vs 2022", "Cambio vs 2018"], {value: "Nivel 2026"})
-viewof muni_top = Inputs.select(["Top 20 más alto", "Top 20 más bajo"], {value: "Top 20 más alto"})
 ```
 
 ```{ojs}
@@ -1367,6 +1366,11 @@ update_map = {
 :::
 
 ::: {style="flex: 0 0 46%; width: 46%;"}
+
+```{ojs}
+viewof muni_top = Inputs.select(["Top 20 más alto", "Top 20 más bajo"], {value: "Top 20 más alto"})
+```
+
 ```{ojs}
 tabla_muni = {
   const esDif = muni_corp === "Comparación S-C";
@@ -1390,25 +1394,42 @@ tabla_muni = {
   const top = muni_top === "Top 20 más alto" ? data.slice(0,20) : data.slice(-20).reverse();
   const rows = top.map(rowFn).join("");
   
-  return html`
-  <div style="background:#fff; border:1px solid #EAF0F6; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,0.04); display:flex; flex-direction:column; height: 540px; overflow:hidden;">
-    <!-- ENCABEZADO Y FILTRO INTEGRADO -->
-    <div style="padding: 10px 16px; border-bottom: 1px solid #CBD5E1; display:flex; justify-content:space-between; align-items:center; background:#F1F5F9;">
-      <div style="font-weight:800; color:#0B2E63; font-size:13px; text-transform:uppercase;">Municipios destacados</div>
-      <div style="font-size:12px;">
-        ${viewof muni_top}
-      </div>
-    </div>
-    <!-- TABLA CON SCROLL -->
-    <div style="overflow-y: auto; flex: 1;">
-      <table style="width:100%; border-collapse:collapse; font-family:sans-serif;">
-        <thead>${head}</thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>
-  </div>
+  const wrapper = document.createElement("div");
+  wrapper.style.display = "flex";
+  wrapper.style.flexDirection = "column";
+  wrapper.style.height = "540px"; 
+
+  const header = document.createElement("div");
+  header.style = "display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;";
+  
+  const title = document.createElement("div");
+  title.style = "font-weight: 800; color: #0B2E63; font-size: 13.5px; text-transform: uppercase;";
+  title.innerText = "Municipios destacados";
+  
+  const filterCont = document.createElement("div");
+  filterCont.appendChild(viewof muni_top); 
+
+  header.appendChild(title);
+  header.appendChild(filterCont);
+
+  const tableCont = document.createElement("div");
+  tableCont.style = "background:#fff; border:1px solid #EAF0F6; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.02); flex: 1; overflow-y: auto;";
+  
+  tableCont.innerHTML = `
+    <table style="width:100%; border-collapse:collapse; font-family:sans-serif;">
+      <thead>${head}</thead>
+      <tbody>${rows}</tbody>
+    </table>
   `;
+
+  wrapper.appendChild(header);
+  wrapper.appendChild(tableCont);
+
+  return wrapper;
 }
+```
+```{ojs}
+html`${tabla_muni}`
 ```
 :::
 
@@ -1458,7 +1479,7 @@ html`
   </div>
   <div style="flex:1; border-left: 1px solid #CBD5E1; padding-left:32px; display:flex; flex-direction:column; justify-content:center;">
     <div style="font-size:15px; color:#334155; font-weight:500; margin-bottom:4px;">Frente a 2022: <strong style="color:${part_ext_26_val > part_ext_22_val ? '#1B7A3A' : '#C00000'}; font-size:16px;">${fmtCambio_ext(part_ext_26_val - part_ext_22_val)}</strong></div>
-    <div style="font-size:11.5px; color:#94A3B8; font-style:italic; line-height:1.2; max-width: 320px;">* Indicadores dinámicos. Ajusta el filtro de corporación arriba para ver los datos de Senado o Cámara.</div>
+    <div style="font-size:11.5px; color:#94A3B8; font-style:italic; line-height:1.2; max-width: 320px;">* </div>
   </div>
 </div>
 `
@@ -1598,6 +1619,816 @@ update_ext_map = {
     target.style.zIndex = "10";
   }
 }
+```
+## Participación en circunscripciones especiales
+
+```{r}
+#| label: datos-esp-part
+datos_esp <- readRDS("datos_especiales_part.rds")
+ojs_define(esp_reg_ojs = datos_esp$regional)
+ojs_define(esp_mun_ojs = datos_esp$municipal)
+```
+
+```{ojs}
+// Filtros interactivos unificados (Oculta 2018 si es CITREP)
+viewof esp_elec = Inputs.radio(["CITREP", "Senado Indígena", "Cámara Indígena", "Cámara Afro"], {value: "CITREP", label: html`<b style="font-size:14px; color:#1F2937;">Elección:</b>`})
+viewof esp_nivel = Inputs.radio(["Regional", "Municipal"], {value: "Regional", label: html`<b style="font-size:14px; color:#1F2937;">Nivel:</b>`, format: x => x === "Regional" ? (esp_elec === "CITREP" ? "Circunscripciones" : "Departamental") : x})
+viewof esp_crit = Inputs.radio(
+  esp_elec === "CITREP" ? ["Nivel 2026", "Cambio vs 2022"] : ["Nivel 2026", "Cambio vs 2022", "Cambio vs 2018"], 
+  {value: "Nivel 2026", label: html`<b style="font-size:14px; color:#1F2937;">Criterio:</b>`}
+)
+viewof esp_top = Inputs.select(["Top 20 más alto", "Top 20 más bajo"], {value: "Top 20 más alto"})
+```
+
+```{ojs}
+html`
+<div style="display: flex; gap: 32px; background: #F8FAFC; padding: 12px 20px; border-radius: 8px; border: 1px solid #E2E8F0; align-items: center; margin-bottom: 16px;">
+  <div style="display: flex; align-items: center; gap: 12px;">
+    ${viewof esp_elec}
+  </div>
+  <div style="display: flex; align-items: center; gap: 12px; border-left: 1px solid #CBD5E1; padding-left: 32px;">
+    ${viewof esp_nivel}
+  </div>
+  <div style="display: flex; align-items: center; gap: 12px; border-left: 1px solid #CBD5E1; padding-left: 32px;">
+    ${viewof esp_crit}
+  </div>
+</div>
+`
+```
+
+```{ojs}
+{
+  let texto = "";
+  if (esp_elec === "CITREP") {
+    texto = "Los cambios en participación son mayoritariamente moderados y cercanos a 0, lo que indica estabilidad frente a 2022 en gran parte de los municipios CITREP. Se observan aumentos puntuales en algunos territorios, pero no configuran un patrón regional amplio sino incrementos localizados. Las caídas más marcadas son menos frecuentes pero más intensas, lo que sugiere que las disminuciones de participación se concentran en pocos municipios específicos tales como en Magdalena y La Guajira.";
+  } else if (esp_elec === "Cámara Afro") {
+    texto = "La participación en la circunscripción de afrodescendientes es en general baja, con pocos focos destacados donde supera claramente el promedio, concentrados en Cauca y Huila. Estos mismos territorios no solo tienen mayor participación en 2026, sino que además muestran incrementos frente a 2022, lo que indica una dinámica local de mayor movilización. En contraste, la tendencia general es de leve disminución de la participación, con cambios cercanos a 0 en la mayoría de municipios. Las caídas más fuertes son puntuales y se concentran en pocos municipios, especialmente en zonas de Risaralda y Nariño.";
+  } else {
+    texto = "En Senado indígena, la mayor participación se concentra en territorios como Amazonas, La Guajira, Cauca, Chocó y sur del Tolima. En estos mismos espacios se observan aumentos frente a 2022, especialmente en municipios de Amazonas y La Guajira. En Cámara indígena el patrón territorial es distinto: la participación se concentra con mayor claridad en Nariño y sur del Cauca, no en los mismos focos del Senado. El cambio frente a 2022 en Cámara es más marcado en Nariño, donde varios municipios muestran incrementos visibles, consolidando ese territorio como principal foco de crecimiento.";
+  }
+  return html`<p style="font-size: 15px; color: #334155; line-height: 1.6; margin-bottom: 24px;">${texto}</p>`;
+}
+```
+
+```{r}
+#| label: mapa-esp-funciones
+sf_mpios_esp <- datos_part$sf_mpios %>% mutate(codmpio = as.integer(codmpio)) %>% st_transform(4326)
+sf_deptos_esp <- datos_part$sf_deptos %>% mutate(coddepto = as.integer(coddepto)) %>% st_transform(4326)
+sf_citrep_esp <- datos_esp$sf_citrep %>% mutate(CTEP = as.integer(CTEP)) %>% st_transform(4326)
+
+crear_mapa_esp <- function(elec_sel, nivel_sel, crit_sel) {
+  if (nivel_sel == "Regional") {
+    d <- datos_esp$regional %>% filter(eleccion == elec_sel)
+    if (elec_sel == "CITREP") {
+      mp <- sf_citrep_esp %>% left_join(d, by = c("CTEP" = "id_region"))
+      lab_nombre <- mp$nombre_region
+    } else {
+      mp <- sf_deptos_esp %>% left_join(d, by = c("coddepto" = "id_region"))
+      lab_nombre <- mp$nombre_region
+    }
+  } else {
+    d <- datos_esp$municipal %>% filter(eleccion == elec_sel)
+    mp <- sf_mpios_esp %>% left_join(d, by = "codmpio")
+    lab_nombre <- mp$Municipio
+  }
+  
+  if (crit_sel == "Nivel 2026") {
+    var <- "part_2026"
+    # Uso de colorBin para distribuir equitativamente los tonos de azul y evitar que quede todo igual
+    pal <- colorBin("Blues", domain = mp[[var]], bins = 5, na.color = "#eeeeee")
+    titulo <- "Participación 2026 (%)"; suf <- "%"
+  } else if (crit_sel == "Cambio vs 2022") {
+    var <- "cambio_22"; m <- max(abs(mp[[var]]), na.rm = TRUE)
+    pal <- colorNumeric(c("#cb181d", "#f7f7f7", "#2171b5"), domain = c(-m, m), na.color = "#eeeeee")
+    titulo <- "Cambio vs 2022 (pp)"; suf <- " pp"
+  } else {
+    var <- "cambio_18"; m <- max(abs(mp[[var]]), na.rm = TRUE)
+    pal <- colorNumeric(c("#cb181d", "#f7f7f7", "#2171b5"), domain = c(-m, m), na.color = "#eeeeee")
+    titulo <- "Cambio vs 2018 (pp)"; suf <- " pp"
+  }
+  
+  vals <- mp[[var]]
+  
+  if (elec_sel == "CITREP") {
+    lab <- sprintf("<b>%s</b><br>2026: %s%%<br>vs 2022: %s pp",
+      lab_nombre, formatC(mp$part_2026, 1, format = "f", decimal.mark = ","),
+      formatC(mp$cambio_22, 1, format = "f", decimal.mark = ",")) %>% lapply(htmltools::HTML)
+  } else {
+    lab <- sprintf("<b>%s</b><br>2026: %s%%<br>vs 2022: %s pp &nbsp;·&nbsp; vs 2018: %s pp",
+      lab_nombre, formatC(mp$part_2026, 1, format = "f", decimal.mark = ","),
+      formatC(mp$cambio_22, 1, format = "f", decimal.mark = ","),
+      formatC(mp$cambio_18, 1, format = "f", decimal.mark = ",")) %>% lapply(htmltools::HTML)
+  }
+  
+  leaflet(mp, height = 540) %>% addProviderTiles("CartoDB.Positron") %>%
+    addPolygons(weight = 0.3, color = "#ffffff", fillColor = pal(vals), fillOpacity = 0.9, label = lab,
+                highlightOptions = highlightOptions(weight = 1.5, color = "#0B2E63", bringToFront = TRUE)) %>%
+    addLegend(pal = pal, values = vals, title = titulo, position = "bottomleft", labFormat = labelFormat(suffix = suf))
+}
+```
+
+:::: {style="display: flex; gap: 24px; align-items: stretch;"}
+
+::: {style="flex: 0 0 54%; width: 54%; position: relative; height: 540px; border: 1px solid #EAF0F6; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.03);"}
+
+<!-- BLOQUES DE MAPAS PRE-RENDERIZADOS OCULTOS -->
+::: {#mapa-esp-citrep-reg-26 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
+```{r}
+crear_mapa_esp("CITREP", "Regional", "Nivel 2026")
+```
+:::
+::: {#mapa-esp-citrep-reg-c22 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
+```{r}
+crear_mapa_esp("CITREP", "Regional", "Cambio vs 2022")
+```
+:::
+::: {#mapa-esp-citrep-mun-26 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
+```{r}
+crear_mapa_esp("CITREP", "Municipal", "Nivel 2026")
+```
+:::
+::: {#mapa-esp-citrep-mun-c22 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
+```{r}
+crear_mapa_esp("CITREP", "Municipal", "Cambio vs 2022")
+```
+:::
+
+::: {#mapa-esp-camafro-reg-26 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
+```{r}
+crear_mapa_esp("Cámara Afro", "Regional", "Nivel 2026")
+```
+:::
+::: {#mapa-esp-camafro-reg-c22 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
+```{r}
+crear_mapa_esp("Cámara Afro", "Regional", "Cambio vs 2022")
+```
+:::
+::: {#mapa-esp-camafro-reg-c18 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
+```{r}
+crear_mapa_esp("Cámara Afro", "Regional", "Cambio vs 2018")
+```
+:::
+::: {#mapa-esp-camafro-mun-26 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
+```{r}
+crear_mapa_esp("Cámara Afro", "Municipal", "Nivel 2026")
+```
+:::
+::: {#mapa-esp-camafro-mun-c22 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
+```{r}
+crear_mapa_esp("Cámara Afro", "Municipal", "Cambio vs 2022")
+```
+:::
+::: {#mapa-esp-camafro-mun-c18 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
+```{r}
+crear_mapa_esp("Cámara Afro", "Municipal", "Cambio vs 2018")
+```
+:::
+
+::: {#mapa-esp-senind-reg-26 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
+```{r}
+crear_mapa_esp("Senado Indígena", "Regional", "Nivel 2026")
+```
+:::
+::: {#mapa-esp-senind-reg-c22 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
+```{r}
+crear_mapa_esp("Senado Indígena", "Regional", "Cambio vs 2022")
+```
+:::
+::: {#mapa-esp-senind-reg-c18 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
+```{r}
+crear_mapa_esp("Senado Indígena", "Regional", "Cambio vs 2018")
+```
+:::
+::: {#mapa-esp-senind-mun-26 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
+```{r}
+crear_mapa_esp("Senado Indígena", "Municipal", "Nivel 2026")
+```
+:::
+::: {#mapa-esp-senind-mun-c22 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
+```{r}
+crear_mapa_esp("Senado Indígena", "Municipal", "Cambio vs 2022")
+```
+:::
+::: {#mapa-esp-senind-mun-c18 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
+```{r}
+crear_mapa_esp("Senado Indígena", "Municipal", "Cambio vs 2018")
+```
+:::
+
+::: {#mapa-esp-camind-reg-26 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
+```{r}
+crear_mapa_esp("Cámara Indígena", "Regional", "Nivel 2026")
+```
+:::
+::: {#mapa-esp-camind-reg-c22 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
+```{r}
+crear_mapa_esp("Cámara Indígena", "Regional", "Cambio vs 2022")
+```
+:::
+::: {#mapa-esp-camind-reg-c18 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
+```{r}
+crear_mapa_esp("Cámara Indígena", "Regional", "Cambio vs 2018")
+```
+:::
+::: {#mapa-esp-camind-mun-26 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
+```{r}
+crear_mapa_esp("Cámara Indígena", "Municipal", "Nivel 2026")
+```
+:::
+::: {#mapa-esp-camind-mun-c22 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
+```{r}
+crear_mapa_esp("Cámara Indígena", "Municipal", "Cambio vs 2022")
+```
+:::
+::: {#mapa-esp-camind-mun-c18 .esp-mapa style="position:absolute; width:100%; top:0; left:0; transition: opacity 0.3s;"}
+```{r}
+crear_mapa_esp("Cámara Indígena", "Municipal", "Cambio vs 2018")
+```
+:::
+
+:::
+
+::: {style="flex: 0 0 46%; width: 46%;"}
+
+```{ojs}
+tabla_esp_render = {
+  // Lógica segura de variables
+  const var_crit_seguro = (esp_crit === "Cambio vs 2018" && esp_elec === "CITREP") ? "Nivel 2026" : esp_crit;
+  const es_mun = esp_nivel === "Municipal";
+  const var_color_esp = var_crit_seguro === "Nivel 2026" ? "part_2026" : (var_crit_seguro === "Cambio vs 2022" ? "cambio_22" : "cambio_18");
+  const datos_brutos_esp = es_mun ? transpose(esp_mun_ojs).filter(d => d.eleccion === esp_elec) : transpose(esp_reg_ojs).filter(d => d.eleccion === esp_elec);
+  
+  const fmtPct_esp = d => d == null ? "—" : d.toFixed(1).replace(".", ",") + "%";
+  const fmtCambio_esp = d => d == null ? "—" : (d > 0 ? "+" : "") + d.toFixed(1).replace(".", ",") + " pp";
+  const colr_esp = v => v > 0 ? "#1B7A3A" : (v < 0 ? "#C00000" : "#5a6a80");
+
+  let data = datos_brutos_esp.filter(d => d[var_color_esp] != null);
+  data = data.slice().sort((a,b) => b[var_color_esp] - a[var_color_esp]);
+  
+  let rows_to_show = data;
+  let header_name = es_mun ? "Municipio" : (esp_elec === "CITREP" ? "Circunscripción" : "Departamento");
+  let subtext_logic = d => es_mun ? `<div style='font-size:10px; color:#94A3B8;'>${d.Depto}</div>` : "";
+  
+  if (es_mun) {
+    rows_to_show = esp_top === "Top 20 más alto" ? data.slice(0, 20) : data.slice(-20).reverse();
+  }
+  
+  const th = "padding:12px 10px; background:#5E7C99; color:#ffffff; font-weight:600; font-size:12px; position:sticky; top:0; z-index:2; border-bottom:2px solid #4A637A;";
+  
+  let head = `<tr><th style="${th} text-align:left;">${header_name}</th><th style="${th} text-align:right;">2026</th><th style="${th} text-align:right;">Δ '22</th>`;
+  if (esp_elec !== "CITREP") { head += `<th style="${th} text-align:right;">Δ '18</th>`; }
+  head += `</tr>`;
+  
+  let tbody = rows_to_show.map((d,i) => {
+    let rowHtml = `
+      <tr style='border-bottom:1px solid #E2E8F0; background:${i%2?'#F8FAFC':'#ffffff'};'>
+        <td style='padding:10px 10px; text-align:left;'><strong style='color:#1F2937; font-size:12.5px;'>${d.nombre_region || d.Municipio}</strong>${subtext_logic(d)}</td>
+        <td style='padding:10px 6px; text-align:right; font-weight:700; color:#0B2E63; font-variant-numeric:tabular-nums; font-size:12.5px;'>${fmtPct_esp(d.part_2026)}</td>
+        <td style='padding:10px 6px; text-align:right; color:${colr_esp(d.cambio_22)}; font-weight:600; font-variant-numeric:tabular-nums; font-size:12.5px;'>${fmtCambio_esp(d.cambio_22)}</td>
+    `;
+    if (esp_elec !== "CITREP") {
+      rowHtml += `<td style='padding:10px 8px; text-align:right; color:${colr_esp(d.cambio_18)}; font-weight:600; font-variant-numeric:tabular-nums; font-size:12.5px;'>${fmtCambio_esp(d.cambio_18)}</td>`;
+    }
+    rowHtml += `</tr>`;
+    return rowHtml;
+  }).join('');
+
+  const titulo_bloque = es_mun ? 'Municipios destacados' : 'Detalle territorial';
+  const mostrar_filtro = es_mun ? 'block' : 'none';
+
+  return html`
+  <div style="background:#fff; border:1px solid #EAF0F6; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.02); display:flex; flex-direction:column; height: 540px; overflow:hidden;">
+    <div style="padding: 10px 16px; border-bottom: 1px solid #CBD5E1; display:flex; justify-content:space-between; align-items:center; background:#F1F5F9;">
+      <div style="font-weight:800; color:#0B2E63; font-size:13.5px; text-transform:uppercase;">${titulo_bloque}</div>
+      <div style="font-size:12px; display: ${mostrar_filtro};">
+        ${viewof esp_top}
+      </div>
+    </div>
+    <div style="overflow-y: auto; flex: 1;">
+      <table style="width:100%; border-collapse:collapse; font-family:sans-serif;">
+        <thead>${head}</thead>
+        <tbody>${tbody}</tbody>
+      </table>
+    </div>
+  </div>
+  `;
+}
+```
+
+:::
+
+::::
+
+```{ojs}
+// Lógica para alternar mapas
+update_esp_map = {
+  const layers = document.querySelectorAll(".esp-mapa");
+  layers.forEach(el => {
+    el.style.opacity = "0";
+    el.style.pointerEvents = "none";
+    el.style.zIndex = "0";
+  });
+  
+  let c = "citrep";
+  if (esp_elec === "Senado Indígena") c = "senind";
+  if (esp_elec === "Cámara Indígena") c = "camind";
+  if (esp_elec === "Cámara Afro") c = "camafro";
+  
+  const n = esp_nivel === "Regional" ? "reg" : "mun";
+  
+  let var_crit_seguro = (esp_crit === "Cambio vs 2018" && esp_elec === "CITREP") ? "Nivel 2026" : esp_crit;
+  let m = "26";
+  if (var_crit_seguro === "Cambio vs 2022") m = "c22";
+  if (var_crit_seguro === "Cambio vs 2018") m = "c18";
+  
+  const targetId = "mapa-esp-" + c + "-" + n + "-" + m;
+  
+  const target = document.getElementById(targetId);
+  if (target) {
+    target.style.opacity = "1";
+    target.style.pointerEvents = "auto";
+    target.style.zIndex = "10";
+  }
+}
+```
+
+### Brecha de participación: CITREP vs Cámara Rural
+
+```{r}
+#| label: datos-brecha-ojs
+
+ojs_define(kpis_brecha_ojs = datos_rb$kpis_brecha)
+ojs_define(diff_mun_ojs = datos_rb$diff_citrep_camara)
+ojs_define(part_rb_long_ojs = datos_rb$part_rb_nac)
+ojs_define(part_rb_wide_ojs = datos_rb$part_rb_nac_wide)
+```
+
+La participación rural en municipios CITREP tiende a ser más baja que en el resto de los municipios no CITREP con 52,8% versus 56,3% para Cámara de Representantes. Sin embargo, la participación por las curules CITREP es incluso más baja, siendo de 47,2%. El mapa muestra que esta brecha entre votación de Cámara y votación de CITREP no es homogénea, sino que se concentra en territorios específicos. Las mayores diferencias se ubican en la región Caribe, especialmente en Cesar, Magdalena y La Guajira, donde la participación en CITREP es entre 10 y 30 pp menor que en Cámara. También hay diferencias altas en algunos municipios del Pacífico y sur del país. En contraste, en varios municipios de Antioquia, Chocó y zonas del Catatumbo las diferencias son bajas o cercanas a cero.
+
+```{ojs}
+// Extracción de KPIs
+kpi_data = transpose(kpis_brecha_ojs)
+val_citrep = kpi_data.find(d => d.metrica === "CITREP")?.valor ?? 0
+val_cam_in = kpi_data.find(d => d.metrica === "Cámara rural en municipios CITREP")?.valor ?? 0
+val_cam_out = kpi_data.find(d => d.metrica === "Cámara rural en el resto del país")?.valor ?? 0
+
+fmtPct_b = d => d.toFixed(1).replace(".", ",") + "%"
+```
+
+```{ojs}
+html`
+<div style="display:flex; gap:16px; margin-bottom:32px; margin-top:16px;">
+  <div style="flex:1; background:#F8FAFC; border:1px solid #E2E8F0; border-top:4px solid #1F4E79; border-radius:6px; padding:16px; text-align:center;">
+    <div style="font-size:28px; font-weight:800; color:#1F4E79;">${fmtPct_b(val_citrep)}</div>
+    <div style="font-size:12.5px; color:#475569; font-weight:600; margin-top:4px;">Participación CITREP</div>
+  </div>
+  <div style="flex:1; background:#F8FAFC; border:1px solid #E2E8F0; border-top:4px solid #D97706; border-radius:6px; padding:16px; text-align:center;">
+    <div style="font-size:28px; font-weight:800; color:#D97706;">${fmtPct_b(val_cam_in)}</div>
+    <div style="font-size:12.5px; color:#475569; font-weight:600; margin-top:4px;">Cámara rural en<br>municipios CITREP</div>
+  </div>
+  <div style="flex:1; background:#F8FAFC; border:1px solid #E2E8F0; border-top:4px solid #64748B; border-radius:6px; padding:16px; text-align:center;">
+    <div style="font-size:28px; font-weight:800; color:#64748B;">${fmtPct_b(val_cam_out)}</div>
+    <div style="font-size:12.5px; color:#475569; font-weight:600; margin-top:4px;">Cámara rural en<br>municipios NO CITREP</div>
+  </div>
+</div>
+`
+```
+
+```{ojs}
+viewof brecha_top = Inputs.select(["Municipios con mayor brecha (Cámara > CITREP)", "Municipios con menor brecha"], {value: "Municipios con mayor brecha (Cámara > CITREP)"})
+```
+
+:::: {style="display: flex; gap: 24px; align-items: flex-start; margin-bottom: 48px;"}
+
+::: {style="flex: 0 0 54%; width: 54%; height: 540px; border: 1px solid #EAF0F6; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.03);"}
+```{r}
+#| label: mapa-brecha-citrep
+sf_mpios_brecha <- datos_part$sf_mpios %>% mutate(codmpio = as.integer(codmpio)) %>%
+  inner_join(datos_rb$diff_citrep_camara, by = "codmpio")
+
+m_abs <- max(abs(sf_mpios_brecha$diff_pp), na.rm=TRUE)
+pal_brecha <- colorNumeric(c("#9F2F2F", "#F0E2D3", "#355C7D"), domain = c(-m_abs, m_abs), na.color = "#eeeeee")
+
+lab_brecha <- sprintf("<b>%s</b><br>Cámara Rural: %s%%<br>CITREP: %s%%<br><b>Diferencia: %+s pp</b>",
+  sf_mpios_brecha$Municipio, 
+  formatC(sf_mpios_brecha$part_cam, 1, format="f", decimal.mark=","),
+  formatC(sf_mpios_brecha$part_citrep, 1, format="f", decimal.mark=","),
+  formatC(sf_mpios_brecha$diff_pp, 1, format="f", decimal.mark=",")) %>% lapply(htmltools::HTML)
+
+leaflet(sf_mpios_brecha, height = 540) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(weight = 0.5, color = "#ffffff", fillColor = ~pal_brecha(diff_pp), fillOpacity = 0.88,
+              label = lab_brecha, highlightOptions = highlightOptions(weight = 2, color = "#0B2E63", bringToFront = TRUE)) %>%
+  addLegend(pal = pal_brecha, values = ~diff_pp, title = "Cámara − CITREP (pp)", position = "bottomleft")
+```
+:::
+
+::: {style="flex: 0 0 46%; width: 46%;"}
+```{ojs}
+tabla_brecha_render = {
+  const data = transpose(diff_mun_ojs);
+  const rows_to_show = brecha_top === "Municipios con mayor brecha (Cámara > CITREP)" ? data.slice(0, 20) : data.slice(-20).reverse();
+  
+  const th = "padding:12px 10px; background:#5E7C99; color:#ffffff; font-weight:600; font-size:12px; position:sticky; top:0; z-index:2; border-bottom:2px solid #4A637A;";
+  
+  let tbody = rows_to_show.map((d,i) => `
+    <tr style='border-bottom:1px solid #E2E8F0; background:${i%2?'#F8FAFC':'#ffffff'};'>
+      <td style='padding:10px 10px; text-align:left;'><strong style='color:#1F2937; font-size:12.5px;'>${d.Municipio}</strong><div style='font-size:10px; color:#94A3B8;'>${d.Depto}</div></td>
+      <td style='padding:10px 6px; text-align:right; font-weight:700; color:#355C7D; font-variant-numeric:tabular-nums; font-size:12.5px;'>${(d.diff_pp>0?"+":"")+d.diff_pp.toFixed(1).replace(".", ",")} pp</td>
+    </tr>
+  `).join('');
+
+  // Creación segura del contenedor con el filtro incrustado
+  const wrapper = document.createElement("div");
+  wrapper.style.display = "flex";
+  wrapper.style.flexDirection = "column";
+  wrapper.style.height = "540px";
+  wrapper.style.background = "#fff";
+  wrapper.style.border = "1px solid #EAF0F6";
+  wrapper.style.borderRadius = "8px";
+  wrapper.style.boxShadow = "0 1px 3px rgba(0,0,0,0.02)";
+
+  const header = document.createElement("div");
+  header.style = "padding: 10px 16px; border-bottom: 1px solid #CBD5E1; display:flex; justify-content:space-between; align-items:center; background:#F1F5F9;";
+
+  const title = document.createElement("div");
+  title.style = "font-weight: 800; color: #0B2E63; font-size: 13.5px; text-transform: uppercase;";
+  title.innerText = "Diferencia por municipio";
+
+  const filterCont = document.createElement("div");
+  filterCont.style.fontSize = "12px";
+  filterCont.appendChild(viewof brecha_top);
+
+  header.appendChild(title);
+  header.appendChild(filterCont);
+
+  const tableCont = document.createElement("div");
+  tableCont.style = "overflow-y: auto; flex: 1;";
+  tableCont.innerHTML = `
+    <table style="width:100%; border-collapse:collapse; font-family:sans-serif;">
+      <thead><tr><th style="${th} text-align:left;">Municipio</th><th style="${th} text-align:right;">Diferencia (Cám - CITREP)</th></tr></thead>
+      <tbody>${tbody}</tbody>
+    </table>
+  `;
+
+  wrapper.appendChild(header);
+  wrapper.appendChild(tableCont);
+
+  return wrapper;
+}
+```
+```{ojs}
+html`${tabla_brecha_render}`
+```
+:::
+
+::::
+
+
+## Participación rural y urbana
+
+La participación rural sigue siendo más alta que la urbana en todos los años y corporaciones. En 2026 ambas zonas se recuperan frente a 2022 con aumentos muy similares (alrededor de +3 pp), manteniendo un patrón estable donde la brecha a favor de lo rural persiste de forma constante. CITREP mantiene niveles más bajos de participación que Senado y Cámara, incluso analizando exclusivamente el ámbito rural.
+
+:::: {style="display: flex; gap: 24px; align-items: stretch; margin-top: 24px;"}
+
+::: {style="flex: 1.1; width: 55%;"}
+```{ojs}
+rb_long = transpose(part_rb_long_ojs)
+rb_wide = transpose(part_rb_wide_ojs)
+
+grafica_rb = {
+  const wrap = document.createElement("div");
+  wrap.style = "background:#fff; border:1px solid #EAF0F6; border-radius:8px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.02); display:flex; flex-direction:column; height:100%; width: 100%;";
+
+  // 1. Encabezado con Leyenda (Circular, Urbano Izquierda, Rural Derecha)
+  const header = document.createElement("div");
+  header.innerHTML = `
+    <div style="font-weight:800; color:#0B2E63; margin-bottom:16px; text-align:center; font-size:14.5px; text-transform:uppercase;">
+      Histórico Rural vs Urbano
+    </div>
+    <div style="display:flex; justify-content:flex-start; gap:24px; margin-bottom:16px; margin-left:70px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <div style="width:14px; height:14px; border-radius:50%; background:#1F4E79;"></div>
+        <span style="font-size:13px; font-weight:700; color:#334155;">Urbano</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <div style="width:14px; height:14px; border-radius:50%; background:#D97706;"></div>
+        <span style="font-size:13px; font-weight:700; color:#334155;">Rural</span>
+      </div>
+    </div>
+  `;
+  wrap.appendChild(header);
+
+  // 2. Generamos un bloque visual limpio para cada año (Simulando facet_grid de ggplot2)
+  const years = [2018, 2022, 2026];
+  years.forEach((yr, idx) => {
+    const rowDataLong = rb_long.filter(d => d.annoh === yr);
+    const rowDataWide = rb_wide.filter(d => d.annoh === yr);
+
+    // Separamos explícitamente los datos para que el texto ancle a la perfección
+    const dataRural = rowDataLong.filter(d => d.zona_rb === "Rural");
+    const dataUrbano = rowDataLong.filter(d => d.zona_rb === "Urbano");
+
+    const p = Plot.plot({
+      marginLeft: 80, 
+      marginRight: 50, // Más espacio a la derecha para que no se corte el texto de rural
+      marginTop: 15,
+      marginBottom: idx === 2 ? 40 : 15,
+      height: idx === 2 ? 150 : 120,
+      style: { fontFamily: "sans-serif", fontSize: "12.5px" },
+      x: { 
+        label: idx === 2 ? "Participación electoral (%) →" : null, 
+        grid: true, 
+        domain: [0, 62], 
+        tickFormat: idx === 2 ? d => d + "%" : () => "",
+        tickSize: idx === 2 ? 6 : 0
+      },
+      y: { 
+        label: null, 
+        domain: ["CITREP", "Cámara", "Senado"], 
+        tickSize: 0, 
+        padding: 0.5 
+      },
+      marks: [
+        Plot.link(rowDataWide, {
+          x1: "Urbano", y1: "Eleccion", x2: "Rural", y2: "Eleccion",
+          stroke: "#CBD5E1", strokeWidth: 3.5
+        }),
+        Plot.dot(rowDataLong, {
+          x: "part", y: "Eleccion", 
+          fill: d => d.zona_rb === "Rural" ? "#D97706" : "#1F4E79", 
+          r: 7.5, stroke: "white", strokeWidth: 1.5, tip: true,
+          title: d => `${d.Eleccion} ${d.annoh}\nZona: ${d.zona_rb}\nParticipación: ${d.part.toFixed(1).replace(".",",")}%`
+        }),
+        // Textos URBANOS: anclados a la derecha del contenedor del texto, empujados a la IZQUIERDA de la bola
+        Plot.text(dataUrbano, {
+          x: "part", y: "Eleccion", 
+          text: d => d.part.toFixed(1).replace(".",",") + "%", 
+          textAnchor: "end", 
+          dx: -15, 
+          fill: "#1F4E79", 
+          fontSize: 12, fontWeight: "bold"
+        }),
+        // Textos RURALES: anclados a la izquierda del contenedor del texto, empujados a la DERECHA de la bola
+        Plot.text(dataRural, {
+          x: "part", y: "Eleccion", 
+          text: d => d.part.toFixed(1).replace(".",",") + "%", 
+          textAnchor: "start", 
+          dx: 15, 
+          fill: "#D97706", 
+          fontSize: 12, fontWeight: "bold"
+        })
+      ]
+    });
+
+    // 3. Contenedor HTML del Facet (Recuadro gris a la izquierda + Gráfica a la derecha)
+    const rowCont = document.createElement("div");
+    rowCont.style = "display: flex; align-items: stretch; border: 1px solid #E2E8F0; border-bottom: " + (idx===2?"1px solid #E2E8F0":"none") + ";";
+
+    const greyBox = document.createElement("div");
+    greyBox.style = "background: #F8FAFC; width: 60px; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #1F2937; font-size: 14.5px; border-right: 1px solid #E2E8F0;";
+    greyBox.innerText = yr;
+
+    const plotCont = document.createElement("div");
+    plotCont.style = "flex: 1;";
+    plotCont.appendChild(p);
+
+    rowCont.appendChild(greyBox);
+    rowCont.appendChild(plotCont);
+    wrap.appendChild(rowCont);
+  });
+
+  return wrap;
+}
+```
+
+```{ojs}
+html`${grafica_rb}`
+```
+:::
+
+::: {style="flex: 0.9; width: 45%; display:flex; flex-direction:column;"}
+
+```{ojs}
+viewof rb_filtro = Inputs.radio(["Rural", "Urbano"], {value: "Rural"})
+```
+
+```{ojs}
+tabla_rb_render = {
+  const data = rb_long.filter(d => d.zona_rb === rb_filtro).sort((a,b) => b.annoh - a.annoh || a.Eleccion.localeCompare(b.Eleccion));
+  
+  const th = "padding:12px 10px; background:#5E7C99; color:#ffffff; font-weight:600; font-size:12px; position:sticky; top:0; z-index:2; border-bottom:2px solid #4A637A;";
+  
+  let tbody = data.map((d,i) => `
+    <tr style='border-bottom:1px solid #E2E8F0; background:${i%2?'#F8FAFC':'#ffffff'};'>
+      <td style='padding:10px 10px; text-align:center; font-weight:700; color:#1F2937; font-size:12.5px;'>${d.annoh}</td>
+      <td style='padding:10px 10px; text-align:left; font-weight:600; color:#334155; font-size:12.5px;'>${d.Eleccion}</td>
+      <td style='padding:10px 6px; text-align:right; font-variant-numeric:tabular-nums; font-size:12.5px;'>${d.votos.toLocaleString("es-CO")}</td>
+      <td style='padding:10px 6px; text-align:right; font-variant-numeric:tabular-nums; font-size:12.5px;'>${d.censo.toLocaleString("es-CO")}</td>
+      <td style='padding:10px 8px; text-align:right; font-weight:700; color:${rb_filtro === "Rural" ? "#D97706" : "#1F4E79"}; font-variant-numeric:tabular-nums; font-size:13px;'>${d.part.toFixed(1).replace(".",",")}%</td>
+    </tr>
+  `).join('');
+
+  // Creación del contenedor de la tabla con el filtro integrado en la cabecera
+  const wrapper = document.createElement("div");
+  wrapper.style.display = "flex";
+  wrapper.style.flexDirection = "column";
+  wrapper.style.height = "100%";
+  wrapper.style.background = "#fff";
+  wrapper.style.border = "1px solid #EAF0F6";
+  wrapper.style.borderRadius = "8px";
+  wrapper.style.boxShadow = "0 1px 3px rgba(0,0,0,0.02)";
+
+  const header = document.createElement("div");
+  header.style = "padding: 10px 16px; border-bottom: 1px solid #CBD5E1; display:flex; justify-content:space-between; align-items:center; background:#F1F5F9;";
+
+  const title = document.createElement("div");
+  title.style = "font-weight: 800; color: #0B2E63; font-size: 13px; text-transform: uppercase;";
+  title.innerText = "Detalle";
+
+  const filterCont = document.createElement("div");
+  filterCont.style.display = "flex";
+  filterCont.style.alignItems = "center";
+  filterCont.style.gap = "8px";
+  filterCont.style.fontSize = "12.5px";
+  
+  const lbl = document.createElement("b");
+  lbl.innerText = "Zona:";
+  lbl.style.color = "#1F2937";
+  
+  filterCont.appendChild(lbl);
+  filterCont.appendChild(viewof rb_filtro);
+
+  header.appendChild(title);
+  header.appendChild(filterCont);
+
+  const tableCont = document.createElement("div");
+  tableCont.style = "overflow-y: auto; flex: 1;";
+  tableCont.innerHTML = `
+    <table style="width:100%; border-collapse:collapse; font-family:sans-serif;">
+      <thead>
+        <tr>
+          <th style="${th} text-align:center;">Año</th>
+          <th style="${th} text-align:left;">Elección</th>
+          <th style="${th} text-align:right;">Votos</th>
+          <th style="${th} text-align:right;">Censo</th>
+          <th style="${th} text-align:right;">Participación</th>
+        </tr>
+      </thead>
+      <tbody>${tbody}</tbody>
+    </table>
+  `;
+
+  wrapper.appendChild(header);
+  wrapper.appendChild(tableCont);
+
+  return wrapper;
+}
+```
+```{ojs}
+html`${tabla_rb_render}`
+```
+:::
+
+::::
+
+
+### Impacto de nuevos puestos rurales
+
+```{r}
+#| label: datos-impacto-ojs
+datos_imp <- readRDS("datos_impacto_puestos.rds")
+ojs_define(df_puestos_ojs = datos_imp$df_plot)
+ojs_define(neto_nuevos_ojs = datos_imp$neto_nuevos)
+```
+
+A mayor número de puestos rurales nuevos, mayor incremento en participación, consistente en Senado, Cámara y CITREP. El efecto es claro al pasar de 0 a 1 o más puestos, y se intensifica en municipios con 3 o más, donde los aumentos superan +9 pp. Esto sugiere que la apertura de nuevos puestos mejora el acceso y facilita la participación en zonas rurales.
+
+```{ojs}
+html`
+<div style="display:flex; justify-content:center; width:100%;">
+  <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-left:5px solid #1B7A3A; border-radius:6px; padding:16px 32px; margin-top:24px; margin-bottom:32px; display:inline-flex; align-items:center; gap:32px; box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+    <div>
+      <div style="font-size:12.5px; color:#64748B; font-weight:800; text-transform:uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">Nuevos Puestos Rurales Netos</div>
+      <div style="font-size:42px; font-weight:900; color:#1B7A3A; line-height:1;">+${neto_nuevos_ojs.toLocaleString("es-CO")}</div>
+    </div>
+    <div style="border-left: 1px solid #CBD5E1; padding-left:32px; max-width: 380px;">
+      <div style="font-size:13px; color:#334155; line-height:1.4;">Diferencia neta entre el total de puestos rurales habilitados en 2026 frente a 2022 (contemplando aperturas y cierres).</div>
+    </div>
+  </div>
+</div>
+`
+```
+
+```{ojs}
+df_puestos = transpose(df_puestos_ojs)
+
+grafica_puestos = {
+  const wrap = document.createElement("div");
+  wrap.style = "background:#fff; border:1px solid #EAF0F6; border-radius:8px; padding:24px; box-shadow:0 1px 3px rgba(0,0,0,0.02); display:flex; flex-direction:column; max-width: 850px; margin: 0 auto;";
+
+  const header = document.createElement("div");
+  header.innerHTML = `<div style="font-weight:800; color:#0B2E63; margin-bottom:20px; text-align:center; font-size:14.5px; text-transform:uppercase;">Efecto de Nuevos Puestos Rurales en Participación (2022 - 2026)</div>`;
+  wrap.appendChild(header);
+
+  // Cálculos para unificar el eje Y y darle espacio a los textos superiores
+  const maxY = Math.max(...df_puestos.map(d => d.delta_part_pp)) + 3.5;
+  const minY = Math.min(...df_puestos.map(d => d.delta_part_pp));
+  const domainY = [Math.min(0, minY - 1), maxY];
+
+  const groups = ["Senado", "Cámara", "CITREP"]; 
+  
+  groups.forEach((grp, idx) => {
+    const dataGrp = df_puestos.filter(d => d.grupo === grp);
+    
+    // Separamos en positivos y negativos para poder usar lineAnchor constante y evitar errores
+    const dataPos = dataGrp.filter(d => d.delta_part_pp >= 0);
+    const dataNeg = dataGrp.filter(d => d.delta_part_pp < 0);
+
+    const p = Plot.plot({
+      marginLeft: 50, marginRight: 20, 
+      marginTop: 20, marginBottom: idx === 2 ? 45 : 10,
+      height: idx === 2 ? 160 : 125,
+      style: { fontFamily: "sans-serif", fontSize: "12px" },
+      x: {
+        type: "band", 
+        domain: ["0", "1", "2", "3 o más"],
+        padding: 0.45, 
+        label: idx === 2 ? "Puestos rurales nuevos →" : null,
+        tickFormat: idx === 2 ? d => d : () => "",
+        tickSize: idx === 2 ? 6 : 0
+      },
+      y: {
+        label: idx === 1 ? "Cambio promedio (pp)" : null,
+        domain: domainY,
+        grid: true
+      },
+      marks: [
+        Plot.ruleY([0], {stroke: "grey", strokeWidth: 1.5}), // Línea central del 0
+        
+        Plot.barY(dataGrp, {
+          x: "bin_puestos", y: "delta_part_pp", 
+          fill: "#1F4E79", rx: 3,
+          title: d => `Nuevos puestos: ${d.bin_puestos}\nCambio: ${(d.delta_part_pp>0?"+":"")+d.delta_part_pp.toFixed(1)} pp\nMunicipios: ${d.n_mun}`
+        }),
+        
+        // --- ETIQUETAS DE VALOR (Afuera de la barra) ---
+        // Positivos (Arriba)
+        Plot.text(dataPos, {
+          x: "bin_puestos", y: "delta_part_pp",
+          text: d => "+" + d.delta_part_pp.toFixed(1).replace(".", ","),
+          dy: -6, lineAnchor: "bottom", textAnchor: "middle",
+          fill: "#1F2937", fontSize: 12.5, fontWeight: "bold"
+        }),
+        // Negativos (Abajo)
+        Plot.text(dataNeg, {
+          x: "bin_puestos", y: "delta_part_pp",
+          text: d => d.delta_part_pp.toFixed(1).replace(".", ","),
+          dy: 6, lineAnchor: "top", textAnchor: "middle",
+          fill: "#1F2937", fontSize: 12.5, fontWeight: "bold"
+        }),
+        
+        // --- ETIQUETAS DE 'N' (En la base de la barra) ---
+        // Positivos (Adentro, en el fondo)
+        Plot.text(dataPos, {
+          x: "bin_puestos", y: 0,
+          text: d => "n=" + d.n_mun.toLocaleString("es-CO"),
+          dy: -6, lineAnchor: "bottom", textAnchor: "middle",
+          fill: "white", fontSize: 10.5, fontWeight: "bold"
+        }),
+        // Negativos (Adentro, en la cima invertida)
+        Plot.text(dataNeg, {
+          x: "bin_puestos", y: 0,
+          text: d => "n=" + d.n_mun.toLocaleString("es-CO"),
+          dy: 6, lineAnchor: "top", textAnchor: "middle",
+          fill: "white", fontSize: 10.5, fontWeight: "bold"
+        })
+      ]
+    });
+
+    // Contenedor HTML (Recuadro gris a la izquierda + Gráfica a la derecha)
+    const rowCont = document.createElement("div");
+    rowCont.style = "display: flex; align-items: stretch; border: 1px solid #E2E8F0; border-bottom: " + (idx===2?"1px solid #E2E8F0":"none") + ";";
+
+    const greyBox = document.createElement("div");
+    greyBox.style = "background: #F8FAFC; width: 65px; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #1F2937; font-size: 13.5px; border-right: 1px solid #E2E8F0;";
+    greyBox.innerText = grp;
+
+    const plotCont = document.createElement("div");
+    plotCont.style = "flex: 1;";
+    plotCont.appendChild(p);
+
+    rowCont.appendChild(greyBox);
+    rowCont.appendChild(plotCont);
+    wrap.appendChild(rowCont);
+  });
+
+  return wrap;
+}
+```
+
+```{ojs}
+html`${grafica_puestos}`
 ```
 
 ```{=html}
