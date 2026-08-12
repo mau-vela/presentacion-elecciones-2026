@@ -33,6 +33,7 @@ datos_part <- readRDS("datos_participacion_final.rds")
 datos_ext <- readRDS("datos_exterior_part.rds")
 datos_esp <- readRDS("datos_especiales_part.rds")
 datos_rb <- readRDS("datos_rural_urbano.rds")
+datos_r <- readRDS("datos_riesgo.rds")
 ```
 
 ::: {.hero}
@@ -2354,7 +2355,229 @@ grafica_puestos = {
 ```{ojs}
 html`${grafica_puestos}`
 ```
+## Participación y violencia
 
+```{r}
+#| label: datos-riesgo-ojs
+datos_r <- readRDS("datos_riesgo.rds")
+ojs_define(riesgo_barras_ojs = datos_r$plot_barras)
+ojs_define(riesgo_lineas_ojs = datos_r$plot_lineas)
+ojs_define(riesgo_tabla_ojs = datos_r$tabla)
+```
+
+```{ojs}
+barras_r_data = transpose(riesgo_barras_ojs);
+val_riesgo = (v, g) => barras_r_data.find(d => d.variable === v && d.grupo === g)?.part_media || 0;
+fmt_riesgo = n => n.toFixed(1).replace(".", ",");
+dif_riesgo = (v) => (val_riesgo(v, "Sin riesgo") - val_riesgo(v, "Con riesgo")).toFixed(1).replace(".", ",");
+
+html`
+<div style="font-size: 15px; color: #334155; line-height: 1.6; margin-bottom: 24px; background: #F8FAFC; padding: 16px 24px; border-radius: 8px; border: 1px solid #E2E8F0;">
+  <p style="margin-top: 0; margin-bottom: 12px; font-size: 15.5px;">Con base en el análisis de riesgo de la Registraduría (corte abril 2026), los municipios <b>sin riesgo registran mayor participación</b> en casi todas las dimensiones.</p>
+  <ul style="margin-top: 0; margin-bottom: 0; padding-left: 24px;">
+    <li style="margin-bottom: 6px;">La brecha es consistente y relevante: en <b>Riesgo total</b> la diferencia es de <b>${dif_riesgo("Riesgo total")} pp</b> (${fmt_riesgo(val_riesgo("Riesgo total", "Sin riesgo"))}% vs ${fmt_riesgo(val_riesgo("Riesgo total", "Con riesgo"))}%).</li>
+    <li style="margin-bottom: 6px;">La mayor diferencia se observa donde hay <b>Interés político-electoral de GAO</b>: ${fmt_riesgo(val_riesgo("Interés político-electoral de GAO", "Sin riesgo"))}% sin riesgo vs ${fmt_riesgo(val_riesgo("Interés político-electoral de GAO", "Con riesgo"))}% con riesgo (−${dif_riesgo("Interés político-electoral de GAO")} pp).</li>
+    <li style="margin-bottom: 6px;">También es alta en contextos de <b>Desplazamiento</b>: ${fmt_riesgo(val_riesgo("Riesgo por desplazamiento", "Sin riesgo"))}% vs ${fmt_riesgo(val_riesgo("Riesgo por desplazamiento", "Con riesgo"))}% (−${dif_riesgo("Riesgo por desplazamiento")} pp).</li>
+    <li style="margin-bottom: 6px;">La única excepción es <b>Violencia política</b>, donde los municipios con riesgo tienen ligeramente mayor participación (${fmt_riesgo(val_riesgo("Riesgo por violencia política", "Con riesgo"))}% vs ${fmt_riesgo(val_riesgo("Riesgo por violencia política", "Sin riesgo"))}%).</li>
+    <li>En variables de intensidad, la participación <b>disminuye de forma sostenida</b> a medida que aumentan los niveles (ej. cae progresivamente en acciones armadas y presencia de GAO).</li>
+  </ul>
+</div>
+`
+```
+
+:::: {style="display: flex; gap: 24px; align-items: stretch; margin-bottom: 40px;"}
+
+::: {style="flex: 1.25; background:#fff; border:1px solid #EAF0F6; border-radius:8px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.02);"}
+<div style="font-weight:800; color:#0B2E63; margin-bottom:10px; text-align:center; font-size:14.5px; text-transform:uppercase;">Participación en municipios con y sin riesgo</div>
+
+```{ojs}
+grafica_barras_riesgo = {
+  const p = Plot.plot({
+    marginLeft: 230, marginRight: 40, height: 470,
+    style: { fontFamily: "sans-serif", fontSize: "12.5px" },
+    x: { label: "Participación promedio (%) →", grid: true, domain: [0, 62], tickFormat: d => d + "%" },
+    y: { axis: null, paddingInner: 0.15 },
+    fy: { label: null, domain: ["Impacto electoral de GAO","Interés político-electoral de GAO","Riesgo por violencia política","Riesgo por desplazamiento","Riesgo por acciones armadas","Riesgo por presencia GAO","Riesgo total"], paddingOuter: 0.1 },
+    color: { domain: ["Con riesgo", "Sin riesgo"], range: ["#355C7D", "#A9BBD0"], legend: true },
+    marks: [
+      Plot.barX(barras_r_data, { x: "part_media", y: "grupo", fy: "variable", fill: "grupo" }),
+      Plot.text(barras_r_data, { x: "part_media", y: "grupo", fy: "variable", text: d => d.part_media.toFixed(1).replace(".",",") + "%", textAnchor: "start", dx: 6, fill: "#2A2A2A", fontSize: 12, fontWeight: "bold" })
+    ]
+  });
+  return p;
+}
+html`${grafica_barras_riesgo}`
+```
+:::
+
+::: {style="flex: 0.75; display:flex; flex-direction:column;"}
+```{ojs}
+viewof riesgo_var = Inputs.select(["Riesgo total","Riesgo por acciones armadas","Nivel de presencia GAO","Nivel de acciones armadas"], {value: "Riesgo total"})
+```
+
+```{ojs}
+lineas_r_data = transpose(riesgo_lineas_ojs).filter(d => d.variable === riesgo_var)
+grafica_lineas_riesgo = {
+  const xDomain = (riesgo_var.includes("Nivel")) ? ["0","1","2","3","4","5"] : ["Sin Riesgo","Bajo","Moderado","Alto"];
+  const p = Plot.plot({
+    marginLeft: 45, marginRight: 20, marginTop: 20, height: 470,
+    style: { fontFamily: "sans-serif", fontSize: "12.5px" },
+    x: { label: "Nivel de riesgo", domain: xDomain, type: "band", padding: 0.4 },
+    y: { label: "Participación prom. (%)", domain: [0, 60], grid: true, tickFormat: d => d + "%" },
+    marks: [
+      Plot.barY(lineas_r_data, { x: "nivel", y: "part_media", fill: "#5E7C99", rx: 2, tip: true, title: d => `Nivel: ${d.nivel}\nParticipación: ${d.part_media.toFixed(1)}%` }),
+      Plot.lineY(lineas_r_data, { x: "nivel", y: "part_media", stroke: "#27445D", strokeWidth: 2, pointerEvents: "none" }),
+      Plot.dot(lineas_r_data, { x: "nivel", y: "part_media", fill: "#27445D", r: 4.5, pointerEvents: "none" }),
+      Plot.text(lineas_r_data, { x: "nivel", y: "part_media", text: d => d.part_media.toFixed(1).replace(".",",") + "%", dy: -18, fill: "#1F2D3A", fontSize: 13.5, fontWeight: "bold", pointerEvents: "none" })
+    ]
+  });
+  const wrap = document.createElement("div");
+  wrap.style = "background:#fff; border:1px solid #EAF0F6; border-radius:8px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.02); display:flex; flex-direction:column; flex:1;";
+  const header = document.createElement("div");
+  header.style = "display:flex; flex-direction:column; gap:8px; margin-bottom:20px; padding-bottom:15px; border-bottom:1px solid #E2E8F0;";
+  const title = document.createElement("div");
+  title.style = "font-weight:800; color:#0B2E63; font-size:13px; text-transform:uppercase;";
+  title.innerText = "Participación por intensidad";
+  const filterCont = document.createElement("div");
+  filterCont.style.fontSize = "13px";
+  filterCont.appendChild(viewof riesgo_var);
+  header.appendChild(title); header.appendChild(filterCont);
+  wrap.appendChild(header); wrap.appendChild(p);
+  return wrap;
+}
+html`${grafica_lineas_riesgo}`
+```
+:::
+
+::::
+
+<h3 style="font-weight:800; color:#0B2E63; font-size:16px; text-transform:uppercase; margin-top:32px; margin-bottom:16px; border-bottom: 2px solid #0B2E63; padding-bottom: 8px;">Distribución territorial del riesgo y la participación</h3>
+
+```{ojs}
+html`
+<div style="font-size: 15px; color: #334155; line-height: 1.6; margin-bottom: 24px;">
+  <p style="margin-top: 0; margin-bottom: 12px;">La relación negativa entre participación y riesgo no es homogénea:</p>
+  <ul style="margin-top: 0; margin-bottom: 0; padding-left: 24px;">
+    <li style="margin-bottom: 6px;">Hay un grupo de <b>municipios sin riesgo con baja participación</b> (azul claro), especialmente concentrados en el centro del país.</li>
+    <li style="margin-bottom: 6px;">Los municipios <b>sin riesgo y alta participación</b> (azul oscuro) se agrupan claramente en el Caribe y en parte de Nariño.</li>
+    <li style="margin-bottom: 6px;">La mayoría de municipios <b>con riesgo se asocia a baja participación</b> (marrón oscuro), con concentración en Arauca, Caquetá, Sur de Meta, Putumayo, Cauca, norte de Antioquia, Bajo Cauca y Catatumbo.</li>
+    <li>Existen <b>excepciones relevantes</b>: algunos municipios con riesgo mantienen niveles altos de participación (marrón claro), particularmente en zonas de Chocó y Sur de Bolívar.</li>
+  </ul>
+</div>
+`
+```
+
+```{ojs}
+L_riesgo = require("leaflet@1.9.4")
+```
+
+```{ojs}
+html`<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">`
+```
+
+```{ojs}
+riesgo_geo = FileAttachment("riesgo_mapa.geojson").json()
+```
+
+:::: {style="display: flex; gap: 24px; align-items: flex-start;"}
+
+::: {style="flex: 0 0 52%; width: 52%;"}
+```{ojs}
+mapa_riesgo_L = {
+  const div = html`<div style="height:550px; border:1px solid #EAF0F6; border-radius:8px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.03);"></div>`;
+  const map = L_riesgo.map(div, { scrollWheelZoom: true }).setView([4.5, -73], 5);
+  L_riesgo.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+    { subdomains: "abcd", attribution: "© OpenStreetMap © CARTO" }).addTo(map);
+  invalidation.then(() => map.remove());
+  setTimeout(() => map.invalidateSize(), 200);
+  div.value = map;
+  return div;
+}
+```
+
+```{ojs}
+riesgo_layer_update = {
+  const map = mapa_riesgo_L.value;
+  if (!map) return;
+  if (map._dl) map.removeLayer(map._dl);
+  if (map._legend) map._legend.remove();
+
+  const colores = {
+    "Sin riesgo/bajo - Part. alta": "#5E8FB1",
+    "Sin riesgo/bajo - Part. baja": "#D9E3EC",
+    "Con riesgo - Part. alta": "#D9A37C",
+    "Con riesgo - Part. baja": "#9A4633",
+    "Part. media o sin datos": "#FFFFFF"
+  };
+
+  const layer = L_riesgo.geoJSON(riesgo_geo, {
+    style: f => ({ fillColor: colores[f.properties.grupo_mapa] || "#FFFFFF", weight: 0.4, color: "#94A3B8", fillOpacity: 0.9 }),
+    onEachFeature: (f, lyr) => {
+      const part = f.properties.part_senado ? f.properties.part_senado.toFixed(1) + "%" : "N/A";
+      lyr.bindTooltip(`<b>${f.properties.Municipio} (${f.properties.Depto})</b><br>Participación: ${part}<br><b>Categoría:</b> ${f.properties.grupo_mapa}`, { sticky: true });
+      lyr.on("mouseover", () => lyr.setStyle({ weight: 2, color: "#0B2E63" }));
+      lyr.on("mouseout", () => lyr.setStyle({ weight: 0.4, color: "#94A3B8" }));
+    }
+  }).addTo(map);
+  map._dl = layer;
+
+  const legend = L_riesgo.control({position: "bottomleft"});
+  legend.onAdd = function() {
+    const div = L_riesgo.DomUtil.create("div", "info legend");
+    div.style = "background: white; padding: 12px; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.2); font-family: sans-serif; font-size: 11.5px; line-height: 18px; color: #334155;";
+    div.innerHTML = `<div style="font-weight: bold; color: #0B2E63; margin-bottom: 8px;">Nivel de Riesgo y Part.</div>`;
+    Object.keys(colores).forEach(key => {
+      div.innerHTML += `<div style="display:flex; align-items:center; margin-bottom:4px;"><i style="background:${colores[key]}; width:16px; height:16px; border:1px solid #CBD5E1; border-radius:3px; display:inline-block; margin-right:8px;"></i> ${key}</div>`;
+    });
+    return div;
+  };
+  legend.addTo(map);
+  map._legend = legend;
+  return md``;
+}
+```
+:::
+
+::: {style="flex: 0 0 48%; width: 48%;"}
+```{ojs}
+tabla_riesgo_render = {
+  const data = transpose(riesgo_tabla_ojs);
+  const th = "padding:12px 10px; background:#0B2E63; color:#ffffff; font-weight:600; font-size:12px; position:sticky; top:0; z-index:2; border-bottom:2px solid #082147;";
+  let tbody = data.map((d,i) => {
+    const mpiosList = d.municipios_lista.split(",").map(m => `<span style="background:#E0E7FF; color:#1E3A8A; padding:3px 7px; border-radius:4px; font-size:10.5px; display:inline-block; margin:2px 3px 2px 0;">${m.trim()}</span>`).join('');
+    return `
+    <tr style='border-bottom:1px solid #E2E8F0; background:${i%2?'#F8FAFC':'#ffffff'};'>
+      <td style='padding:12px 10px; text-align:left; vertical-align:top;'>
+        <strong style='color:#1F2937; font-size:13px; display:block; margin-bottom:4px;'>${d.Depto}</strong>
+        <div style='font-size:11.5px; color:#64748B;'>${d.n_mun} municipios en riesgo</div>
+      </td>
+      <td style='padding:12px 10px; text-align:left; vertical-align:top;'>${mpiosList}</td>
+      <td style='padding:12px 6px; text-align:right; vertical-align:top; font-weight:700; color:#0B2E63; font-variant-numeric:tabular-nums; font-size:13px;'>${d.part_prom.toFixed(1).replace(".",",")}%</td>
+    </tr>`;
+  }).join('');
+  return html`
+  <div style="background:#fff; border:1px solid #EAF0F6; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.02); display:flex; flex-direction:column; height: 550px; overflow:hidden;">
+    <div style="padding: 14px 16px; border-bottom: 1px solid #CBD5E1; background:#F1F5F9;">
+      <div style="font-weight:800; color:#0B2E63; font-size:13.5px; text-transform:uppercase;">Departamentos Críticos</div>
+      <div style="font-size:12px; color:#475569; margin-top:2px;">Mayor cantidad de municipios con alto riesgo y baja participación</div>
+    </div>
+    <div style="overflow-y: auto; flex: 1;">
+      <table style="width:100%; border-collapse:collapse; font-family:sans-serif;">
+        <thead><tr>
+          <th style="${th} text-align:left; width: 25%;">Departamento</th>
+          <th style="${th} text-align:left; width: 60%;">Municipios afectados</th>
+          <th style="${th} text-align:right; width: 15%;">Part. Prom.</th>
+        </tr></thead>
+        <tbody>${tbody}</tbody>
+      </table>
+    </div>
+  </div>`;
+}
+html`${tabla_riesgo_render}`
+```
+:::
+
+::::
 
 ```{=html}
 <script>

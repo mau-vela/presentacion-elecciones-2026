@@ -2006,3 +2006,114 @@ saveRDS(list(
 ), "datos_impacto_puestos.rds")
 
 message("Listo: datos_impacto_puestos.rds generados con éxito")
+
+
+# =====================================================================3
+#  SECCION 03-9 RIESGO Y PARTICIPACIÓN ----
+# =====================================================================3
+
+# 1. Cargar bases de riesgo y mapear a DANE
+riesgo <- read_excel("../Mapa de riesgo/datos/Mapa de Riesgo - Registraduría - Riesgos.xlsx") %>%
+  mutate(code_RNEC = as.numeric(divipole))
+vars_riesgo <- read_excel("../Mapa de riesgo/datos/Mapa de Riesgo - Registraduría - Variables.xlsx") %>%
+  mutate(code_RNEC = as.numeric(divipole))
+
+# Calcular Participación de Senado 2026 a nivel municipal (usando DANE)
+part_sen_26_riesgo <- base_congreso %>%
+  filter(annoh == 2026, corp == "SENADO", codcirc %in% c(0, 4)) %>%
+  filter(!is.na(codmpio)) %>%
+  group_by(codmpio) %>%
+  summarise(votos = sum(votos, na.rm = TRUE), .groups = "drop") %>%
+  left_join(
+    censo_divipol_hist %>% filter(annoh == 2026) %>% group_by(codmpio) %>% summarise(censo = sum(censo, na.rm=TRUE), .groups="drop"),
+    by = "codmpio"
+  ) %>%
+  mutate(part_senado = if_else(censo > 0, 100 * votos / censo, NA_real_)) %>%
+  left_join(todos_municipios %>% distinct(codmpio, code_RNEC, Municipio, Depto), by = "codmpio")
+
+# Cruzar con variables de riesgo
+base_riesgo_analisis <- part_sen_26_riesgo %>%
+  left_join(riesgo %>% select(-Municipio, -Departamento, -divipole, -Grupos), by = "code_RNEC") %>%
+  left_join(vars_riesgo %>% select(-Municipio, -Departamento, -divipole, -Grupos), by = "code_RNEC")
+
+# 2. Generar datos para Gráfica 1 (Barras Principales)
+vars_binarias_plot <- bind_rows(
+  base_riesgo_analisis %>% transmute(variable = "Riesgo total", grupo = if_else(`Riesgo Total` %in% c("Moderado", "Alto"), "Con riesgo", "Sin riesgo"), part_senado),
+  base_riesgo_analisis %>% transmute(variable = "Riesgo por presencia GAO", grupo = if_else(`Riesgo por pressencia GAO` %in% c("Moderado", "Alto"), "Con riesgo", "Sin riesgo"), part_senado),
+  base_riesgo_analisis %>% transmute(variable = "Riesgo por acciones armadas", grupo = if_else(`Riesgo por acciones armadas` %in% c("Moderado", "Alto"), "Con riesgo", "Sin riesgo"), part_senado),
+  base_riesgo_analisis %>% transmute(variable = "Riesgo por desplazamiento", grupo = if_else(`Riesgo por desplazamiento` %in% c("Moderado", "Alto"), "Con riesgo", "Sin riesgo"), part_senado),
+  base_riesgo_analisis %>% transmute(variable = "Riesgo por violencia política", grupo = if_else(`Riesgo por violencia política` %in% c("Moderado", "Alto"), "Con riesgo", "Sin riesgo"), part_senado),
+  base_riesgo_analisis %>% transmute(variable = "Interés político-electoral de GAO", grupo = if_else(`Interés político-electoral de GAO` == "Si", "Con riesgo", "Sin riesgo"), part_senado),
+  base_riesgo_analisis %>% transmute(variable = "Impacto electoral de GAO", grupo = if_else(`Impacto electoral de GAO` == "Si", "Con riesgo", "Sin riesgo"), part_senado)
+) %>%
+  filter(!is.na(grupo), !is.na(part_senado)) %>%
+  group_by(variable, grupo) %>%
+  summarise(part_media = mean(part_senado, na.rm = TRUE), .groups = "drop") %>%
+  mutate(variable = factor(variable, levels = rev(c("Riesgo total", "Riesgo por presencia GAO", "Riesgo por acciones armadas", "Riesgo por desplazamiento", "Riesgo por violencia política", "Interés político-electoral de GAO", "Impacto electoral de GAO"))))
+
+# 3. Generar datos para Gráfica 2 (Líneas Laterales)
+base_intensidad_plot <- bind_rows(
+  base_riesgo_analisis %>% transmute(variable = "Riesgo total", nivel = as.character(`Riesgo Total`), part_senado) %>% filter(!is.na(nivel)) %>% mutate(nivel = factor(nivel, levels = c("Sin Riesgo", "Bajo", "Moderado", "Alto")), variable = "Riesgo total"),
+  base_riesgo_analisis %>% transmute(variable = "Riesgo por acciones armadas", nivel = as.character(`Riesgo por acciones armadas`), part_senado) %>% filter(!is.na(nivel)) %>% mutate(nivel = factor(nivel, levels = c("Sin Riesgo", "Bajo", "Moderado", "Alto")), variable = "Riesgo por acciones armadas"),
+  base_riesgo_analisis %>% transmute(variable = "Nivel de presencia GAO", nivel = as.character(`Nivel de presencia GAO`), part_senado) %>% filter(!is.na(nivel)) %>% mutate(nivel = factor(nivel, levels = c("0", "1", "2", "3", "4", "5")), variable = "Nivel de presencia GAO"),
+  base_riesgo_analisis %>% transmute(variable = "Nivel de acciones armadas", nivel = as.character(`Nivel de acciones armadas`), part_senado) %>% filter(!is.na(nivel)) %>% mutate(nivel = factor(nivel, levels = c("0", "1", "2", "3", "4", "5")), variable = "Nivel de acciones armadas")
+) %>%
+  filter(!is.na(nivel), !is.na(part_senado)) %>%
+  group_by(variable, nivel) %>%
+  summarise(part_media = mean(part_senado, na.rm = TRUE), .groups = "drop")
+
+# 4. Datos para el Mapa y Tabla
+q_part <- quantile(base_riesgo_analisis$part_senado, probs = c(1/3, 2/3), na.rm = TRUE)
+
+base_mapa_riesgo <- base_riesgo_analisis %>%
+  mutate(
+    exposicion_critica = case_when(
+      `Riesgo Total` %in% c("Moderado", "Alto") ~ "Con riesgo",
+      `Riesgo Total` %in% c("Sin Riesgo", "Bajo") ~ "Sin riesgo o bajo",
+      TRUE ~ "Sin clasificar"
+    ),
+    nivel_part = case_when(
+      is.na(part_senado) ~ "Media",
+      part_senado < q_part[1] ~ "Baja",
+      part_senado > q_part[2] ~ "Alta",
+      TRUE ~ "Media"
+    ),
+    grupo_mapa = case_when(
+      exposicion_critica == "Sin riesgo o bajo" & nivel_part == "Alta" ~ "Sin riesgo/bajo - Part. alta",
+      exposicion_critica == "Sin riesgo o bajo" & nivel_part == "Baja" ~ "Sin riesgo/bajo - Part. baja",
+      exposicion_critica == "Con riesgo" & nivel_part == "Alta" ~ "Con riesgo - Part. alta",
+      exposicion_critica == "Con riesgo" & nivel_part == "Baja" ~ "Con riesgo - Part. baja",
+      TRUE ~ "Part. media o sin datos"
+    )
+  )
+
+# Tabla de Mpios Críticos (Con riesgo y baja part)
+tabla_critica <- base_mapa_riesgo %>%
+  filter(exposicion_critica == "Con riesgo", nivel_part == "Baja") %>%
+  group_by(Depto) %>%
+  summarise(
+    n_mun = n(),
+    part_prom = mean(part_senado, na.rm = TRUE),
+    municipios_lista = paste(Municipio[order(part_senado)][1:min(30, n())], collapse = ", "),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(n_mun), part_prom) %>%
+  slice(1:12)
+
+# Unir geometría y exportar GeoJSON (Para mapa en OJS)
+sf_riesgo <- readRDS(file.path(ruta_general, "shapes", "muni_simpl_sanandres_cache.rds"))$sf_obj %>%
+  mutate(codmpio = as.integer(codmpio)) %>%
+  inner_join(base_mapa_riesgo %>% select(codmpio, grupo_mapa, Municipio, Depto, part_senado), by = "codmpio") %>%
+  st_transform(4326)
+
+file_geojson_riesgo <- "riesgo_mapa.geojson"
+if(file.exists(file_geojson_riesgo)) file.remove(file_geojson_riesgo)
+st_write(sf_riesgo, file_geojson_riesgo, driver = "GeoJSON", quiet = TRUE)
+
+saveRDS(list(
+  plot_barras = vars_binarias_plot,
+  plot_lineas = base_intensidad_plot,
+  tabla = tabla_critica
+), "datos_riesgo.rds")
+
+message("Listo: datos de riesgo generados y geojson exportado.")
