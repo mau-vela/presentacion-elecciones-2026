@@ -1,0 +1,10 @@
+name: informe_scroll
+title:
+username: mau-vela
+account: mau-vela
+server: connect.posit.cloud
+hostUrl: https://api.connect.posit.cloud/v1
+appId: 019ff757-12c6-7dd5-327d-b7cc9b2d9945
+bundleId:
+url: https://connect.posit.cloud/mau-vela/content/019ff757-12c6-7dd5-327d-b7cc9b2d9945
+version: 1

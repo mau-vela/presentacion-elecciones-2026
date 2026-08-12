@@ -1951,7 +1951,7 @@ update_esp_map = {
   }
 }
 ```
-
+::: {.content-hidden}
 ### Brecha de participación: CITREP vs Cámara Rural
 
 ```{r}
@@ -2083,7 +2083,7 @@ html`${tabla_brecha_render}`
 :::
 
 ::::
-
+:::
 
 ## Participación rural y urbana
 
@@ -2430,6 +2430,7 @@ grafica_puestos = {
 ```{ojs}
 html`${grafica_puestos}`
 ```
+
 
 ```{=html}
 <script>
