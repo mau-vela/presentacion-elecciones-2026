@@ -3141,6 +3141,114 @@ grafica_ve_esp = {
 
 ::::
 
+## Composición del Congreso por tipo de organización
+
+```{r}
+#| label: datos-electos-ojs
+datos_el <- readRDS("datos_electos.rds")
+ojs_define(el_seats_ojs = datos_el$seats)
+ojs_define(el_comp_ojs = datos_el$comp)
+```
+
+```{ojs}
+viewof el_corp = Inputs.radio(["Senado", "Cámara"], {value: "Senado", label: html`<b style="font-size:14px; color:#1F2937;">Corporación:</b>`})
+viewof el_anno = Inputs.radio([2026, 2022], {value: 2026, format: x => `${x}`, label: html`<b style="font-size:14px; color:#1F2937;">Año:</b>`})
+```
+
+```{ojs}
+// Transformación central para homologar "Partido" en toda la data
+el_seats_data = transpose(el_seats_ojs).map(d => ({...d, tipo: d.tipo === "Partido" ? "Partido con personería jurídica" : d.tipo}));
+el_comp_data = transpose(el_comp_ojs).map(d => ({...d, tipo: d.tipo === "Partido" ? "Partido con personería jurídica" : d.tipo}));
+
+// Variables locales
+ord_tipo_el = ["Coaliciones", "Partido con personería jurídica", "GSC", "Organización indígena", "Organización afro", "Organización social"]
+col_tipo_el = ({"Coaliciones":"#355C7D","Partido con personería jurídica":"#6F8FB8","GSC":"#E8A33D","Organización indígena":"#1B7A3A","Organización afro":"#9A4633","Organización social":"#7F60A8"})
+esEspecial_el = c => c && /CITREP|IND[IÍ]GENA|AFRO|ESTATUTO/i.test(c)
+```
+
+```{ojs}
+{
+  const d = el_comp_data.filter(x => +x.annoh === +el_anno && x.corp === el_corp)
+    .filter(x => x.n_electos > 0 || x.n_cand > 0);
+  
+  const tot = d3.sum(d, x => x.n_electos);
+  const dom = d.slice().sort((a,b) => b.n_electos - a.n_electos)[0];
+  const f = n => n.toFixed(1).replace(".", ",");
+  
+  return html`
+  <div style="font-size:15px; color:#334155; line-height:1.65; margin-bottom:24px; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; padding:16px 24px;">
+    <p style="margin:0 0 8px;">En <b>${el_corp} ${el_anno}</b> la composición incluye <b>${tot} curules</b> en total.</p>
+    <p style="margin:0;">El tipo de organización con mayor porcentaje de curules fue <b>${dom.tipo}</b>, logrando el <b>${f(dom.pct_electos)}%</b> de los escaños (${dom.n_electos}). Este resultado contrasta con su participación en las candidaturas, donde representaba el <b>${f(dom.pct_cand)}%</b> del total.</p>
+  </div>`;
+}
+```
+
+:::: {style="display:flex; gap:24px; align-items:stretch;"}
+
+::: {style="flex:0 0 50%; background:#fff; border:1px solid #EAF0F6; border-radius:8px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.02);"}
+<div style="font-weight:800; color:#0B2E63; text-align:center; font-size:14px; text-transform:uppercase; margin-bottom:8px;">Curules por partido</div>
+
+```{ojs}
+hemiciclo = {
+  let rows = el_seats_data.filter(d => +d.annoh === +el_anno && d.corp === el_corp);
+  if (rows.length === 0) return html`<div style="color:#94A3B8; text-align:center; padding:40px;">Sin datos</div>`;
+  
+  // 1. Calcular el total de curules por partido para ordenar de mayor a menor
+  const partyCounts = d3.rollups(rows, v => v.length, d => d.partido_color);
+  const countMap = new Map(partyCounts);
+  
+  // 2. Ordenar de izquierda a derecha (mayor tamaño primero, luego alfabético)
+  rows.sort((a, b) => {
+    const diff = countMap.get(b.partido_color) - countMap.get(a.partido_color);
+    if (diff !== 0) return diff;
+    return a.partido_color.localeCompare(b.partido_color);
+  });
+  
+  const n = rows.length;
+  const nrows = Math.max(3, Math.round(Math.sqrt(n / 2.2)));
+  const r0 = 1, r1 = 1.9;
+  const radii = d3.range(nrows).map(i => nrows === 1 ? r1 : r0 + (r1 - r0) * i / (nrows - 1));
+  const sw = d3.sum(radii);
+  let per = radii.map(r => Math.max(1, Math.round(n * r / sw)));
+  let diff = n - d3.sum(per);
+  for (let i = 0; diff !== 0; i = (i + 1) % nrows) {
+    if (diff > 0) { per[i]++; diff--; } else if (per[i] > 1) { per[i]--; diff++; }
+  }
+  
+  let pts = [];
+  radii.forEach((r, ri) => {
+    const c = per[ri];
+    for (let s = 0; s < c; s++) {
+      const t = c === 1 ? 0.5 : s / (c - 1);
+      const ang = Math.PI * (1 - t);
+      pts.push({x: r * Math.cos(ang), y: r * Math.sin(ang), ang});
+    }
+  });
+  
+  // Asignamos las coordenadas a los datos ordenados (el de mayor ángulo queda a la izquierda)
+  pts.sort((a, b) => b.ang - a.ang);
+  const seatData = pts.map((p, i) => ({...p, ...rows[Math.min(i, rows.length - 1)]}));
+
+  return Plot.plot({
+    width: 440, height: 260, marginTop: 10, marginBottom: 4,
+    x: {axis: null, domain: [-2.15, 2.15]}, // Ajuste del dominio para que no corte los bordes
+    y: {axis: null, domain: [-0.1, 2.1]},   
+    color: {type: "identity"},
+    marks: [
+      Plot.dot(seatData, {
+        x: "x", y: "y", fill: "color", r: 5.5, stroke: "white", strokeWidth: 0.6,
+        tip: true, 
+        channels: {
+          Congresista: "congresista", Partido: "partido", Tipo: "tipo",
+          Coalición: d => d.coalicion ?? "—", Circunscripción: d => esEspecial_el(d.circ) ? d.circ : "—"
+        },
+        title: d => `${d.congresista ?? ""}\n${d.partido}${d.coalicion ? "\nCoalición: " + d.coalicion : ""}\nTipo: ${d.tipo}${esEspecial_el(d.circ) ? "\nCircunscripción: " + d.circ : ""}`
+      })
+    ]
+  });
+}
+```
+
 ```{ojs}
 // Leyenda organizada con Grid CSS en columnas perfectas y porcentajes
 {
@@ -3173,6 +3281,85 @@ grafica_ve_esp = {
   </div>`;
 }
 ```
+:::
+
+::: {style="flex:0 0 50%; background:#fff; border:1px solid #EAF0F6; border-radius:8px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.02); display:flex; flex-direction:column;"}
+<div style="font-weight:800; color:#0B2E63; text-align:center; font-size:14px; text-transform:uppercase; margin-bottom:4px;">Candidaturas vs Curules</div>
+<div style="display:flex; justify-content:center; gap:20px; margin-bottom:16px; font-size:12px; color:#334155;">
+  <span style="display:flex; align-items:center; gap:6px;"><span style="width:12px; height:12px; border-radius:2px; background:#94A3B8; display:inline-block;"></span>% Candidaturas</span>
+  <span style="display:flex; align-items:center; gap:6px;"><span style="width:12px; height:12px; border-radius:2px; background:#0B2E63; display:inline-block;"></span>% Curules</span>
+</div>
+
+```{ojs}
+comparativo_barras = {
+  const d_raw = el_comp_data.filter(x => +x.annoh === +el_anno && x.corp === el_corp)
+    .filter(x => x.n_electos > 0 || x.n_cand > 0)
+    .sort((a, b) => b.pct_electos - a.pct_electos); 
+    
+  const d_long = d_raw.flatMap(x => [
+    {tipo: x.tipo, categoria: "Candidaturas", valor: x.pct_cand, n: x.n_cand},
+    {tipo: x.tipo, categoria: "Curules", valor: x.pct_electos, n: x.n_electos}
+  ]);
+
+  const maxv = Math.max(60, d3.max(d_long, x => x.valor) * 1.15);
+  
+  return Plot.plot({
+    marginLeft: 215, // Aumentado para acomodar "Partido con personería jurídica"
+    marginRight: 45, 
+    height: 60 + d_raw.length * 60, 
+    width: 540,
+    style: {fontSize: "12.5px", fontFamily: "sans-serif"},
+    x: {
+      label: "% del total de la corporación →", 
+      domain: [0, maxv], 
+      grid: true, 
+      tickFormat: d => d + "%"
+    },
+    y: {
+      axis: null, 
+      paddingInner: 0.2
+    },
+    fy: {
+      label: null, 
+      domain: d_raw.map(x => x.tipo), 
+      paddingOuter: 0.1
+    },
+    color: {
+      domain: ["Candidaturas", "Curules"], 
+      range: ["#94A3B8", "#0B2E63"]
+    },
+    marks: [
+      Plot.barX(d_long, {
+        x: "valor", 
+        y: "categoria", 
+        fy: "tipo", 
+        fill: "categoria", 
+        rx: 2,
+        tip: true,
+        title: d => `${d.tipo}\n${d.categoria}: ${d.valor.toFixed(1).replace(".",",")}% (${d.n})`
+      }),
+      Plot.text(d_long, {
+        x: "valor", 
+        y: "categoria", 
+        fy: "tipo", 
+        text: d => d.valor.toFixed(1).replace(".", ",") + "%",
+        textAnchor: "start",
+        dx: 6,
+        fontSize: 11.5, 
+        fontWeight: "bold", 
+        fill: "#1E293B"
+      })
+    ]
+  });
+}
+```
+:::
+
+::::
+
+<div style="font-size:11.5px; color:#64748B; margin-top:16px;">
+  <b>Nota:</b> La composición incluye para 2026 las curules del Estatuto de Oposición, y para 2022 las curules del Partido Comunes y del Estatuto de Oposición.
+</div>
 
 ```{=html}
 <script>
