@@ -2117,3 +2117,398 @@ saveRDS(list(
 ), "datos_riesgo.rds")
 
 message("Listo: datos de riesgo generados y geojson exportado.")
+
+# =====================================================================3
+#  SECCION 04-1 VOTOS EN BLANCO, NULOS Y NO MARCADOS ----
+# =====================================================================3
+
+# 1. Base consolidada para Votos Especiales
+base_ve <- base_congreso %>%
+  filter(annoh %in% c(2018, 2022, 2026)) %>%
+  mutate(
+    corp_graf = case_when(
+      corp == "SENADO" & codcirc %in% c(0, 4) ~ "Senado",
+      corp == "CAMARA" & codcirc %in% c(1, 4, 5) ~ "Cámara",
+      TRUE ~ NA_character_
+    ),
+    tipo_voto = case_when(
+      codparti == 996 ~ "Votos en blanco",
+      codparti == 997 ~ "Votos nulos",
+      codparti == 998 ~ "Votos no marcados",
+      TRUE ~ "Válidos" 
+    )
+  ) %>%
+  filter(!is.na(corp_graf))
+
+# 2. Nivel Nacional
+tot_nal <- base_ve %>% 
+  group_by(annoh, corp_graf) %>% 
+  summarise(tot = sum(votos, na.rm = TRUE), .groups = "drop")
+
+ve_nal <- base_ve %>% 
+  filter(tipo_voto != "Válidos") %>%
+  group_by(annoh, corp_graf, tipo_voto) %>% 
+  summarise(votos = sum(votos, na.rm = TRUE), .groups = "drop") %>%
+  left_join(tot_nal, by = c("annoh", "corp_graf")) %>%
+  mutate(pct = if_else(tot > 0, 100 * votos / tot, NA_real_))
+
+# 3. Nivel Departamental (2018, 2022 y 2026 para cambio)
+tot_dep <- base_ve %>% 
+  group_by(annoh, corp_graf, coddepto) %>% 
+  summarise(tot = sum(votos, na.rm = TRUE), .groups = "drop")
+
+ve_dep <- base_ve %>% 
+  filter(tipo_voto != "Válidos") %>%
+  group_by(annoh, corp_graf, tipo_voto, coddepto) %>% 
+  summarise(votos = sum(votos, na.rm = TRUE), .groups = "drop") %>%
+  left_join(tot_dep, by = c("annoh", "corp_graf", "coddepto")) %>%
+  mutate(pct = if_else(tot > 0, 100 * votos / tot, NA_real_)) %>%
+  select(annoh, corp_graf, tipo_voto, coddepto, pct) %>%
+  pivot_wider(names_from = annoh, values_from = pct, names_prefix = "pct_") %>%
+  mutate(
+    dif_22 = pct_2026 - pct_2022,
+    dif_18 = pct_2026 - pct_2018
+  ) %>%
+  left_join(todos_deptos %>% distinct(coddepto, Depto), by = "coddepto") %>%
+  mutate(
+    # Si no tiene nombre de Depto (porque es coddepto NA o código internacional), lo forzamos a "Exterior"
+    Depto = if_else(is.na(Depto), "Exterior", Depto)
+  )
+
+# 4. Nivel Municipal (2018, 2022 y 2026 para cambio)
+# (Al nivel municipal se omite el exterior, pero por si acaso aplicamos la misma lógica preventiva)
+tot_mpi <- base_ve %>% 
+  filter(!is.na(codmpio)) %>% # Filtramos NA aquí porque el exterior no tiene municipio
+  group_by(annoh, corp_graf, codmpio) %>% 
+  summarise(tot = sum(votos, na.rm = TRUE), .groups = "drop")
+
+ve_mpi <- base_ve %>% 
+  filter(tipo_voto != "Válidos", !is.na(codmpio)) %>%
+  group_by(annoh, corp_graf, tipo_voto, codmpio) %>% 
+  summarise(votos = sum(votos, na.rm = TRUE), .groups = "drop") %>%
+  left_join(tot_mpi, by = c("annoh", "corp_graf", "codmpio")) %>%
+  mutate(pct = if_else(tot > 0, 100 * votos / tot, NA_real_)) %>%
+  select(annoh, corp_graf, tipo_voto, codmpio, pct) %>%
+  pivot_wider(names_from = annoh, values_from = pct, names_prefix = "pct_") %>%
+  mutate(
+    dif_22 = pct_2026 - pct_2022,
+    dif_18 = pct_2026 - pct_2018
+  ) %>%
+  left_join(todos_municipios %>% distinct(codmpio, Municipio, Depto), by = "codmpio")
+
+# Exportar
+saveRDS(list(
+  nacional = ve_nal,
+  depto = ve_dep,
+  mpio = ve_mpi
+), "datos_votos_especiales.rds")
+
+message("Listo: datos_votos_especiales.rds generado correctamente con corrección de NAs.")
+
+
+# =====================================================================3
+#  SECCION 04-2 VOTOS BLANCOS/NULOS/NO MARCADOS EN ELECCIONES ESPECIALES ----
+# =====================================================================3
+
+# 1. Base para Circunscripciones Especiales
+base_ve_esp <- base_congreso %>%
+  filter(annoh %in% c(2018, 2022, 2026)) %>%
+  mutate(
+    eleccion = case_when(
+      corp == "SENADO" & codcirc == 4 ~ "Senado Indígena",
+      corp == "CAMARA" & codcirc == 4 ~ "Cámara Indígena",
+      corp == "CAMARA" & codcirc == 5 ~ "Cámara Afro",
+      corp == "CAMARA" & codcirc == 9 ~ "CITREP",
+      TRUE ~ NA_character_
+    ),
+    tipo_voto = case_when(
+      codparti == 996 ~ "Votos en blanco",
+      codparti == 997 ~ "Votos nulos",
+      codparti == 998 ~ "Votos no marcados",
+      TRUE ~ "Válidos"
+    ),
+    coddepto = floor(codmpio / 1000)
+  ) %>%
+  filter(!is.na(eleccion))
+
+# 2. Total Nacional / Circunscripción Completa
+tot_esp_nal <- base_ve_esp %>%
+  group_by(annoh, eleccion) %>%
+  summarise(tot = sum(votos, na.rm = TRUE), .groups = "drop")
+
+ve_esp_nal <- base_ve_esp %>%
+  filter(tipo_voto != "Válidos") %>%
+  group_by(annoh, eleccion, tipo_voto) %>%
+  summarise(votos = sum(votos, na.rm = TRUE), .groups = "drop") %>%
+  left_join(tot_esp_nal, by = c("annoh", "eleccion")) %>%
+  mutate(pct = if_else(tot > 0, 100 * votos / tot, NA_real_))
+
+# 3. Nivel Regional (Departamental y CITREP)
+# a. CITREP (por CTEP)
+tot_esp_citrep <- base_ve_esp %>%
+  filter(eleccion == "CITREP", annoh %in% c(2022, 2026), zona == 99, !is.na(CTEP), CTEP != 0) %>%
+  group_by(annoh, CTEP) %>%
+  summarise(tot = sum(votos, na.rm = TRUE), .groups = "drop")
+
+ve_esp_citrep <- base_ve_esp %>%
+  filter(eleccion == "CITREP", annoh %in% c(2022, 2026), zona == 99, !is.na(CTEP), CTEP != 0, tipo_voto != "Válidos") %>%
+  group_by(annoh, CTEP, tipo_voto) %>%
+  summarise(votos = sum(votos, na.rm = TRUE), .groups = "drop") %>%
+  left_join(tot_esp_citrep, by = c("annoh", "CTEP")) %>%
+  mutate(pct = if_else(tot > 0, 100 * votos / tot, NA_real_), id_region = CTEP, eleccion = "CITREP")
+
+# b. Afro e Indígena (por Depto)
+tot_esp_dep <- base_ve_esp %>%
+  filter(eleccion != "CITREP", !is.na(coddepto)) %>%
+  group_by(annoh, eleccion, coddepto) %>%
+  summarise(tot = sum(votos, na.rm = TRUE), .groups = "drop")
+
+ve_esp_dep <- base_ve_esp %>%
+  filter(eleccion != "CITREP", !is.na(coddepto), tipo_voto != "Válidos") %>%
+  group_by(annoh, eleccion, tipo_voto, coddepto) %>%
+  summarise(votos = sum(votos, na.rm = TRUE), .groups = "drop") %>%
+  left_join(tot_esp_dep, by = c("annoh", "eleccion", "coddepto")) %>%
+  mutate(pct = if_else(tot > 0, 100 * votos / tot, NA_real_), id_region = coddepto)
+
+# Consolidar Regional
+ve_esp_reg_long <- bind_rows(
+  ve_esp_citrep %>% select(annoh, eleccion, tipo_voto, id_region, pct),
+  ve_esp_dep %>% select(annoh, eleccion, tipo_voto, id_region, pct)
+)
+
+ve_esp_reg <- ve_esp_reg_long %>%
+  pivot_wider(names_from = annoh, values_from = pct, names_prefix = "pct_") %>%
+  mutate(
+    dif_22 = pct_2026 - pct_2022,
+    dif_18 = if_else(eleccion == "CITREP", NA_real_, pct_2026 - pct_2018)
+  )
+
+# Agregar Nombres de Región (Depto o CITREP)
+map_citrep_lbl <- tibble::tribble(
+  ~CTEP, ~lbl,
+  1L, "1. Cauca-Nariño-Valle", 2L, "2. Arauca", 3L, "3. Bajo Cauca", 4L, "4. Catatumbo",
+  5L, "5. Caquetá-Huila", 6L, "6. Chocó", 7L, "7. Sur de Meta-Guaviare", 8L, "8. Montes de María",
+  9L, "9. Pacífico Cauca-Valle", 10L, "10. Pacífico Nariño", 11L, "11. Putumayo", 12L, "12. Cesar-Guajira-Magdalena",
+  13L, "13. Sur de Bolívar", 14L, "14. Sur de Córdoba", 15L, "15. Sur de Tolima", 16L, "16. Urabá"
+)
+deptos_validos <- map_depto_nom %>% distinct()
+
+ve_esp_reg <- ve_esp_reg %>%
+  left_join(deptos_validos %>% rename(id_region = coddepto, nombre_region = Depto) %>% mutate(is_citrep=FALSE), by="id_region") %>%
+  left_join(map_citrep_lbl %>% rename(id_region_citrep = CTEP, nombre_citrep = lbl), by=c("id_region"="id_region_citrep")) %>%
+  mutate(nombre_region = if_else(eleccion == "CITREP", nombre_citrep, nombre_region)) %>%
+  select(-nombre_citrep, -is_citrep) %>% filter(!is.na(nombre_region))
+
+# 4. Guardar
+saveRDS(list(
+  nacional = ve_esp_nal,
+  regional = ve_esp_reg
+), "datos_ve_especiales.rds")
+
+message("Listo: datos_ve_especiales.rds generado.")
+
+# ======================================================================3
+#  SECCION 04-03 ELECTOS POR TIPO DE ORGANIZACIÓN  (Congreso 2022 y 2026) ----
+# ======================================================================3
+
+getcol <- function(df, nm) if (nm %in% names(df)) df[[nm]] else NA
+
+homolog_tipo <- function(x) dplyr::case_when(
+  x == "Coaliciones" ~ "Coaliciones",
+  x == "Movimientos sociales o GSC" ~ "GSC",
+  x == "Partido con personería jurídica" ~ "Partido",
+  x == "Organizaciones indígenas" ~ "Organización indígena",
+  x == "Organizaciones afrodescendientes" ~ "Organización afro",
+  x %in% c("Organizaciones sociales", "Org. sociales o GSC CITREP") ~ "Organización social",
+  TRUE ~ NA_character_
+)
+
+cand_tipo_corp <- bind_rows(
+  cand22_tipo %>% transmute(annoh = 2022, corp, tipo_part),
+  cand26_tipo %>% filter(!is.na(tipo_part)) %>% transmute(annoh = 2026, corp, tipo_part)
+) %>%
+  mutate(tipo = homolog_tipo(tipo_part)) %>%
+  filter(!is.na(corp), !is.na(tipo)) %>%
+  count(annoh, corp, tipo, name = "n_cand") %>%
+  group_by(annoh, corp) %>% mutate(pct_cand = 100 * n_cand / sum(n_cand)) %>% ungroup()
+
+# ======================= ELECTOS 2026 =======================3
+ruta_electos <- "../Congreso 2026/datos/ESCRUTINIO"
+e26r <- read_excel(file.path(ruta_electos, "Electos Congreso 2026 - escrutinio definitivo.xlsx"))
+names(e26r) <- str_squish(names(e26r))
+e26 <- tibble(
+  annoh = 2026,
+  corp_raw = str_to_upper(str_squish(e26r$corp)),
+  nomparti = str_squish(e26r$nomparti),
+  sin_coal = str_squish(as.character(e26r$`partido_sin_coalición`)),
+  circ = str_to_upper(str_squish(e26r$circ)),
+  congresista = str_squish(as.character(getcol(e26r, "nomcandi"))),
+  cod_depto = suppressWarnings(as.integer(getcol(e26r, "COD_DPTO"))),
+  depto = str_squish(as.character(getcol(e26r, "Depto")))
+) %>%
+  mutate(
+    es_coal   = !is.na(sin_coal) & sin_coal != "" & str_to_upper(sin_coal) != "NA",
+    es_citrep = str_detect(corp_raw, "CITREP") | str_detect(circ, "CITREP"),
+    corp = case_when(es_citrep ~ "Cámara",
+                     str_detect(corp_raw, "SENADO") ~ "Senado",
+                     str_detect(corp_raw, "CAMARA|CÁMARA") ~ "Cámara",
+                     TRUE ~ str_to_title(corp_raw)),
+    partido = if_else(es_citrep, nomparti,
+                  if_else(es_coal, sin_coal, nomparti)),,            # nombre real (tooltip)
+    coalicion = if_else(es_coal & !es_citrep, nomparti, NA_character_),
+    color_base = case_when(es_citrep ~ "CITREP", es_coal ~ sin_coal, TRUE ~ nomparti),
+    tipo = case_when(
+      es_citrep & str_detect(str_to_upper(nomparti), "SOY URAB") ~ "GSC",
+      es_citrep ~ "Organización social",
+      str_detect(str_to_upper(partido), "DEMÓCRATA|DEMOCRATA") & str_detect(circ, "AFRO") ~ "Organización afro",   # Demócrata tiene personería
+      es_coal ~ "Coaliciones",
+      str_detect(circ, "INDIGENA|INDÍGENA") ~ "Organización indígena",
+      str_detect(circ, "AFRO") ~ "Organización afro",
+      str_detect(str_to_upper(nomparti), "CREEMOS|LA FUERZA") ~ "GSC",
+      str_detect(str_to_upper(nomparti), "MINGA") ~ "Organización indígena",
+      str_detect(str_to_upper(nomparti), "NARANJ") ~ "Organización afro",
+      TRUE ~ "Partido"
+    ),
+    en_barras = TRUE
+  ) %>%
+  select(annoh, corp, tipo, color_base, partido, coalicion, congresista, circ, depto, en_barras)
+
+# Cepeda (Senado) y Quilcué (Cámara): estatuto oposición, fuera de barras
+oposicion_26 <- tibble(
+  annoh = 2026, corp = c("Senado", "Cámara"), tipo = "Partido",
+  color_base = "PACTO HISTÓRICO", partido = "MOVIMIENTO POLÍTICO PACTO HISTÓRICO",
+  coalicion = NA_character_, congresista = c("IVÁN CEPEDA CASTRO", "AÍDA QUILCUÉ VIVAS"),
+  circ = "ESTATUTO OPOSICIÓN", depto = NA_character_, en_barras = FALSE
+)
+e26 <- bind_rows(e26, oposicion_26)
+
+# ======================= ELECTOS 2022 =======================3
+e22r <- read_excel(file.path("../Congreso 2026/datos/2022", "Electos CONGRESO COMPLETO 2022-2026.xlsx"),
+                   sheet = "Congreso Completo 22-26")
+names(e22r) <- str_squish(names(e22r))
+e22 <- tibble(
+  annoh = 2022,
+  corp_raw = str_to_upper(str_squish(e22r$Corpóración)),
+  nomparti = str_squish(e22r$nomparti),
+  circ_raw = str_squish(as.character(e22r$Circunscripción)),
+  congresista = str_to_upper(str_squish(as.character(e22r$nomcandi)))
+)
+
+fix_22 <- c(
+  "MAURICIO PARODI DIAZ"="PARTIDO CAMBIO RADICAL","DANIEL CARVALHO MEJIA"="PARTIDO VERDE OXÍGENO",
+  "DORINA NA HERNANDEZ PALOMINO"="PACTO HISTÓRICO","JUAN SEBASTIAN GOMEZ GONZALES"="PARTIDO NUEVO LIBERALISMO",
+  "OSCAR RODRIGO CAMPO HURTADO"="PARTIDO CAMBIO RADICAL","CARLOS FELIPE QUINTERO OVALLE"="PARTIDO LIBERAL COLOMBIANO",
+  "JENNIFER DALLEY PEDRAZA SANDOVAL"="DIGNIDAD","IRMA LUZ HERRERA RODRIGUEZ"="PARTIDO MIRA",
+  "JUAN CARLOS WILLS OSPINA"="PARTIDO CONSERVADOR COLOMBIANO","ALEJANDRO GARCIA RIOS"="PARTIDO ALIANZA VERDE",
+  "CAROLINA GIRALDO BOTERO"="PARTIDO ALIANZA VERDE","LUIS DAVID SUAREZ CHADID"="PARTIDO CONSERVADOR COLOMBIANO",
+  "MARTHA LISBETH ALFONSO JURADO"="PARTIDO ALIANZA VERDE","SANTIAGO OSORIO MARIN"="PARTIDO ALIANZA VERDE",
+  "HUMBERTO DE LA CALLE LOMBANA"="PARTIDO VERDE OXÍGENO","JAIRO ALBERTO CASTELLANOS SERRANO"="PARTIDO ALIANZA SOCIAL INDEPENDIENTE",
+  "GUIDO ECHEVERRI PIEDRAHITA"="PARTIDO ALIANZA SOCIAL INDEPENDIENTE","GUSTAVO ADOLFO MORENO HURTADO"="PARTIDO ALIANZA SOCIAL INDEPENDIENTE",
+  "SOR BERENICE BEDOYA PEREZ"="PARTIDO ALIANZA SOCIAL INDEPENDIENTE","BEATRIZ LORENA RIOS CUELLAR"="COLOMBIA JUSTA LIBRES",
+  "CARLOS EDUARDO GUEVARA VILLABON"="PARTIDO MIRA","ANA PAOLA AGUDELO GARCIA"="PARTIDO MIRA",
+  "MANUEL ANTONIO VIRGUEZ PIRAQUIVE"="PARTIDO MIRA"
+)
+
+e22 <- e22 %>%
+  mutate(
+    nomparti_orig = nomparti,
+    nomparti = coalesce(fix_22[congresista], nomparti),
+    nomparti = if_else(str_to_upper(nomparti) == "COALICIÓN ALIANZA VERDE Y CENTRO ESPERANZA",
+                       "PARTIDO ALIANZA VERDE", nomparti),
+    P = str_to_upper(nomparti), PO = str_to_upper(nomparti_orig),
+    circ_num = suppressWarnings(as.integer(circ_raw)),
+    es_citrep = corp_raw %in% c("CAMARA","CÁMARA") & !is.na(circ_num) & circ_num >= 1 & circ_num <= 16,
+    es_oposicion = str_detect(corp_raw, "ESTATUTO|OPOSICI"),
+    es_comunes = str_detect(P, "COMUNES"),
+    es_afro_esp = str_detect(P, "FERNANDO R.?OS HIDALGO|PALENQUE"),
+    cambio = P != PO,
+    es_coal = (cambio & !es_afro_esp) | str_detect(PO, "COALICION|COALICIÓN|PACTO HIST"),
+    corp = case_when(str_detect(corp_raw, "SENADO") ~ "Senado",
+                     str_detect(corp_raw, "CAMARA|CÁMARA") ~ "Cámara",
+                     TRUE ~ str_to_title(corp_raw)),
+    tipo = case_when(
+      es_citrep & str_detect(P, "SOY URAB") ~ "GSC",
+      es_citrep ~ "Organización social",
+      es_afro_esp ~ "Organización afro",
+      str_detect(P, "AICO|AUTORIDADES IND|MAIS|ALTERNATIVO IND") ~ "Organización indígena",
+      str_detect(P, "FUERZA CIUDADANA|GENTE EN MOVIMIENTO|LA FUERZA") ~ "GSC",
+      es_coal ~ "Coaliciones",
+      TRUE ~ "Partido"
+    ),
+    color_base = if_else(es_citrep, "CITREP", nomparti),
+    coalicion = if_else(es_coal & !es_citrep, nomparti_orig, NA_character_),
+    partido = nomparti,
+    depto = if_else(es_citrep | is.na(circ_num), circ_raw, NA_character_),
+    en_barras = !(es_oposicion | es_comunes)
+  ) %>%
+  select(annoh, corp, tipo, color_base, partido, coalicion, congresista, circ = circ_raw, depto, en_barras)
+
+# ======================= CANONIZAR NOMBRES + COLOR =======================3
+canon <- function(x) {
+  u <- str_to_upper(str_squish(x))
+  dplyr::case_when(
+    str_detect(u, "PACTO HIST") ~ "PACTO HISTÓRICO",
+    str_detect(u, "DE LA U|UNIÓN POR LA GENTE|UNION POR LA GENTE") ~ "PARTIDO DE LA U",
+    str_detect(u, "ALIANZA SOCIAL INDEP|\\bASI\\b") ~ "PARTIDO ASI",
+    str_detect(u, "NUEVO LIBERALISMO") ~ "NUEVO LIBERALISMO",
+    str_detect(u, "MAIS|ALTERNATIVO IND") ~ "MAIS",
+    str_detect(u, "AICO|AUTORIDADES IND") ~ "AICO",
+    str_detect(u, "DIGNIDAD") ~ "DIGNIDAD Y COMPROMISO",
+    str_detect(u, "DEMÓCRATA|DEMOCRATA|PALENQUE") ~ "PARTIDO DEMÓCRATA COLOMBIANO",
+    str_detect(u, "CENTRO DEMOCR") ~ "CENTRO DEMOCRÁTICO",
+    str_detect(u, "CONSERVADOR") ~ "PARTIDO CONSERVADOR COLOMBIANO",
+    str_detect(u, "LIBERAL COLOMB") ~ "PARTIDO LIBERAL COLOMBIANO",
+    str_detect(u, "CAMBIO RADICAL") ~ "PARTIDO CAMBIO RADICAL",
+    str_detect(u, "ALIANZA VERDE") ~ "PARTIDO ALIANZA VERDE",
+    str_detect(u, "VERDE OX") ~ "VERDE OXÍGENO",
+    str_detect(u, "\\bMIRA\\b") ~ "PARTIDO MIRA",
+    str_detect(u, "COMUNES") ~ "PARTIDO COMUNES",
+    str_detect(u, "COLOMBIA RENACIENTE") ~ "COLOMBIA RENACIENTE",
+    str_detect(u, "COLOMBIA JUSTA") ~ "COLOMBIA JUSTA LIBRES",
+    str_detect(u, "SALVACIÓN NACIONAL|SALVACION NACIONAL") ~ "SALVACIÓN NACIONAL",
+    str_detect(u, "LIGA DE GOBERN") ~ "LIGA ANTICORRUPCIÓN",
+    str_detect(u, "CREEMOS") ~ "CREEMOS",
+    str_detect(u, "EN MARCHA") ~ "EN MARCHA",
+    str_detect(u, "FUERZA CIUDADANA") ~ "FUERZA CIUDADANA",
+    str_detect(u, "GENTE EN MOVIMIENTO") ~ "GENTE EN MOVIMIENTO",
+    str_detect(u, "FERNANDO R") ~ "FERNANDO RÍOS HIDALGO",
+    str_detect(u, "NARANJO") ~ "CONSEJO COMUNITARIO EL NARANJO",
+    str_detect(u, "MINGA") ~ "EN MINGA POR COLOMBIA",
+    str_detect(u, "LA FUERZA") ~ "LA FUERZA",
+    u == "CITREP" ~ "CITREP",
+    TRUE ~ str_to_title(u)
+  )
+}
+color_map <- c(
+  "PARTIDO LIBERAL COLOMBIANO"="#C00000","PARTIDO CONSERVADOR COLOMBIANO"="#0051BA",
+  "PARTIDO CAMBIO RADICAL"="#E2001B","CENTRO DEMOCRÁTICO"="#253D6B","PACTO HISTÓRICO"="#700CF2",
+  "PARTIDO ALIANZA VERDE"="#007C3D","VERDE OXÍGENO"="#8DC63F","PARTIDO DE LA U"="#F2B611",
+  "PARTIDO MIRA"="#004998","PARTIDO ASI"="#E4BB97","NUEVO LIBERALISMO"="#F15A29","EN MARCHA"="#D62839",
+  "COLOMBIA RENACIENTE"="#E9761B","PARTIDO COMUNES"="#EA686B","SALVACIÓN NACIONAL"="#1C6E8C",
+  "LIGA ANTICORRUPCIÓN"="#F07605","MAIS"="#FDEB01","AICO"="#B6590C","DIGNIDAD Y COMPROMISO"="#A0299B",
+  "PARTIDO DEMÓCRATA COLOMBIANO"="#967C3F","COLOMBIA JUSTA LIBRES"="#A97C20","CREEMOS"="#66C2A5",
+  "FUERZA CIUDADANA"="#FF6702","GENTE EN MOVIMIENTO"="#E4D031","FERNANDO RÍOS HIDALGO"="#626165",
+  "CONSEJO COMUNITARIO EL NARANJO"="#D2691E","EN MINGA POR COLOMBIA"="#6B8E23","LA FUERZA"="#00A0A0",
+  "CITREP"="#C2AFF0"
+)
+
+electos_ind <- bind_rows(e26, e22) %>%
+  filter(!is.na(corp), !is.na(tipo)) %>%
+  mutate(
+    partido_color = canon(color_base),
+    color = unname(color_map[partido_color]),
+    color = if_else(is.na(color), "#B0B0B0", color)   # gris para no mapeados
+  ) %>%
+  select(annoh, corp, tipo, partido_color, color, partido, coalicion, congresista, circ, depto, en_barras)
+
+comp_tipo <- electos_ind %>%
+  filter(en_barras) %>%
+  count(annoh, corp, tipo, name = "n_electos") %>%
+  group_by(annoh, corp) %>% mutate(pct_electos = 100 * n_electos / sum(n_electos)) %>% ungroup() %>%
+  full_join(cand_tipo_corp, by = c("annoh", "corp", "tipo")) %>%
+  mutate(across(c(n_electos, n_cand), ~ coalesce(., 0L)),
+         across(c(pct_electos, pct_cand), ~ coalesce(., 0)))
+
+saveRDS(list(seats = electos_ind, comp = comp_tipo), "datos_electos.rds")
+message("Listo: datos_electos.rds (", nrow(electos_ind), " curules; ",
+        sum(electos_ind$en_barras), " en barras)")

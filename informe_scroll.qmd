@@ -2578,6 +2578,601 @@ html`${tabla_riesgo_render}`
 :::
 
 ::::
+<br>
+
+::: {.subseccion}
+### Resultados electorales
+:::
+
+## Votos en blanco, nulos y tarjetones no marcados
+
+```{r}
+#| label: datos-ve-ojs
+datos_ve <- readRDS("datos_votos_especiales.rds")
+ojs_define(ve_nal_ojs = datos_ve$nacional)
+ojs_define(ve_dep_ojs = datos_ve$depto)
+ojs_define(ve_mpi_ojs = datos_ve$mpio)
+```
+
+```{ojs}
+ve_nal_data = transpose(ve_nal_ojs);
+ve_dep_data = transpose(ve_dep_ojs);
+ve_mpi_data = transpose(ve_mpi_ojs);
+```
+
+```{ojs}
+viewof ve_tipo_nal = Inputs.radio(["Votos en blanco", "Votos nulos", "Votos no marcados"], {value: "Votos en blanco", label: html`<b style="font-size:14px; color:#1F2937;">Tipo de voto:</b>`})
+```
+
+```{ojs}
+// Cálculos dinámicos para el texto nacional
+texto_nal_dinamico = {
+  const d_sen_18 = ve_nal_data.find(x => x.tipo_voto === ve_tipo_nal && x.corp_graf === "Senado" && x.annoh === 2018)?.pct || 0;
+  const d_sen_26 = ve_nal_data.find(x => x.tipo_voto === ve_tipo_nal && x.corp_graf === "Senado" && x.annoh === 2026)?.pct || 0;
+  const d_cam_18 = ve_nal_data.find(x => x.tipo_voto === ve_tipo_nal && x.corp_graf === "Cámara" && x.annoh === 2018)?.pct || 0;
+  const d_cam_26 = ve_nal_data.find(x => x.tipo_voto === ve_tipo_nal && x.corp_graf === "Cámara" && x.annoh === 2026)?.pct || 0;
+  
+  const fmt = n => n.toFixed(1).replace(".", ",");
+  
+  let obs = "";
+  if (ve_tipo_nal === "Votos nulos") {
+    obs = `La caída es más marcada en Cámara (pasando de ${fmt(d_cam_18)}% a ${fmt(d_cam_26)}%).`;
+  } else if (ve_tipo_nal === "Votos en blanco") {
+    obs = `Los votos en blanco disminuyen de forma consistente, bajando en el Senado de ${fmt(d_sen_18)}% a ${fmt(d_sen_26)}%.`;
+  } else {
+    obs = `Los votos no marcados presentan una reducción gradual, alcanzando niveles de ${fmt(d_sen_26)}% en Senado y ${fmt(d_cam_26)}% en Cámara para 2026.`;
+  }
+
+  return html`
+  <div style="font-size: 15px; color: #334155; line-height: 1.6; margin-bottom: 24px;">
+    <ul style="margin-top: 0; padding-left: 20px;">
+      <li style="margin-bottom: 6px;">Se observa una reducción sostenida en los <b>${ve_tipo_nal.toLowerCase()}</b> entre 2018 y 2026 en ambas corporaciones.</li>
+      <li>${obs}</li>
+    </ul>
+  </div>
+  `;
+}
+```
+
+:::: {style="display: flex; gap: 24px; align-items: stretch; margin-bottom: 40px;"}
+
+::: {style="flex: 0.25; display:flex; flex-direction:column; justify-content:center; gap: 16px;"}
+```{ojs}
+// Tarjetas KPI
+kpi_ve_render = {
+  const d_sen = ve_nal_data.find(x => x.tipo_voto === ve_tipo_nal && x.corp_graf === "Senado" && x.annoh === 2026);
+  const d_sen22 = ve_nal_data.find(x => x.tipo_voto === ve_tipo_nal && x.corp_graf === "Senado" && x.annoh === 2022);
+  const d_cam = ve_nal_data.find(x => x.tipo_voto === ve_tipo_nal && x.corp_graf === "Cámara" && x.annoh === 2026);
+  const d_cam22 = ve_nal_data.find(x => x.tipo_voto === ve_tipo_nal && x.corp_graf === "Cámara" && x.annoh === 2022);
+  
+  const diff_sen = (d_sen?.pct || 0) - (d_sen22?.pct || 0);
+  const diff_cam = (d_cam?.pct || 0) - (d_cam22?.pct || 0);
+  
+  const card = (corp, data, diff) => `
+    <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-left:4px solid #1F4E79; border-radius:6px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,0.02);">
+      <div style="font-size:13px; font-weight:800; color:#0B2E63; text-transform:uppercase;">${corp} (2026)</div>
+      <div style="display:flex; align-items:baseline; gap:8px; margin-top:8px;">
+        <span style="font-size:32px; font-weight:900; color:#1F4E79; line-height:1;">${(data?.pct||0).toFixed(1).replace(".",",")}%</span>
+        <span style="font-size:14px; font-weight:700; color:${diff>0?'#C00000':'#1B7A3A'};">${diff>0?"+":""}${Math.abs(diff).toFixed(1).replace(".",",")} pp vs 22</span>
+      </div>
+      <div style="font-size:12px; color:#64748B; margin-top:8px; font-weight:600;">Total: ${(data?.votos||0).toLocaleString("es-CO")} votos</div>
+    </div>
+  `;
+  
+  return html`<div>${card("Senado", d_sen, diff_sen)}<br>${card("Cámara", d_cam, diff_cam)}</div>`;
+}
+```
+:::
+
+::: {style="flex: 0.75; background:#fff; border:1px solid #EAF0F6; border-radius:8px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.02);"}
+```{ojs}
+grafica_ve_nal = {
+  const dataFilt = ve_nal_data.filter(d => d.tipo_voto === ve_tipo_nal);
+  
+  return Plot.plot({
+    marginLeft: 50, marginRight: 30, marginTop: 20, height: 350,
+    style: { fontFamily: "sans-serif", fontSize: "12.5px" },
+    x: { type: "point", domain: [2018, 2022, 2026], padding: 0.5 },
+    y: { 
+      label: "↑ Porcentaje sobre el total (%)", 
+      grid: true, 
+      tickFormat: d => d + "%",
+      insetTop: 35
+    },
+    color: { domain: ["Senado", "Cámara"], range: ["#1F4E79", "#D97706"], legend: true },
+    marks: [
+      Plot.lineY(dataFilt, { x: "annoh", y: "pct", stroke: "corp_graf", strokeWidth: 2.5 }),
+      Plot.dot(dataFilt, { x: "annoh", y: "pct", fill: "corp_graf", r: 5 }),
+      Plot.text(dataFilt, { 
+        x: "annoh", 
+        y: "pct", 
+        text: d => d.pct.toFixed(1).replace(".",",") + "%", 
+        dy: d => {
+          const otra = dataFilt.find(o => o.annoh === d.annoh && o.corp_graf !== d.corp_graf);
+          return (otra && d.pct >= otra.pct) ? -16 : 18;
+        },
+        fill: d => d.corp_graf === "Cámara" ? "#D97706" : "#1F4E79", 
+        stroke: "white", strokeWidth: 4, paintOrder: "stroke",
+        fontSize: 12, 
+        fontWeight: "bold" 
+      }),
+      Plot.tip(dataFilt, Plot.pointer({
+        x: "annoh", y: "pct",
+        title: d => `${d.corp_graf} (${d.annoh})\n${ve_tipo_nal}: ${d.pct.toFixed(1)}%\nVotos: ${d.votos.toLocaleString("es-CO")}`,
+        fontSize: 14, fill: "#F8FAFC", stroke: "corp_graf"
+      }))
+    ]
+  });
+}
+```
+:::
+
+::::
+
+<h3 style="font-weight:800; color:#0B2E63; font-size:16px; text-transform:uppercase; margin-top:32px; margin-bottom:16px; border-bottom: 2px solid #0B2E63; padding-bottom: 8px;">Detalle territorial </h3>
+
+```{ojs}
+// Filtros combinados para el mapa territorial
+viewof ve_map_tipo = Inputs.radio(["Votos en blanco", "Votos nulos", "Votos no marcados"], {value: "Votos en blanco", label: html`<b style="font-size:14px; color:#1F2937;">Tipo:</b>`})
+viewof ve_map_corp = Inputs.radio(["Senado", "Cámara"], {value: "Senado", label: html`<b style="font-size:14px; color:#1F2937;">Corporación:</b>`})
+viewof ve_map_nivel = Inputs.radio(["Departamental", "Municipal"], {value: "Departamental", label: html`<b style="font-size:14px; color:#1F2937;">Nivel:</b>`})
+viewof ve_map_top = Inputs.select(["Top 20 más alto", "Top 20 más bajo"], {value: "Top 20 más alto"})
+```
+
+```{ojs}
+html`
+<div style="display: flex; gap: 32px; background: #F8FAFC; padding: 12px 20px; border-radius: 8px; border: 1px solid #E2E8F0; align-items: center; margin-bottom: 16px;">
+  <div style="display: flex; align-items: center; gap: 12px;">${viewof ve_map_tipo}</div>
+  <div style="display: flex; align-items: center; gap: 12px; border-left: 1px solid #CBD5E1; padding-left: 32px;">${viewof ve_map_corp}</div>
+  <div style="display: flex; align-items: center; gap: 12px; border-left: 1px solid #CBD5E1; padding-left: 32px;">${viewof ve_map_nivel}</div>
+</div>
+`
+```
+
+```{ojs}
+// Textos dinámicos del mapa 
+texto_territorial_ve = {
+  const data = ve_dep_data.filter(d => d.tipo_voto === ve_map_tipo && d.corp_graf === ve_map_corp && d.pct_2026 != null);
+  const sortedPart = data.slice().sort((a,b) => b.pct_2026 - a.pct_2026);
+  const sortedDrop = data.slice().sort((a,b) => a.dif_22 - b.dif_22);
+  
+  const fmt = n => n.toFixed(1).replace(".", ",");
+  
+  const top1 = sortedPart[0];
+  const top2 = sortedPart[1];
+  const bot1 = sortedPart[sortedPart.length - 1];
+  const bot2 = sortedPart[sortedPart.length - 2];
+  const drop1 = sortedDrop[0];
+  
+  return html`
+  <div style="font-size: 15px; color: #334155; line-height: 1.6; margin-bottom: 24px;">
+    <ul style="margin-top: 0; padding-left: 20px;">
+      <li style="margin-bottom: 6px;">Los niveles más altos de <b>${ve_map_tipo.toLowerCase()}</b> en ${ve_map_corp} se concentran en departamentos como <b>${top1?.Depto||""}</b> (${fmt(top1?.pct_2026||0)}%) y <b>${top2?.Depto||""}</b> (${fmt(top2?.pct_2026||0)}%).</li>
+      <li style="margin-bottom: 6px;">Los niveles más bajos se registran en <b>${bot1?.Depto||""}</b> (${fmt(bot1?.pct_2026||0)}%) y <b>${bot2?.Depto||""}</b> (${fmt(bot2?.pct_2026||0)}%).</li>
+      <li>Respecto a 2022, la reducción más fuerte se observa en <b>${drop1?.Depto||""}</b> (${fmt(drop1?.dif_22||0)} pp).</li>
+    </ul>
+  </div>
+  `;
+}
+```
+
+```{ojs}
+//| label: leaflet-setup-ve
+L_ve = require("leaflet@1.9.4")
+```
+
+```{ojs}
+html`<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">`
+```
+
+```{ojs}
+geo_mpios_ve = FileAttachment("geo_mpios.geojson").json()
+geo_deptos_ve = FileAttachment("geo_deptos.geojson").json()
+```
+
+:::: {style="display: flex; gap: 24px; align-items: flex-start;"}
+
+::: {style="flex: 0 0 54%; width: 54%;"}
+```{ojs}
+mapa_ve_L = {
+  const div = html`<div style="height:540px; border:1px solid #EAF0F6; border-radius:8px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.03);"></div>`;
+  const map = L_ve.map(div, { scrollWheelZoom: true }).setView([4.4, -73.5], 5);
+  L_ve.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+    { subdomains: "abcd", attribution: "© OpenStreetMap © CARTO" }).addTo(map);
+  invalidation.then(() => map.remove());
+  setTimeout(() => map.invalidateSize(), 200);
+  div.value = map;
+  return div;
+}
+```
+
+```{ojs}
+ve_layer_update = {
+  const map = mapa_ve_L.value;
+  if (!map) return;
+  if (map._dl) map.removeLayer(map._dl);
+  if (map._legend) map._legend.remove();
+
+  const isMpio = ve_map_nivel === "Municipal";
+  const geo = isMpio ? geo_mpios_ve : geo_deptos_ve;
+  const codeProp = isMpio ? "codmpio" : "coddepto";
+  const dataArr = isMpio ? ve_mpi_data : ve_dep_data;
+  
+  const dataFilt = dataArr.filter(d => d.tipo_voto === ve_map_tipo && d.corp_graf === ve_map_corp);
+  const lookup = new Map(dataFilt.map(d => [+d[codeProp], d]));
+  const vals = dataFilt.map(d => d.pct_2026).filter(v => v != null);
+
+  const color = d3.scaleSequential([d3.min(vals) ?? 0, d3.max(vals) ?? 1], d3.interpolateBlues);
+  const colorOf = v => v == null ? "#eeeeee" : color(v);
+  const pf = v => v == null ? "—" : v.toFixed(1).replace(".", ",");
+  const pfd = v => v == null ? "—" : (v>0?"+":"") + v.toFixed(1).replace(".", ",");
+
+  const layer = L_ve.geoJSON(geo, {
+    style: f => {
+      const d = lookup.get(+f.properties[codeProp]);
+      return { weight: 0.4, color: "#ffffff", fillColor: colorOf(d ? d.pct_2026 : null), fillOpacity: 0.9 };
+    },
+    onEachFeature: (f, lyr) => {
+      const d = lookup.get(+f.properties[codeProp]);
+      const nom = d ? (isMpio ? d.Municipio : d.Depto) : "Sin datos";
+      const dep = (isMpio && d) ? ` <span style='color:#888'>(${d.Depto})</span>` : "";
+      let t = `<b>${nom}</b>${dep}<br>2026: ${pf(d?.pct_2026)}%<br>Cambio vs 22: ${pfd(d?.dif_22)} pp<br>Cambio vs 18: ${pfd(d?.dif_18)} pp`;
+      lyr.bindTooltip(t, { sticky: true });
+      lyr.on("mouseover", () => lyr.setStyle({ weight: 2, color: "#0B2E63" }));
+      lyr.on("mouseout", () => lyr.setStyle({ weight: 0.4, color: "#ffffff" }));
+    }
+  }).addTo(map);
+  map._dl = layer;
+
+  const legend = L_ve.control({ position: "bottomleft" });
+  legend.onAdd = () => {
+    const dv = L_ve.DomUtil.create("div");
+    dv.style = "background:#fff; padding:10px 12px; border-radius:6px; box-shadow:0 1px 4px rgba(0,0,0,.2); font-size:11px; width: 140px;";
+    
+    const mMax = d3.max(vals) ?? 1;
+    const mMin = d3.min(vals) ?? 0;
+    
+    let inner = `<div style="font-weight:700; color:#0B2E63; margin-bottom:6px; font-size:12px;">${ve_map_tipo} (%)</div>`;
+    inner += `<div style="display:flex; justify-content:space-between; font-size:10.5px; color:#475569; margin-bottom:4px; font-weight:600;">
+                <span>${mMin.toFixed(1).replace(".",",")}%</span>
+                <span>${mMax.toFixed(1).replace(".",",")}%</span>
+              </div>`;
+    inner += `<div style="height:10px; width:100%; border-radius:4px; border:1px solid #CBD5E1; background:linear-gradient(to right, ${colorOf(mMin)}, ${colorOf((mMin+mMax)/2)}, ${colorOf(mMax)});"></div>`;
+    
+    dv.innerHTML = inner;
+    return dv;
+  };
+  legend.addTo(map);
+  map._legend = legend;
+  
+  return md``;
+}
+```
+:::
+
+::: {style="flex: 0 0 46%; width: 46%;"}
+```{ojs}
+tabla_ve_render = {
+  const isMpio = ve_map_nivel === "Municipal";
+  const dataArr = isMpio ? ve_mpi_data : ve_dep_data;
+  const dataFilt = dataArr.filter(d => d.tipo_voto === ve_map_tipo && d.corp_graf === ve_map_corp && d.pct_2026 != null);
+  
+  let data = dataFilt.slice().sort((a,b) => b.pct_2026 - a.pct_2026);
+  let rows_to_show = data;
+  
+  if (isMpio) {
+    rows_to_show = ve_map_top === "Top 20 más alto" ? data.slice(0, 20) : data.slice(-20).reverse();
+  }
+  
+  const fmtPct = d => d == null ? "—" : d.toFixed(1).replace(".", ",") + "%";
+  const fmtCam = d => d == null ? "—" : (d > 0 ? "+" : "") + d.toFixed(1).replace(".", ",") + " pp";
+  const colr = v => v > 0 ? "#C00000" : (v < 0 ? "#1B7A3A" : "#5a6a80"); 
+  
+  const th = "padding:12px 8px; background:#5E7C99; color:#ffffff; font-weight:600; font-size:12px; position:sticky; top:0; z-index:2; border-bottom:2px solid #4A637A;";
+  const header_name = isMpio ? "Municipio" : "Departamento";
+  const subtext_logic = d => isMpio ? `<div style='font-size:10px; color:#94A3B8;'>${d.Depto}</div>` : "";
+  
+  let tbody = rows_to_show.map((d,i) => `
+    <tr style='border-bottom:1px solid #E2E8F0; background:${i%2?'#F8FAFC':'#ffffff'};'>
+      <td style='padding:10px 8px; text-align:left;'><strong style='color:#1F2937; font-size:12.5px;'>${isMpio ? d.Municipio : d.Depto}</strong>${subtext_logic(d)}</td>
+      <td style='padding:10px 6px; text-align:right; font-weight:700; color:#0B2E63; font-variant-numeric:tabular-nums; font-size:12.5px;'>${fmtPct(d.pct_2026)}</td>
+      <td style='padding:10px 6px; text-align:right; color:${colr(d.dif_22)}; font-weight:600; font-variant-numeric:tabular-nums; font-size:12.5px;'>${fmtCam(d.dif_22)}</td>
+      <td style='padding:10px 6px; text-align:right; color:${colr(d.dif_18)}; font-weight:600; font-variant-numeric:tabular-nums; font-size:12.5px;'>${fmtCam(d.dif_18)}</td>
+    </tr>
+  `).join('');
+
+  return html`
+  <div style="background:#fff; border:1px solid #EAF0F6; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.02); display:flex; flex-direction:column; height: 540px; overflow:hidden;">
+    <div style="padding: 10px 16px; border-bottom: 1px solid #CBD5E1; display:flex; justify-content:space-between; align-items:center; background:#F1F5F9;">
+      <div style="font-weight:800; color:#0B2E63; font-size:13.5px; text-transform:uppercase;">${isMpio ? 'Municipios destacados' : 'Detalle territorial'}</div>
+      <div style="font-size:12px; display: ${isMpio ? 'block' : 'none'};">${viewof ve_map_top}</div>
+    </div>
+    <div style="overflow-y: auto; flex: 1;">
+      <table style="width:100%; border-collapse:collapse; font-family:sans-serif;">
+        <thead>
+          <tr>
+            <th style="${th} text-align:left;">${header_name}</th>
+            <th style="${th} text-align:right;">2026</th>
+            <th style="${th} text-align:right;">Δ '22</th>
+            <th style="${th} text-align:right;">Δ '18</th>
+          </tr>
+        </thead>
+        <tbody>${tbody}</tbody>
+      </table>
+    </div>
+  </div>
+  `;
+}
+```
+```{ojs}
+html`${tabla_ve_render}`
+```
+:::
+
+::::
+### Votos en blanco, nulos y no marcados en elecciones especiales
+
+```{r}
+#| label: datos-ve-esp-ojs
+datos_ve_esp <- readRDS("datos_ve_especiales.rds")
+ojs_define(ve_esp_nal_ojs = datos_ve_esp$nacional)
+ojs_define(ve_esp_reg_ojs = datos_ve_esp$regional)
+```
+
+```{ojs}
+ve_esp_nal_data = transpose(ve_esp_nal_ojs);
+ve_esp_reg_data = transpose(ve_esp_reg_ojs);
+```
+
+```{ojs}
+viewof ve_esp_elec = Inputs.radio(["CITREP", "Senado Indígena", "Cámara Indígena", "Cámara Afro"], {value: "CITREP", label: html`<b style="font-size:14px; color:#1F2937;">Elección:</b>`})
+viewof ve_esp_tipo = Inputs.radio(["Votos en blanco", "Votos nulos", "Votos no marcados"], {value: "Votos en blanco", label: html`<b style="font-size:14px; color:#1F2937;">Tipo:</b>`})
+```
+
+```{ojs}
+html`
+<div style="display: flex; gap: 32px; background: #F8FAFC; padding: 12px 20px; border-radius: 8px; border: 1px solid #E2E8F0; align-items: center; margin-bottom: 24px;">
+  <div style="display: flex; align-items: center; gap: 12px;">${viewof ve_esp_elec}</div>
+  <div style="display: flex; align-items: center; gap: 12px; border-left: 1px solid #CBD5E1; padding-left: 32px;">${viewof ve_esp_tipo}</div>
+</div>
+`
+```
+
+```{ojs}
+kpi_esp_calc = {
+  const d_26 = ve_esp_nal_data.find(x => x.tipo_voto === ve_esp_tipo && x.eleccion === ve_esp_elec && x.annoh === 2026);
+  const d_22 = ve_esp_nal_data.find(x => x.tipo_voto === ve_esp_tipo && x.eleccion === ve_esp_elec && x.annoh === 2022);
+  const diff = (d_26?.pct || 0) - (d_22?.pct || 0);
+  const pct26 = d_26?.pct || 0;
+  return { pct26, diff, votos: d_26?.votos || 0 };
+}
+```
+
+```{ojs}
+texto_esp_dinamico = {
+  const d_18 = ve_esp_nal_data.find(x => x.tipo_voto === ve_esp_tipo && x.eleccion === ve_esp_elec && x.annoh === 2018);
+  const fmt = n => n == null ? "—" : n.toFixed(1).replace(".", ",");
+  const pfd = n => n == null ? "—" : (n > 0 ? "+" : "") + n.toFixed(1).replace(".", ",");
+
+  const reg_data = ve_esp_reg_data.filter(d => d.tipo_voto === ve_esp_tipo && d.eleccion === ve_esp_elec && d.pct_2026 != null);
+  const sorted_26 = reg_data.slice().sort((a,b) => b.pct_2026 - a.pct_2026);
+  const sorted_dif = reg_data.filter(d => d.dif_22 != null).slice().sort((a,b) => b.dif_22 - a.dif_22);
+
+  const v26 = kpi_esp_calc.pct26;
+  const v22 = kpi_esp_calc.pct26 - kpi_esp_calc.diff;
+  const difNal = kpi_esp_calc.diff;
+
+  const top1 = sorted_26[0];
+  const top2 = sorted_26[1];
+  const inc1 = sorted_dif[0];
+  const dec1 = sorted_dif[sorted_dif.length - 1];
+
+  let tendenciaNal = difNal < -0.1 ? "una reducción" : (difNal > 0.1 ? "un incremento" : "estabilidad");
+  let comp18 = "";
+  if (d_18 && d_18.pct > 15) {
+     comp18 = ` En 2018 el valor fue excepcionalmente alto (${fmt(d_18.pct)}%) por el uso de tarjetón compartido, lo que no es comparable con años posteriores.`;
+  }
+
+  let txtTerritorial = "";
+  if (top1) {
+    txtTerritorial = `A nivel territorial, los niveles más altos se observan en <b>${top1.nombre_region}</b> (${fmt(top1.pct_2026)}%)`;
+    if (top2) txtTerritorial += ` y <b>${top2.nombre_region}</b> (${fmt(top2.pct_2026)}%).`;
+    else txtTerritorial += ".";
+  }
+
+  let txtCambioTerr = "";
+  if (difNal > 0 && inc1 && inc1.dif_22 > 0) {
+    txtCambioTerr = ` Los mayores incrementos se concentran en <b>${inc1.nombre_region}</b> (${pfd(inc1.dif_22)} pp).`;
+  } else if (difNal < 0 && dec1 && dec1.dif_22 < 0) {
+    txtCambioTerr = ` Las caídas más fuertes ocurren en <b>${dec1.nombre_region}</b> (${pfd(dec1.dif_22)} pp).`;
+  }
+
+  let alerta18 = "";
+  if (ve_esp_elec !== "CITREP" && ve_esp_tipo !== "Votos en blanco") {
+     let circunscripcion = ve_esp_elec.includes("Indígena") ? "indígena" : "afrodescendiente";
+     alerta18 = `<div style="font-size:12px; color:#64748B; font-style:italic; margin-top:14px; padding-top:12px; border-top:1px dashed #CBD5E1;">
+       Nota: en 2018 no es posible distinguir votos nulos y no marcados por circunscripción ${circunscripcion}, ya que compartían tarjetón con otras circunscripciones.
+     </div>`;
+  }
+
+  return html`
+  <div style="display:grid; grid-template-columns: 260px 1fr; gap:28px; align-items:stretch; margin-bottom:28px;">
+    <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-left:5px solid #D97706; border-radius:8px; padding:20px 22px; box-shadow:0 1px 3px rgba(0,0,0,0.02); display:flex; flex-direction:column; justify-content:center;">
+      <div style="font-size:12px; font-weight:800; color:#0B2E63; text-transform:uppercase; letter-spacing:0.4px; line-height:1.3;">${ve_esp_tipo}<br><span style="color:#64748B;">${ve_esp_elec}</span></div>
+      <div style="font-size:44px; font-weight:900; color:#D97706; line-height:1; margin:10px 0 6px;">${fmt(v26)}%</div>
+      <div style="font-size:15px; font-weight:700; color:${difNal>0?'#C00000':'#1B7A3A'};">${pfd(difNal)} pp <span style="color:#94A3B8; font-weight:600;">vs 2022</span></div>
+      <div style="font-size:12.5px; color:#64748B; margin-top:10px; padding-top:10px; border-top:1px solid #E2E8F0; font-weight:600;">Total 2026: ${kpi_esp_calc.votos.toLocaleString("es-CO")} votos</div>
+    </div>
+    <div style="background:#fff; border:1px solid #EAF0F6; border-radius:8px; padding:20px 24px; box-shadow:0 1px 3px rgba(0,0,0,0.02); font-size:15px; color:#334155; line-height:1.65; display:flex; flex-direction:column; justify-content:center;">
+      <p style="margin:0 0 10px;">Frente a 2022, los <b>${ve_esp_tipo.toLowerCase()}</b> en <b>${ve_esp_elec}</b> muestran <b>${tendenciaNal}</b>, pasando de ${fmt(v22)}% a ${fmt(v26)}%.${comp18}</p>
+      <p style="margin:0;">${txtTerritorial}${txtCambioTerr}</p>
+      ${alerta18}
+    </div>
+  </div>
+  `;
+}
+```
+
+```{ojs}
+L_ve_esp = require("leaflet@1.9.4")
+```
+
+```{ojs}
+html`<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">`
+```
+
+```{ojs}
+geo_deptos_esp_v = FileAttachment("geo_deptos.geojson").json()
+geo_citrep_esp_v = FileAttachment("geo_citrep.geojson").json()
+```
+
+:::: {style="display: flex; gap: 24px; align-items: stretch;"}
+
+::: {style="flex: 0.55; position: relative;"}
+```{ojs}
+mapa_ve_esp_L = {
+  const div = html`<div style="height:460px; border:1px solid #EAF0F6; border-radius:8px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.03);"></div>`;
+  const map = L_ve_esp.map(div, { scrollWheelZoom: true }).setView([4.4, -73.5], 5);
+  L_ve_esp.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+    { subdomains: "abcd", attribution: "© OpenStreetMap © CARTO" }).addTo(map);
+  invalidation.then(() => map.remove());
+  setTimeout(() => map.invalidateSize(), 200);
+  div.value = map;
+  return div;
+}
+```
+
+```{ojs}
+ve_esp_layer_update = {
+  const map = mapa_ve_esp_L.value;
+  if (!map) return;
+  if (map._dl) map.removeLayer(map._dl);
+  if (map._legend) map._legend.remove();
+
+  const isCitrep = ve_esp_elec === "CITREP";
+  const geo = isCitrep ? geo_citrep_esp_v : geo_deptos_esp_v;
+  const codeProp = isCitrep ? "CTEP" : "coddepto";
+
+  const dataFilt = ve_esp_reg_data.filter(d => d.tipo_voto === ve_esp_tipo && d.eleccion === ve_esp_elec);
+  const lookup = new Map(dataFilt.map(d => [+d.id_region, d]));
+  const vals = dataFilt.map(d => d.pct_2026).filter(v => v != null);
+
+  const color = d3.scaleSequential([d3.min(vals) ?? 0, d3.max(vals) ?? 1], d3.interpolateBlues);
+  const colorOf = v => v == null ? "#eeeeee" : color(v);
+  const pf = v => v == null ? "—" : v.toFixed(1).replace(".", ",");
+  const pfd = v => v == null ? "—" : (v>0?"+":"") + v.toFixed(1).replace(".", ",");
+
+  const layer = L_ve_esp.geoJSON(geo, {
+    style: f => {
+      const d = lookup.get(+f.properties[codeProp]);
+      return { weight: 0.4, color: "#ffffff", fillColor: colorOf(d ? d.pct_2026 : null), fillOpacity: 0.9 };
+    },
+    onEachFeature: (f, lyr) => {
+      const d = lookup.get(+f.properties[codeProp]);
+      const nom = d ? d.nombre_region : "Sin datos";
+      let t = `<b>${nom}</b><br>2026: ${pf(d?.pct_2026)}%<br>Cambio vs 22: ${pfd(d?.dif_22)} pp`;
+      if (!isCitrep) t += `<br>Cambio vs 18: ${pfd(d?.dif_18)} pp`;
+      lyr.bindTooltip(t, { sticky: true });
+      lyr.on("mouseover", () => lyr.setStyle({ weight: 2, color: "#0B2E63" }));
+      lyr.on("mouseout", () => lyr.setStyle({ weight: 0.4, color: "#ffffff" }));
+    }
+  }).addTo(map);
+  map._dl = layer;
+
+  const legend = L_ve_esp.control({ position: "bottomleft" });
+  legend.onAdd = () => {
+    const dv = L_ve_esp.DomUtil.create("div");
+    dv.style = "background:#fff; padding:10px 12px; border-radius:6px; box-shadow:0 1px 4px rgba(0,0,0,.2); font-size:11px; width: 140px;";
+    const mMax = d3.max(vals) ?? 1;
+    const mMin = d3.min(vals) ?? 0;
+    let inner = `<div style="font-weight:700; color:#0B2E63; margin-bottom:6px; font-size:12px;">${ve_esp_tipo} (%)</div>`;
+    inner += `<div style="display:flex; justify-content:space-between; font-size:10.5px; color:#475569; margin-bottom:4px; font-weight:600;">
+                <span>${mMin.toFixed(1).replace(".",",")}%</span>
+                <span>${mMax.toFixed(1).replace(".",",")}%</span>
+              </div>`;
+    inner += `<div style="height:10px; width:100%; border-radius:4px; border:1px solid #CBD5E1; background:linear-gradient(to right, ${colorOf(mMin)}, ${colorOf((mMin+mMax)/2)}, ${colorOf(mMax)});"></div>`;
+    dv.innerHTML = inner;
+    return dv;
+  };
+  legend.addTo(map);
+  map._legend = legend;
+  return md``;
+}
+```
+:::
+
+::: {style="flex: 0.45; background:#fff; border:1px solid #EAF0F6; border-radius:8px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.02);"}
+```{ojs}
+grafica_ve_esp = {
+  const dataFilt = ve_esp_nal_data.filter(d => d.tipo_voto === ve_esp_tipo && d.eleccion === ve_esp_elec);
+  return Plot.plot({
+    marginLeft: 50, marginRight: 30, marginTop: 20, marginBottom: 40, height: 420,
+    style: { fontFamily: "sans-serif", fontSize: "12.5px" },
+    x: { label: null, type: "point", domain: [2018, 2022, 2026], padding: 0.5, tickFormat: d => `${d}` },
+    y: {
+      label: "↑ Porcentaje sobre el total (%)",
+      grid: true,
+      tickFormat: d => d + "%",
+      insetTop: 30
+    },
+    marks: [
+      Plot.lineY(dataFilt, { x: "annoh", y: "pct", stroke: "#D97706", strokeWidth: 2.5 }),
+      Plot.dot(dataFilt, { x: "annoh", y: "pct", fill: "#D97706", r: 5 }),
+      Plot.text(dataFilt, {
+        x: "annoh",
+        y: "pct",
+        text: d => d.pct.toFixed(1).replace(".",",") + "%",
+        dy: -18,
+        fill: "#1F2D3A",
+        stroke: "white", strokeWidth: 4, paintOrder: "stroke",
+        fontSize: 13,
+        fontWeight: "bold"
+      }),
+      Plot.tip(dataFilt, Plot.pointer({
+        x: "annoh", y: "pct",
+        title: d => `${ve_esp_elec} (${d.annoh})\n${ve_esp_tipo}: ${d.pct.toFixed(1)}%\nVotos: ${d.votos.toLocaleString("es-CO")}`,
+        fontSize: 14, fill: "#F8FAFC", stroke: "#D97706"
+      }))
+    ]
+  });
+}
+```
+:::
+
+::::
+
+```{ojs}
+// Leyenda organizada con Grid CSS en columnas perfectas y porcentajes
+{
+  const rows = el_seats_data.filter(d => +d.annoh === +el_anno && d.corp === el_corp);
+  const total_curules = rows.length; // Calculamos el total para sacar los porcentajes
+  
+  const g = d3.rollups(rows, v => ({n: v.length, color: v[0].color}), d => d.partido_color)
+    .map(([partido, o]) => ({
+      partido, 
+      n: o.n, 
+      color: o.color,
+      pct: ((o.n / total_curules) * 100).toFixed(1).replace(".", ",") // Cálculo del porcentaje
+    }))
+    .sort((a, b) => b.n - a.n);
+    
+  return html`
+  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px 12px; margin-top: 16px; padding-top: 16px; border-top: 1px solid #EAF0F6; font-size: 11px; color: #334155;">
+    ${g.map(x => html`
+      <div style="display: flex; align-items: center; justify-content: space-between;">
+        <span style="display: flex; align-items: center; gap: 6px; overflow: hidden;">
+          <span style="min-width: 10px; height: 10px; border-radius: 50%; background: ${x.color}; border: 0.5px solid #ccc;"></span>
+          <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${x.partido}">${x.partido}</span>
+        </span>
+        <span style="white-space: nowrap;">
+          <b style="color: #0B2E63; margin-left: 8px;">${x.n}</b>
+          <span style="color: #64748B; font-size: 10px; margin-left: 4px;">(${x.pct}%)</span>
+        </span>
+      </div>
+    `)}
+  </div>`;
+}
+```
 
 ```{=html}
 <script>
