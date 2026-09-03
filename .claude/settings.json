@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node --check *)",
+      "Bash(md5sum *)",
+      "Bash(wc -l *)",
+
+      "Bash(mkdir -p /tmp/*)",
+      "Bash(mkdir -p C:/Users/nande/AppData/Local/Temp/*)",
+
+      "Bash(cp informe_scroll.qmd /tmp/*)",
+      "Bash(cp scripts/00_preparar_datos.R /tmp/*)",
+      "Bash(cp estilos.scss /tmp/*)",
+      "Bash(cp CLAUDE.md /tmp/*)",
+
+      "Bash(python /tmp/*)",
+      "Bash(python C:/Users/nande/AppData/Local/Temp/*)",
+      "Bash(node /tmp/*)",
+      "Bash(node C:/Users/nande/AppData/Local/Temp/*)",
+      "Bash(\"/c/Program Files/R/R-4.6.1/bin/Rscript.exe\" /tmp/*)",
+      "Bash(\"/c/Program Files/R/R-4.6.1/bin/Rscript.exe\" C:/Users/nande/AppData/Local/Temp/*)"
+    ]
+  }
+}

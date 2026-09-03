@@ -107,16 +107,18 @@ censo_congreso_2018 <- read_fwf(rp("DIVIPOL_20180223_111842_01_UNIFICADO.txt"),
   select(coddepto, codmun, zona, puesto, hombres, mujeres, censo, mesas)
 
 # 2018 Presidencia (base madre SIN exterior + consulados). No trae mesas.
+# 2018 Presidencia (base madre SIN exterior + consulados). La Base Madre SÍ trae mesas.
 pres_2018_base <- read_excel(rp("Divipol Presidente 2018.xlsx"), sheet="Base Madre ", range="A1:N10999") %>%
   transmute(coddepto=as.numeric(`Code Depto`), codmun=as.numeric(`Code Muni`), zona=as.numeric(Zona),
             puesto=str_remove(as.character(Puesto),"^0+(?!$)"),
-            hombres=as.integer(hombres), mujeres=as.integer(mujeres), censo=as.integer(total))
+            hombres=as.integer(hombres), mujeres=as.integer(mujeres), censo=as.integer(total),
+            mesas=as.integer(mesas))
 pres_2018_cons <- read_excel(rp("Divipol Presidente 2018.xlsx"), sheet="Consulados ", range="A1:L233") %>%
   transmute(coddepto=as.numeric(dd), codmun=as.numeric(mm), zona=as.numeric(zz),
             puesto=str_remove(as.character(pp),"^0+(?!$)"),
-            hombres=as.integer(hombres), mujeres=as.integer(mujeres), censo=as.integer(total))
+            hombres=as.integer(hombres), mujeres=as.integer(mujeres), censo=as.integer(total),
+            mesas=mesas)
 censo_pres_2018 <- bind_rows(pres_2018_base %>% filter(coddepto != 88), pres_2018_cons)
-censo_pres_2018$mesas <- NA_real_
 
 # 2022 (ambos traen 'mesas' en el Excel; el lector la detecta sola)
 censo_congreso_2022 <- leer_censo_excel(rp("Divipole_Elecciones_Congreso_13-03-2022.xlsx"), "divipol_20220207_161440")
@@ -253,6 +255,10 @@ paises_iso <- c("Ghana" = "GHA","Senegal" = "SEN", "Emiratos Árabes Unidos"="AR
                 "Marruecos"="MAR","Palestina"="PSE","Arabia Saudita"="SAU","Costa Rica"="CRI","Puerto Rico"="PRI","El Salvador"="SLV",
                 "República Dominicana"="DOM","Corea del Sur"="KOR","Singapur"="SGP","Honduras"="HND","Polonia"="POL","Israel"="ISR","Curazao"="CUW")
 dic_pais_ext <- dic_pais_ext %>% mutate(iso3 = unname(paises_iso[pais]))
+# Copia estable del diccionario armado sobre el DIVIPOL: mas abajo (seccion 03-5)
+# 'dic_pais_ext' se redefine sobre los datos de votacion de Congreso, y la seccion
+# del exterior presidencial necesita esta version.
+dic_pais_ext_divipol <- dic_pais_ext
 
 ext_pais_2026 <- divipol_cong_26 %>% filter(COD_DPTO == 88) %>%
   left_join(dic_pais_ext, by = c("nompuesto","zona")) %>%
@@ -732,10 +738,171 @@ cand_presidencia <- bind_rows(
     genero = if_else(str_detect(nomcandi, "(?i)CEPEDA CASTRO"), "M", genero)
   )
 
+
+## ---- Embudo GSC: listas que solicitan formulario (Excel) vs listas que inscriben candidatos (RMD) ----
+sin_tildes <- function(x) {
+  x <- str_to_upper(str_squish(x))
+  x <- str_replace_all(x, "Á","A"); x <- str_replace_all(x, "É","E")
+  x <- str_replace_all(x, "Í","I"); x <- str_replace_all(x, "Ó","O"); x <- str_replace_all(x, "Ú","U")
+  x
+}
+gsc_grupos   <- c("Senado · Nacional", "Cámara · Territorial", "Cámara · CITREP")
+gsc_universo <- c("Movimientos sociales o GSC")
+
+# --- INICIAL (solicitan formulario): cada fila del Excel es una lista ---
+gsc_ini_22 <- read_excel("../inscripción de candidatos/datos/GSC 2022.xlsx", sheet = "GSC General") %>%
+  transmute(Fecha, circ_raw = sin_tildes(`Corporación...5`), corp_raw = sin_tildes(`Corporación...6`),
+            voto_blanco = `Prom. Voto en blanco`) %>%
+  filter(!is.na(Fecha), corp_raw != "PRESIDENCIA", voto_blanco != 1) %>%
+  transmute(
+    annoh = 2022L,
+    corp = case_when(corp_raw == "SENADO" ~ "Senado", corp_raw == "CAMARA" ~ "Cámara", TRUE ~ NA_character_),
+    circ = case_when(circ_raw == "SENADO NACIONAL" ~ "Nacional",
+                     circ_raw %in% c("CAMARA TERRITORIAL","CAMARA INTERNACIONAL") ~ "Territorial",
+                     circ_raw == "CAMARA CTEP" ~ "CITREP", TRUE ~ NA_character_)) %>%
+  filter(!is.na(corp), !is.na(circ)) %>% count(annoh, corp, circ, name = "n_inicial")
+
+gsc_ini_26 <- read_excel("../Congreso 2026/datos/Datos_GSC_Coaliciones.xlsx", sheet = "GSC-MS_REGISTRADOS_INSCRITOS") %>%
+  transmute(corp_raw = sin_tildes(`CORPORACIÓN`), circ_raw = sin_tildes(CIRCUNSCRIPCION),
+            voto_blanco = sin_tildes(VOTO_BLANCO)) %>%
+  filter(voto_blanco != "SI") %>%
+  transmute(
+    annoh = 2026L,
+    corp = case_when(corp_raw == "SENADO" ~ "Senado", corp_raw == "CAMARA" ~ "Cámara", TRUE ~ NA_character_),
+    circ = case_when(circ_raw == "NACIONAL" ~ "Nacional",
+                     circ_raw %in% c("TERRITORIAL","INTERNACIONAL") ~ "Territorial",
+                     circ_raw == "CITREP" ~ "CITREP", TRUE ~ NA_character_)) %>%
+  filter(!is.na(corp), !is.na(circ)) %>% count(annoh, corp, circ, name = "n_inicial")
+
+# --- FINAL (inscriben lista): listas distintas con candidatos GSC en las bases del RMD ---
+gsc_fin_22 <- cand22_tipo %>% mutate(DESC_TPPART=case_when(codparti==503 & circ=="CITREP"~"Movimientos sociales o GSC", TRUE~DESC_TPPART)) %>% 
+  mutate(tipo_part =case_when(codparti==503 & circ=="CITREP"~"Movimientos sociales o GSC", TRUE~tipo_part )) %>% 
+  filter(tipo_part %in% gsc_universo) %>%
+  distinct(corp, circ, codparti) %>% count(corp, circ, name = "n_final") %>% mutate(annoh = 2022L)
+gsc_fin_26 <- cand26_tipo %>% mutate(DESC_TPPART=case_when(codparti==1047 & circ=="CITREP"~"Movimientos sociales o GSC", TRUE~DESC_TPPART)) %>% 
+  mutate(tipo_part =case_when(codparti==1047 & circ=="CITREP"~"Movimientos sociales o GSC", TRUE~tipo_part )) %>% 
+  filter(tipo_part %in% gsc_universo) %>%
+  distinct(corp, circ, codparti, territorio_join) %>% count(corp, circ, name = "n_final") %>% mutate(annoh = 2026L)
+
+# --- Unir y pasar a formato largo ---
+gsc_embudo <- bind_rows(
+  full_join(gsc_ini_22, gsc_fin_22, by = c("annoh","corp","circ")),
+  full_join(gsc_ini_26, gsc_fin_26, by = c("annoh","corp","circ"))
+) %>%
+  mutate(grupo = paste(corp, circ, sep = " · "),
+         n_inicial = coalesce(n_inicial, 0L), n_final = coalesce(n_final, 0L)) %>%
+  filter(grupo %in% gsc_grupos) %>%
+  select(annoh, grupo, n_inicial, n_final) %>%
+  pivot_longer(c(n_inicial, n_final), names_to = "etapa", values_to = "n") %>%
+  mutate(etapa = recode(etapa, n_inicial = "Solicitan formulario", n_final = "Inscriben lista"))
+
+
+## ===== Coaliciones 2026: partidos con personeria que se aliaron =============
+# Fuente: Datos_GSC_Coaliciones.xlsx, hoja CONGRESO_2026. Cada fila es una lista
+# de coalicion inscrita; las columnas "Agrupacion_conformo coalicion_1..6" traen
+# los partidos que la conformaron. Se normalizan con map26() para contarlos
+# contra master_2026, es decir los 27 con personeria juridica.
+coal_raw <- read_excel("../Congreso 2026/datos/Datos_GSC_Coaliciones.xlsx",
+                       sheet = "CONGRESO_2026")
+
+coal_largo <- coal_raw %>%
+  mutate(fila = row_number(),
+         coalicion = str_squish(str_to_upper(`Nombre Agrupación`))) %>%
+  select(fila, coalicion, starts_with("Agrupación_conformo")) %>%
+  pivot_longer(starts_with("Agrupación_conformo"), values_to = "crudo") %>%
+  mutate(crudo = str_squish(str_to_upper(crudo))) %>%
+  filter(!is.na(crudo), crudo != "NO APLICA", crudo != "") %>%
+  mutate(partido = map26(crudo))
+
+# Listas de coalicion en las que aparece cada uno de los 27. distinct(fila,partido)
+# evita contar dos veces si un partido se repite en columnas de la misma fila.
+# Los nombres que map26() no reconoce son movimientos sin personeria juridica.
+coal_partidos <- coal_largo %>% filter(!is.na(partido)) %>%
+  distinct(fila, partido) %>%
+  count(partido, name = "n_listas") %>%
+  right_join(master_2026, by = "partido") %>%
+  mutate(n_listas = coalesce(n_listas, 0L)) %>%
+  arrange(desc(n_listas))
+
+coal_resumen <- tibble(
+  n_master       = nrow(master_2026),
+  n_en_coalicion = sum(coal_partidos$n_listas > 0),
+  n_coaliciones  = n_distinct(coal_largo$coalicion),
+  n_listas       = nrow(coal_raw),
+  sin_personeria = n_distinct(coal_largo$crudo[is.na(coal_largo$partido)])
+)
+message("Coaliciones 2026: ", coal_resumen$n_en_coalicion, " de ", coal_resumen$n_master,
+        " partidos con personeria en coalicion | ", coal_resumen$n_coaliciones,
+        " coaliciones distintas | ", coal_resumen$sin_personeria, " movimientos sin personeria")
+
+## ===== CITREP: tipo de organizacion, 2026 y 2022 ============================3
+# 2026: el Excel de inscripcion trae el tipo de organizacion, pero es una version
+# anterior al cierre. Se cruza por cedula contra c26_base (CANDIDATOS.TXT, la base
+# autoritativa): las cedulas del Excel que ya no estan se descartan, y las que
+# estan en el TXT pero no en el Excel se marcan ORGANIZACIONES SOCIALES para no
+# dejar NA y que el total cuadre.
+# 2022: la hoja CITREP_2022 ya trae el tipo en MARCA_CANDIDATO.
+# Las dos fuentes nombran las mismas 7 categorias distinto (plural vs singular),
+# asi que se normalizan a una etiqueta comun y los dos anios quedan comparables.
+
+citrep_lbl <- function(x) case_when(
+  str_detect(x, "CAMPESIN")                    ~ "Campesinas",
+  str_detect(x, "VÍCTIMA|VICTIMA")             ~ "De víctimas",
+  str_detect(x, "MUJER")                       ~ "Sociales de mujeres",
+  str_detect(x, "CONSEJO")                     ~ "Consejos comunitarios",
+  str_detect(x, "RESGUARDO|INDÍGENA|INDIGENA") ~ "Resguardos indígenas",
+  str_detect(x, "SIGNIFICATIV")                ~ "GSC",
+  str_detect(x, "SOCIAL")                      ~ "Sociales",
+  TRUE ~ str_to_sentence(x))
+
+citrep_full <- c(
+  "Campesinas"            = "Organizaciones campesinas",
+  "De víctimas"           = "Organizaciones de víctimas",
+  "Sociales de mujeres"   = "Organizaciones sociales de mujeres",
+  "Consejos comunitarios" = "Consejos comunitarios",
+  "Resguardos indígenas"  = "Resguardos y autoridades indígenas",
+  "GSC"                   = "Grupos significativos de ciudadanos",
+  "Sociales"              = "Organizaciones sociales")
+
+citrep_xls <- read_excel(file.path(ruta_inscr, "CANDIATURAS2026.xlsx")) %>%
+  filter(str_squish(str_to_upper(`Descripción Circunscripción`)) == "CITREP") %>%
+  transmute(cedula = sub("[.]0$", "", str_squish(as.character(`Número de Identificación`))),
+            tipo   = str_squish(str_to_upper(`Descripción Tipo Agrupación`))) %>%
+  filter(!is.na(cedula), cedula != "") %>%
+  distinct(cedula, .keep_all = TRUE)
+
+citrep_26 <- c26_base %>% filter(circ == "CITREP") %>%
+  left_join(citrep_xls, by = "cedula") %>%
+  mutate(tipo = coalesce(tipo, "ORGANIZACIONES SOCIALES")) %>%
+  count(tipo, name = "n") %>% mutate(annoh = 2026L)
+
+citrep_22 <- read_excel(file.path(ruta_inscr, "Congreso_2022.xls"), sheet = "CITREP_2022") %>%
+  filter(!is.na(`N# CITREP`), !is.na(MARCA_CANDIDATO)) %>%
+  transmute(tipo = str_squish(str_to_upper(MARCA_CANDIDATO))) %>%
+  count(tipo, name = "n") %>% mutate(annoh = 2022L)
+
+citrep_tipo <- bind_rows(citrep_26, citrep_22) %>%
+  mutate(tipo_lbl  = citrep_lbl(tipo),
+         tipo_full = unname(citrep_full[tipo_lbl])) %>%
+  group_by(annoh, tipo_lbl, tipo_full) %>%
+  summarise(n = sum(n), .groups = "drop") %>%
+  group_by(annoh) %>% mutate(pct = n / sum(n)) %>% ungroup() %>%
+  arrange(annoh, desc(n)) %>%
+  select(annoh, tipo_lbl, tipo_full, n, pct)
+
+message("CITREP por tipo de organizacion: 2026 = ",
+        sum(citrep_tipo$n[citrep_tipo$annoh == 2026]), " candidaturas | 2022 = ",
+        sum(citrep_tipo$n[citrep_tipo$annoh == 2022]), " candidaturas | ",
+        sum(!citrep_xls$cedula %in% c26_base$cedula), " cedulas del Excel 2026 descartadas | ",
+        sum(!(c26_base %>% filter(circ == "CITREP") %>% pull(cedula)) %in% citrep_xls$cedula),
+        " sin dato -> ORGANIZACIONES SOCIALES")
 # ---- GUARDAR (ahora con las dos tablas) ----------------------------3
 datos_candidaturas <- list(tabla_corpcirc = tabla_corpcirc, tipo_wide = tipo_wide,
                            camara_depto = camara_depto, conteo_fechas = conteo_fechas, citrep_cambio = citrep_cambio,
-                           hm_base = hm_base, sincoal = sincoal, n_part = n_part, cand_presidencia = cand_presidencia)
+                           hm_base = hm_base, sincoal = sincoal, n_part = n_part, cand_presidencia = cand_presidencia,
+                           gsc_embudo = gsc_embudo,
+                           coal_partidos = coal_partidos, coal_resumen = coal_resumen,
+                           citrep_tipo = citrep_tipo)
 saveRDS(datos_candidaturas, "datos_candidaturas.rds")
 message("Listo: datos_candidaturas.rds")
 
@@ -930,6 +1097,441 @@ dep_senado <- sen_99_depto %>% left_join(dep_bridge, by="COD_DPTO") %>%
 saveRDS(list(vel_2026=vel_2026, hitos_mesas=hitos_mesas, comp_22_26=comp_22_26,
              hitos_comp=hitos_comp, dep_senado=dep_senado), "datos_preconteo.rds")
 message("Listo: datos_preconteo.rds")
+
+# =====================================================================3
+#  SECCION 05 PRESIDENCIA: VELOCIDAD DEL PRECONTEO ----
+#  Primera y segunda vuelta van por separado; dentro de cada una se compara
+#  2026 con 2022. Los cuatro Excel traen la misma estructura de seis columnas
+#  (mesas, % mesas, votantes, % votantes, boletin, hora), pero la hora llega
+#  como fraccion de dia de Excel en tres de ellos y como texto "HH:MM" en uno.
+# =====================================================================3
+ruta_vel_1v <- "../Presidencia 2026/preconteo/datos/velocidad"
+ruta_vel_2v <- "../Presidencia 2026/preconteo segunda vuelta/datos/velocidad"
+
+# Horas desde las 4:00 p.m., que es cuando arranca el preconteo.
+hora_desde_16 <- function(x) {
+  x <- str_squish(as.character(x))
+  frac <- suppressWarnings(as.numeric(x))
+  hhmm <- ifelse(str_detect(x, "^\\d{1,2}:\\d{2}"),
+                 suppressWarnings(as.numeric(str_extract(x, "^\\d{1,2}")) +
+                                  as.numeric(str_extract(x, "(?<=:)\\d{2}")) / 60),
+                 NA_real_)
+  ifelse(!is.na(hhmm), hhmm - 16, frac * 24 - 16)
+}
+
+hh_pres <- function(h) {
+  # se redondea el total de minutos antes de partir en hora y minuto; si no,
+  # 16:59.6 quedaba como "4:60 PM".
+  tot <- round((16 + h) * 60) %% (24 * 60)
+  hr  <- tot %/% 60
+  mn  <- tot %% 60
+  ampm <- if_else(hr >= 12, "PM", "AM")
+  h12 <- if_else(hr %% 12 == 0, 12, hr %% 12)
+  sprintf("%d:%02d %s", h12, mn, ampm)
+}
+
+leer_velocidad <- function(ruta, vuelta_lab, eleccion_lab) {
+  x <- suppressWarnings(read_excel(ruta, col_names = FALSE))
+  i <- which(str_squish(str_to_upper(as.character(x[[1]]))) == "MESAS INFORMADAS")[1]
+  d <- x[(i + 1):nrow(x), 1:6]
+  names(d) <- c("mesas", "pct_mesas", "votantes", "pct_votantes", "boletin", "hora")
+  d %>%
+    mutate(hora_num = hora_desde_16(hora),
+           across(c(mesas, pct_mesas, votantes, pct_votantes, boletin),
+                  ~ suppressWarnings(as.numeric(.)))) %>%
+    filter(!is.na(mesas), !is.na(hora_num)) %>%
+    transmute(vuelta = vuelta_lab, eleccion = eleccion_lab, boletin,
+              hora_num, hora_txt = hh_pres(hora_num),
+              porc_mesas = pct_mesas, porc_votos = pct_votantes) %>%
+    arrange(hora_num)
+}
+
+pres_vel <- bind_rows(
+  leer_velocidad(file.path(ruta_vel_1v, "PRESIDENTE_2026_1V_boletines_avance_0_3.xlsx"), "Primera vuelta", "2026"),
+  leer_velocidad(file.path(ruta_vel_1v, "PRESIDENTE 1RA VUELTA 2022.xlsx"),              "Primera vuelta", "2022"),
+  leer_velocidad(file.path(ruta_vel_2v, "Nacional_Consolidado_2V_20260812_1317.xlsx"),   "Segunda vuelta", "2026"),
+  leer_velocidad(file.path(ruta_vel_2v, "PRESIDENTE 2RA VUELTA 2022.xlsx"),              "Segunda vuelta", "2022")
+)
+
+# Primer boletin que alcanza cada umbral de mesas (para el recuadro de horas).
+hito_pres <- function(df, p) {
+  x <- df %>% filter(porc_mesas >= p) %>% arrange(hora_num)
+  if (nrow(x) == 0) NA_character_ else x$hora_txt[1]
+}
+
+pres_hitos <- pres_vel %>%
+  group_by(vuelta, eleccion) %>%
+  group_modify(~ tibble(h25 = hito_pres(.x, .25), h50 = hito_pres(.x, .50),
+                        h75 = hito_pres(.x, .75), h90 = hito_pres(.x, .90))) %>%
+  ungroup()
+
+# Puntos que se etiquetan dentro del grafico: el 50 % y el 99 % de mesas.
+# Mismo criterio que el recuadro (primer boletin que cruza el umbral), para que
+# la hora de la etiqueta y la de la tabla no se contradigan.
+cruce <- function(h, p, umbral) {
+  i <- which(p >= umbral)
+  if (length(i) == 0) NA_real_ else h[i[1]]
+}
+cruce_val <- function(p, umbral) {
+  i <- which(p >= umbral)
+  if (length(i) == 0) NA_real_ else p[i[1]]
+}
+
+pres_hitos_pts <- pres_vel %>%
+  group_by(vuelta, eleccion) %>%
+  summarise(h50_num = cruce(hora_num, porc_mesas, 0.50),
+            h99_num = cruce(hora_num, porc_mesas, 0.99),
+            porc_99 = cruce_val(porc_mesas, 0.99),
+            .groups = "drop")
+
+
+# ---- Comparacion territorial: hora de cierre del preconteo por departamento ---3
+# OJO con la fuente: en los dos Excel de "deptos_boletines" la hoja principal
+# repite la serie NACIONAL bajo el nombre de cada departamento (758 de 792 filas
+# en 1V, 610 de 648 en 2V apuntan a la URL nacional 00.json). La unica
+# informacion realmente departamental es la hoja resumen_deptos, que trae una
+# fila por departamento con el boletin en que llego al 100 % de sus mesas.
+# Por eso aqui se mapea la hora de CIERRE (100 %) y no la de llegada al 99 %:
+# la serie por departamento no existe en estos archivos.
+hora_txt_pres <- function(h) {
+  hr <- as.integer(str_sub(h, 1, 2)); mn <- str_sub(h, 4, 5)
+  ampm <- if_else(hr >= 12, "PM", "AM")
+  h12 <- if_else(hr %% 12 == 0, 12L, hr %% 12L)
+  sprintf("%d:%s %s", h12, mn, ampm)
+}
+
+cortes_pres <- c(0, 17.5, 18, 18.5, 19, 20, 24)
+etiq_pres   <- c("Antes de 5:30 PM", "5:30–6:00 PM", "6:00–6:30 PM",
+                 "6:30–7:00 PM", "7:00–8:00 PM", "8:00 PM o más")
+
+leer_cierre_dep <- function(ruta, vuelta_lab) {
+  suppressWarnings(read_excel(ruta, sheet = "resumen_deptos")) %>%
+    transmute(vuelta = vuelta_lab,
+              cod_rnec_dep = as.integer(cod_depto),
+              depto_raw = str_squish(departamento),
+              boletin, total_mesas,
+              hora_num = as.numeric(str_sub(hora, 1, 2)) + as.numeric(str_sub(hora, 4, 5)) / 60,
+              hora_cierre_txt = hora_txt_pres(hora)) %>%
+    left_join(map_rnec_dane_dep, by = "cod_rnec_dep") %>%
+    left_join(map_depto_nom, by = "coddepto") %>%
+    mutate(Depto = coalesce(Depto, if_else(depto_raw == "CONSULADOS", "Exterior",
+                                           str_to_title(depto_raw))),
+           cat_hora = as.character(cut(hora_num, cortes_pres, labels = etiq_pres, right = FALSE))) %>%
+    select(vuelta, coddepto, Depto, hora_cierre_txt, hora_num, cat_hora, boletin, total_mesas) %>%
+    arrange(desc(hora_num))
+}
+
+pres_dep_cierre <- bind_rows(
+  leer_cierre_dep(file.path(ruta_vel_1v, "PRESIDENCIA_2026_deptos_boletines_20260601_1334.xlsx"),
+                  "Primera vuelta"),
+  leer_cierre_dep(file.path(ruta_vel_2v, "PRESIDENCIA_2026_2V_deptos_boletines_20260812_1310.xlsx"),
+                  "Segunda vuelta")
+)
+
+saveRDS(list(vel = pres_vel, hitos = pres_hitos, hitos_pts = pres_hitos_pts,
+             dep_cierre = pres_dep_cierre),
+        "datos_preconteo_presidencia.rds")
+message("Listo: datos_preconteo_presidencia.rds | series: ",
+        paste(unique(paste(pres_vel$vuelta, pres_vel$eleccion)), collapse = " · "),
+        " | cierre departamental: ", nrow(pres_dep_cierre), " filas")
+
+# =====================================================================3
+#  SECCION 06 PRESIDENCIA: PRECONTEO VS ESCRUTINIO ----
+#  Replica la tabla "Cambios generales" de los Rmd de comparacion, para las dos
+#  vueltas y los tres anios. Se omite "Avance escrutinio (%)" porque hoy siempre
+#  da 100 %. Todo el peso queda aqui: el armonizado de 2018-2022 pesa 3,5 GB y
+#  las bases de 2026 suman ~4,5 M de filas, asi que se agregan a nivel de mesa y
+#  solo se guarda el resumen (12 filas).
+# =====================================================================3
+ruta_pres_pasadas <- "../Presidencia 2026/datos_elecciones_pasadas"
+ruta_esc_1v <- "../Presidencia 2026/escrutinio primera vuelta"
+ruta_esc_2v <- "../Presidencia 2026/escrutinio segunda vuelta"
+
+# Votos por mesa: es el unico nivel que necesita la tabla y reduce el volumen
+# antes de cualquier cruce.
+votos_por_mesa <- function(df, anno_val, vuelta_val, fuente_val) {
+  df %>%
+    filter(!is.na(llave_mesa), !is.na(votos)) %>%
+    group_by(llave_mesa) %>%
+    summarise(votos = sum(as.numeric(votos), na.rm = TRUE), .groups = "drop") %>%
+    mutate(anno = anno_val, vuelta = vuelta_val, fuente = fuente_val)
+}
+
+carga_rda <- function(ruta, objeto) {
+  e <- new.env(); load(ruta, envir = e); get(objeto, envir = e)
+}
+
+pres_arm_mc <- readRDS(file.path(ruta_pres_pasadas,
+  "presidencia_preconteo_escrutinio_armonizado.rds"))$presidencia_mesa_candidato
+
+mesas_pres <- bind_rows(
+  # 2018 y 2022, las dos vueltas, desde el armonizado
+  pres_arm_mc %>%
+    filter(anno %in% c(2018, 2022), vuelta %in% c("1ra", "2da"),
+           fuente %in% c("preconteo", "escrutinio"),
+           !is.na(llave_mesa), !is.na(votos)) %>%
+    group_by(anno, vuelta, fuente, llave_mesa) %>%
+    summarise(votos = sum(as.numeric(votos), na.rm = TRUE), .groups = "drop"),
+  # 2026 primera vuelta
+  votos_por_mesa(carga_rda("../Presidencia 2026/preconteo/datos/preconteo_completo_1era.rda",
+                           "preconteo_mmv_2026"), 2026, "1ra", "preconteo"),
+  votos_por_mesa(readRDS(file.path(ruta_esc_1v, "mmv", "escrutinio_completo_1era.rds")),
+                 2026, "1ra", "escrutinio"),
+  # 2026 segunda vuelta
+  votos_por_mesa(carga_rda("../Presidencia 2026/preconteo segunda vuelta/datos/preconteo_completo_2da.rda",
+                           "preconteo_mmv_2026"), 2026, "2da", "preconteo"),
+  votos_por_mesa(readRDS(file.path(ruta_esc_2v, "mmv", "escrutinio_completo_2da.rds")),
+                 2026, "2da", "escrutinio")
+)
+
+rm(pres_arm_mc); invisible(gc())
+
+pre_m <- mesas_pres %>% filter(fuente == "preconteo")  %>% select(anno, vuelta, llave_mesa, votos_pre = votos)
+esc_m <- mesas_pres %>% filter(fuente == "escrutinio") %>% select(anno, vuelta, llave_mesa, votos_esc = votos)
+
+tot_pre <- pre_m %>% group_by(anno, vuelta) %>%
+  summarise(votos_preconteo = sum(votos_pre), mesas_preconteo = n_distinct(llave_mesa), .groups = "drop")
+tot_esc <- esc_m %>% group_by(anno, vuelta) %>%
+  summarise(votos_escrutinio = sum(votos_esc), mesas_escrutinio = n_distinct(llave_mesa), .groups = "drop")
+
+# El cambio neto solo tiene sentido sobre las mesas presentes en los dos conteos.
+comparable <- pre_m %>%
+  inner_join(esc_m, by = c("anno", "vuelta", "llave_mesa")) %>%
+  group_by(anno, vuelta) %>%
+  summarise(mesas_comparables = n_distinct(llave_mesa),
+            votos_preconteo_comparable = sum(votos_pre),
+            votos_escrutinio_comparable = sum(votos_esc),
+            cambio_neto = sum(votos_esc - votos_pre), .groups = "drop")
+
+pres_esc_gral <- tot_pre %>%
+  full_join(tot_esc, by = c("anno", "vuelta")) %>%
+  left_join(comparable, by = c("anno", "vuelta")) %>%
+  mutate(across(where(is.numeric), ~ coalesce(., 0)),
+         cambio_neto_pct = if_else(votos_preconteo_comparable > 0,
+                                   100 * cambio_neto / votos_preconteo_comparable, NA_real_),
+         vuelta_lab = if_else(vuelta == "1ra", "Primera vuelta", "Segunda vuelta")) %>%
+  arrange(vuelta, anno) %>%
+  select(vuelta = vuelta_lab, anno, votos_preconteo, votos_escrutinio,
+         mesas_preconteo, mesas_escrutinio, mesas_comparables,
+         votos_preconteo_comparable, votos_escrutinio_comparable,
+         cambio_neto, cambio_neto_pct)
+
+
+# ---- Cambio de votos por candidato ------------------------------------------3
+# Las fuentes traen varias grafias del mismo codcandi ("IVAN DUQUE" y "Ivan
+# Duque" con tilde, "COALICION" y "COALICIÓN"). Se elige la mejor variante por
+# candidato: primero la que ya viene en formato titulo, y entre esas la que
+# conserva mas tildes. Solo si todas vienen en mayuscula sostenida se titula.
+mejor_variante <- function(v) {
+  v <- unique(v[!is.na(v) & str_squish(v) != ""])
+  if (!length(v)) return(NA_character_)
+  formato_titulo <- str_detect(v, "[a-záéíóúñü]")
+  n_tildes <- str_count(v, "[áéíóúÁÉÍÓÚñÑüÜ]")
+  v[order(-as.integer(formato_titulo), -n_tildes)][1]
+}
+
+titulo_es <- function(x) {
+  menores <- c("de", "del", "la", "las", "los", "y", "e", "el", "en", "por", "para", "a")
+  vapply(str_split(str_squish(str_to_lower(x)), " "), function(p) {
+    if (!length(p) || all(p == "")) return(NA_character_)
+    cap <- if_else(p %in% menores, p,
+                   paste0(str_to_upper(str_sub(p, 1, 1)), str_sub(p, 2)))
+    cap[1] <- paste0(str_to_upper(str_sub(cap[1], 1, 1)), str_sub(cap[1], 2))
+    paste(cap, collapse = " ")
+  }, character(1), USE.NAMES = FALSE)
+}
+
+# Votos por mesa y candidato, que es el nivel que necesita esta tabla.
+por_mesa_cand <- function(df, anno_val, vuelta_val, fuente_val) {
+  df %>%
+    filter(!is.na(llave_mesa), !is.na(votos)) %>%
+    transmute(anno = anno_val, vuelta = vuelta_val, fuente = fuente_val,
+              llave_mesa, codmpio = as.integer(codmpio),
+              coddepto = as.integer(floor(as.numeric(codmpio) / 1000)),
+              codcandi = as.numeric(codcandi),
+              nomcandi = as.character(nomcandi), nomparti = as.character(nomparti),
+              votos = as.numeric(votos))
+}
+
+pres_arm_mc2 <- readRDS(file.path(ruta_pres_pasadas,
+  "presidencia_preconteo_escrutinio_armonizado.rds"))$presidencia_mesa_candidato
+
+cand_largo <- bind_rows(
+  pres_arm_mc2 %>%
+    filter(anno %in% c(2018, 2022), vuelta %in% c("1ra", "2da"),
+           fuente %in% c("preconteo", "escrutinio"), !is.na(llave_mesa), !is.na(votos)) %>%
+    transmute(anno, vuelta, fuente, llave_mesa,
+              codmpio = as.integer(codmpio),
+              coddepto = as.integer(floor(as.numeric(codmpio) / 1000)),
+              codcandi = as.numeric(codcandi),
+              nomcandi = as.character(nomcandi), nomparti = as.character(nomparti),
+              votos = as.numeric(votos)),
+  por_mesa_cand(carga_rda("../Presidencia 2026/preconteo/datos/preconteo_completo_1era.rda",
+                          "preconteo_mmv_2026"), 2026, "1ra", "preconteo"),
+  por_mesa_cand(readRDS(file.path(ruta_esc_1v, "mmv", "escrutinio_completo_1era.rds")),
+                2026, "1ra", "escrutinio"),
+  por_mesa_cand(carga_rda("../Presidencia 2026/preconteo segunda vuelta/datos/preconteo_completo_2da.rda",
+                          "preconteo_mmv_2026"), 2026, "2da", "preconteo"),
+  por_mesa_cand(readRDS(file.path(ruta_esc_2v, "mmv", "escrutinio_completo_2da.rds")),
+                2026, "2da", "escrutinio")
+)
+
+rm(pres_arm_mc2); invisible(gc())
+
+# Mesas presentes en los dos conteos, por anio y vuelta.
+# Candidaturas que renunciaron: tienen votos en el preconteo y cero en el
+# escrutinio, porque sus votos se trasladan a tarjetones no marcados. Para que la
+# comparacion sea justa se hace el mismo traslado en el preconteo, es decir sus
+# votos se reasignan al codcandi 998. Se detecta por los datos, no por nombre.
+renunciantes <- cand_largo %>%
+  filter(!codcandi %in% c(996, 997, 998)) %>%
+  group_by(anno, vuelta, codcandi) %>%
+  summarise(pre = sum(votos[fuente == "preconteo"], na.rm = TRUE),
+            esc = sum(votos[fuente == "escrutinio"], na.rm = TRUE), .groups = "drop") %>%
+  filter(pre > 0, esc == 0)
+
+renunciantes_lbl <- renunciantes %>%
+  left_join(cand_largo %>% distinct(anno, vuelta, codcandi, nomcandi),
+            by = c("anno", "vuelta", "codcandi")) %>%
+  group_by(anno, vuelta, codcandi, pre) %>%
+  summarise(nombre = first(nomcandi), .groups = "drop")
+
+if (nrow(renunciantes) > 0) {
+  message("Renuncias detectadas (votos del preconteo trasladados a no marcados): ",
+          paste(sprintf("%s %s %s (%s votos)", renunciantes_lbl$anno, renunciantes_lbl$vuelta,
+                        renunciantes_lbl$nombre, format(renunciantes_lbl$pre, big.mark = ".")),
+                collapse = " | "))
+  cand_largo <- cand_largo %>%
+    left_join(renunciantes %>% mutate(renuncio = TRUE) %>% select(anno, vuelta, codcandi, renuncio),
+              by = c("anno", "vuelta", "codcandi")) %>%
+    mutate(reasignado = coalesce(renuncio, FALSE) & fuente == "preconteo",
+           nomcandi = if_else(reasignado, NA_character_, nomcandi),
+           nomparti = if_else(reasignado, NA_character_, nomparti),
+           codcandi = if_else(reasignado, 998, codcandi)) %>%
+    select(-renuncio, -reasignado)
+}
+
+mesas_comp_cand <- inner_join(
+  cand_largo %>% filter(fuente == "preconteo")  %>% distinct(anno, vuelta, llave_mesa),
+  cand_largo %>% filter(fuente == "escrutinio") %>% distinct(anno, vuelta, llave_mesa),
+  by = c("anno", "vuelta", "llave_mesa")
+) %>% mutate(comparable = TRUE)
+
+nombres_cand <- cand_largo %>%
+  group_by(anno, vuelta, codcandi) %>%
+  summarise(candidato = titulo_es(mejor_variante(nomcandi)),
+            partido   = titulo_es(mejor_variante(nomparti)), .groups = "drop") %>%
+  mutate(candidato = coalesce(candidato, partido, paste("Código", codcandi)),
+         partido   = coalesce(partido, candidato))
+
+pres_esc_cand <- cand_largo %>%
+  left_join(mesas_comp_cand, by = c("anno", "vuelta", "llave_mesa")) %>%
+  mutate(comparable = coalesce(comparable, FALSE)) %>%
+  group_by(anno, vuelta, codcandi) %>%
+  summarise(
+    votos_preconteo   = sum(votos[fuente == "preconteo"], na.rm = TRUE),
+    votos_escrutinio  = sum(votos[fuente == "escrutinio"], na.rm = TRUE),
+    votos_preconteo_comparable  = sum(votos[fuente == "preconteo"  & comparable], na.rm = TRUE),
+    votos_escrutinio_comparable = sum(votos[fuente == "escrutinio" & comparable], na.rm = TRUE),
+    .groups = "drop") %>%
+  mutate(cambio_neto = votos_escrutinio_comparable - votos_preconteo_comparable,
+         cambio_neto_pct = if_else(votos_preconteo_comparable > 0,
+                                   100 * cambio_neto / votos_preconteo_comparable, NA_real_),
+         es_especial = codcandi %in% c(996, 997, 998)) %>%
+  left_join(nombres_cand, by = c("anno", "vuelta", "codcandi")) %>%
+  # Los que renunciaron quedan en cero por ambos lados tras el traslado: se
+  # sacan de la tabla y se nombran en la nota.
+  filter(votos_preconteo > 0 | votos_escrutinio > 0) %>%
+  mutate(vuelta = if_else(vuelta == "1ra", "Primera vuelta", "Segunda vuelta")) %>%
+  arrange(vuelta, anno, desc(votos_preconteo)) %>%
+  select(vuelta, anno, codcandi, candidato, partido, es_especial,
+         votos_preconteo, votos_escrutinio, votos_preconteo_comparable,
+         votos_escrutinio_comparable, cambio_neto, cambio_neto_pct)
+
+
+# ---- Participacion electoral presidencial ------------------------------------3
+# El censo viene a nivel de PUESTO de votacion, no de mesa, asi que se suma por
+# puesto hasta el total nacional. 2018 y 2022 usan el censo presidencial del
+# anio (el mismo para las dos vueltas, que es lo unico que hay disponible) y
+# 2026 usa el divipol presidencial. Los puestos 81-86 del exterior ya vienen
+# anulados por corregir_censo_exterior(): son dias de votacion anticipada con
+# censo repetido y contarlos inflaria el denominador.
+censo_pres_nac <- bind_rows(
+  pres_2018       %>% mutate(annoh = 2018),
+  pres_2022       %>% mutate(annoh = 2022),
+  divipol_pres_26 %>% mutate(annoh = 2026)
+) %>%
+  group_by(annoh) %>%
+  summarise(censo_total = sum(censo, na.rm = TRUE), .groups = "drop")
+
+# Se usan los votos del escrutinio, que es el conteo definitivo.
+pres_part_nac <- pres_esc_gral %>%
+  transmute(vuelta, annoh = anno, votos = votos_escrutinio) %>%
+  left_join(censo_pres_nac, by = "annoh") %>%
+  mutate(participacion = 100 * votos / censo_total) %>%
+  arrange(vuelta, annoh)
+
+message("Participacion presidencial: ",
+        paste(sprintf("%s %s = %.1f%%", pres_part_nac$vuelta, pres_part_nac$annoh,
+                      pres_part_nac$participacion), collapse = " | "))
+
+# ---- Participacion departamental presidencial --------------------------------3
+# Mismo criterio que la nacional: votos del escrutinio sobre censo sumado por
+# puesto de votacion. El censo se lleva de code_RNEC a codmpio para poder cruzar
+# con la geometria DANE, igual que hace censo_divipol_hist para Congreso.
+censo_pres_dep <- bind_rows(
+  pres_2018       %>% mutate(annoh = 2018),
+  pres_2022       %>% mutate(annoh = 2022),
+  divipol_pres_26 %>% mutate(annoh = 2026)
+) %>%
+  left_join(map_rnec_codmpio %>% select(code_RNEC, codmpio), by = "code_RNEC") %>%
+  filter(!is.na(codmpio)) %>%
+  mutate(coddepto = as.integer(floor(codmpio / 1000))) %>%
+  group_by(annoh, coddepto) %>%
+  summarise(censo_total = sum(censo, na.rm = TRUE), .groups = "drop")
+
+votos_pres_dep <- cand_largo %>%
+  filter(fuente == "escrutinio", !is.na(coddepto)) %>%
+  group_by(anno, vuelta, coddepto) %>%
+  summarise(votos_total = sum(votos, na.rm = TRUE), .groups = "drop") %>%
+  mutate(vuelta = if_else(vuelta == "1ra", "Primera vuelta", "Segunda vuelta"))
+
+# Rejilla completa para que ningun departamento desaparezca de la tabla.
+grilla_pres_dep <- expand_grid(
+  annoh  = c(2018, 2022, 2026),
+  vuelta = c("Primera vuelta", "Segunda vuelta"),
+  coddepto = sort(unique(map_depto_nom$coddepto))
+)
+
+pres_part_dep <- grilla_pres_dep %>%
+  left_join(votos_pres_dep, by = c("annoh" = "anno", "vuelta", "coddepto")) %>%
+  left_join(censo_pres_dep, by = c("annoh", "coddepto")) %>%
+  left_join(map_depto_nom, by = "coddepto") %>%
+  mutate(votos_total = replace_na(votos_total, 0),
+         participacion = if_else(!is.na(censo_total) & censo_total > 0,
+                                 100 * votos_total / censo_total, NA_real_)) %>%
+  filter(!is.na(Depto)) %>%
+  select(annoh, vuelta, coddepto, Depto, participacion) %>%
+  pivot_wider(names_from = annoh, values_from = participacion, names_prefix = "part_") %>%
+  mutate(cambio_22 = part_2026 - part_2022,
+         cambio_18 = part_2026 - part_2018) %>%
+  arrange(vuelta, coddepto)
+
+message("Participacion departamental presidencial: ", nrow(pres_part_dep), " filas | ",
+        n_distinct(pres_part_dep$coddepto), " departamentos por vuelta")
+pres_esc_renuncias <- renunciantes_lbl %>%
+  mutate(vuelta = if_else(vuelta == "1ra", "Primera vuelta", "Segunda vuelta"),
+         candidato = titulo_es(nombre), votos_trasladados = pre) %>%
+  select(vuelta, anno, candidato, votos_trasladados) %>%
+  arrange(vuelta, anno, desc(votos_trasladados))
+
+saveRDS(list(general = pres_esc_gral, candidatos = pres_esc_cand,
+             renuncias = pres_esc_renuncias, participacion = pres_part_nac,
+             part_dep = pres_part_dep),
+        "datos_escrutinio_presidencia.rds")
+message("Listo: datos_escrutinio_presidencia.rds | general: ", nrow(pres_esc_gral),
+        " filas | candidatos: ", nrow(pres_esc_cand), " filas | renuncias: ",
+        nrow(pres_esc_renuncias))
 
 #######################################################################3
 # SECCION 03-2 COMPARACIÓN PRECONTEO - ESCRUTINIO CONGRESO ----
@@ -1169,7 +1771,7 @@ gen_senado <- function(pre_tot, esc_tot, anno_val) {
   
   full_join(pre, esc, by = c("nomparti", "circ_tabla")) %>%
     mutate(curules_pre = coalesce(curules_pre, 0L), curules_esc = coalesce(curules_esc, 0L), diferencia = curules_esc - curules_pre,
-           corp = "Senado", anno = anno_val, Territorio = NA_character_, circ_ord = if_else(circ_tabla == "Circunscripción nacional", 1L, 2L)) %>%
+           corp = "Senado", anno = anno_val, Departamento = NA_character_, circ_ord = if_else(circ_tabla == "Circunscripción nacional", 1L, 2L)) %>%
     filter(curules_pre > 0 | curules_esc > 0) %>%
     rename(Partido = nomparti, Circunscripcion = circ_tabla)
 }
@@ -1198,31 +1800,41 @@ gen_camara <- function(pre_tot, esc_tot, anno_val) {
   if(!"CTEP" %in% names(esc_tot)) esc_tot <- esc_tot %>% mutate(CTEP = NA_integer_)
  
   # Bloque 1 (Territorial)
-  pre_1 <- pre_tot %>% filter(corp == "CAMARA", codcirc == 1, curules_pre > 0) %>% distinct(COD_DPTO, Depto, nomparti, curules_pre)
-  esc_1 <- esc_tot %>% filter(corp == "CAMARA", codcirc == 1, curules_esc > 0) %>% distinct(COD_DPTO, Depto, nomparti, curules_esc)
+  pre_1 <- pre_tot %>% filter(corp == "CAMARA", codcirc == 1, curules_pre > 0) %>%
+    group_by(COD_DPTO, nomparti) %>% summarise(Depto = first(Depto), curules_pre = sum(curules_pre, na.rm=TRUE), .groups="drop")
+  esc_1 <- esc_tot %>% filter(corp == "CAMARA", codcirc == 1, curules_esc > 0) %>%
+    group_by(COD_DPTO, nomparti) %>% summarise(Depto = first(Depto), curules_esc = sum(curules_esc, na.rm=TRUE), .groups="drop")
   
   b1 <- full_join(pre_1, esc_1, by = c("COD_DPTO", "nomparti"), suffix = c("_pre", "_esc")) %>%
-    mutate(Depto = coalesce(Depto_pre, Depto_esc), curules_pre = coalesce(curules_pre, 0L), curules_esc = coalesce(curules_esc, 0L)) %>%
-    group_by(nomparti) %>%
+    mutate(Departamento = coalesce(Depto_pre, Depto_esc), curules_pre = coalesce(curules_pre, 0L), curules_esc = coalesce(curules_esc, 0L)) %>%
+    group_by(COD_DPTO, Departamento, nomparti) %>%
     summarise(curules_pre = sum(curules_pre, na.rm=TRUE), curules_esc = sum(curules_esc, na.rm=TRUE),
-              Territorio = paste(sort(unique(Depto)), collapse=", "), diferencia = curules_esc - curules_pre, circ_ord = 1L, Circunscripcion = "Territorial", .groups="drop") %>%
-    filter(curules_pre > 0 | curules_esc > 0)
+              diferencia = curules_esc - curules_pre, circ_ord = 1L, Circunscripcion = "Territorial", .groups="drop") %>%
+    filter((curules_pre > 0 | curules_esc > 0) & diferencia != 0) %>%
+    select(circ_ord, Circunscripcion, nomparti, Departamento, curules_pre, curules_esc, diferencia)
   
   # Bloque CITREP
   pre_ctp <- pre_tot %>% filter(corp == "CITREP", curules_pre > 0) %>% select(nomparti, CTEP, curules_pre)
   esc_ctp <- esc_tot %>% filter(corp == "CITREP", curules_esc > 0) %>% select(nomparti, CTEP, curules_esc)
   
+  # Una CTEP que solo aparece en uno de los dos conteos es falta de dato, no un
+  # cambio: en 2022 la CTEP 14 no tiene registro de preconteo, asi que el escano
+  # del escrutinio salia como curul ganada de la nada. Se excluye el territorio
+  # completo cuando le falta cualquiera de los dos lados.
+  ctep_ambos <- intersect(unique(pre_ctp$CTEP), unique(esc_ctp$CTEP))
+
   b_ctp <- full_join(pre_ctp, esc_ctp, by = c("nomparti", "CTEP")) %>%
+    filter(CTEP %in% ctep_ambos) %>%
     mutate(curules_pre = coalesce(curules_pre, 0L), curules_esc = coalesce(curules_esc, 0L), diferencia = curules_esc - curules_pre, circ_ord = 2L, Circunscripcion = "CITREP") %>%
-    filter(curules_pre > 0 | curules_esc > 0) %>% left_join(map_citrep_lbl, by = "CTEP") %>% rename(Territorio = lbl) %>% arrange(CTEP) %>%
-    select(circ_ord, Circunscripcion, nomparti, Territorio, curules_pre, curules_esc, diferencia)
+    filter(curules_pre > 0 | curules_esc > 0) %>% left_join(map_citrep_lbl, by = "CTEP") %>% rename(Departamento = lbl) %>% arrange(CTEP) %>%
+    select(circ_ord, Circunscripcion, nomparti, Departamento, curules_pre, curules_esc, diferencia)
   
   # Bloque Indigena
   pre_4 <- pre_tot %>% filter(corp == "CAMARA", codcirc == 4, curules_pre > 0) %>% select(nomparti, curules_pre)
   esc_4 <- esc_tot %>% filter(corp == "CAMARA", codcirc == 4, curules_esc > 0) %>% select(nomparti, curules_esc)
   
   b4 <- full_join(pre_4, esc_4, by = "nomparti") %>%
-    mutate(curules_pre = coalesce(curules_pre, 0L), curules_esc = coalesce(curules_esc, 0L), diferencia = curules_esc - curules_pre, Territorio = "", circ_ord = 3L, Circunscripcion = "Indígena") %>%
+    mutate(curules_pre = coalesce(curules_pre, 0L), curules_esc = coalesce(curules_esc, 0L), diferencia = curules_esc - curules_pre, Departamento = "", circ_ord = 3L, Circunscripcion = "Indígena") %>%
     filter(curules_pre > 0 | curules_esc > 0)
   
   # Bloque Afro
@@ -1230,19 +1842,29 @@ gen_camara <- function(pre_tot, esc_tot, anno_val) {
   esc_5 <- esc_tot %>% filter(corp == "CAMARA", codcirc == 5, curules_esc > 0) %>% select(nomparti, curules_esc)
   
   b5 <- full_join(pre_5, esc_5, by = "nomparti") %>%
-    mutate(curules_pre = coalesce(curules_pre, 0L), curules_esc = coalesce(curules_esc, 0L), diferencia = curules_esc - curules_pre, Territorio = "", circ_ord = 4L, Circunscripcion = "Afrodescendiente") %>%
+    mutate(curules_pre = coalesce(curules_pre, 0L), curules_esc = coalesce(curules_esc, 0L), diferencia = curules_esc - curules_pre, Departamento = "", circ_ord = 4L, Circunscripcion = "Afrodescendiente") %>%
     filter(curules_pre > 0 | curules_esc > 0)
   
   bind_rows(b1, b_ctp, b4, b5) %>% rename(Partido = nomparti) %>% mutate(corp = "Cámara", anno = anno_val)
 }
 
 # 2. Cargar datos base y generar consolidado
-c_pre_26 <- readRDS(file.path("../Congreso 2026/datos/ESCRUTINIO", "curules_pre_total.rds"))
-c_esc_26 <- readRDS(file.path("../Congreso 2026/datos/ESCRUTINIO", "curules_esc_total.rds"))
-c_pre_22 <- readRDS("../Congreso 2026/datos/2022/curules_pre_total.rds")
-c_esc_22 <- readRDS("../Congreso 2026/datos/2022/curules_partido_total.rds")
-c_pre_18 <- readRDS("../Congreso 2026/datos/2018/curules_pre_total_2018.rds")
-c_esc_18 <- readRDS("../Congreso 2026/datos/2018/curules_partido_total_2018.rds")
+# ASI y AICO llegan con y sin comillas segun el archivo sea de preconteo o de
+# escrutinio. Al cruzar por nomparti eso los partia en dos partidos distintos y
+# producia curules "perdidas" y "ganadas" que nunca cambiaron de manos.
+comillas_parti <- '["“”‘’]'
+norm_parti <- function(df) {
+  if ("nomparti" %in% names(df))
+    df$nomparti <- str_squish(str_remove_all(df$nomparti, comillas_parti))
+  df
+}
+
+c_pre_26 <- norm_parti(readRDS(file.path("../Congreso 2026/datos/ESCRUTINIO", "curules_pre_total.rds")))
+c_esc_26 <- norm_parti(readRDS(file.path("../Congreso 2026/datos/ESCRUTINIO", "curules_esc_total.rds")))
+c_pre_22 <- norm_parti(readRDS("../Congreso 2026/datos/2022/curules_pre_total.rds"))
+c_esc_22 <- norm_parti(readRDS("../Congreso 2026/datos/2022/curules_partido_total.rds"))
+c_pre_18 <- norm_parti(readRDS("../Congreso 2026/datos/2018/curules_pre_total_2018.rds"))
+c_esc_18 <- norm_parti(readRDS("../Congreso 2026/datos/2018/curules_partido_total_2018.rds"))
 
 curules_gral <- bind_rows(
   gen_senado(c_pre_26, c_esc_26, 2026),
@@ -1471,6 +2093,313 @@ saveRDS(list(nacional = part_nac, departamental = part_dep_comp,
              municipal = part_mpio_comp, municipal_dif = muni_dif, sf_mpios = sf_mpi_part),
         "datos_participacion_final.rds")
 
+
+# =====================================================================3
+#  SECCION 03-3b PARTICIPACION PRESIDENCIAL FRENTE A CONGRESO ----
+# =====================================================================3
+# Compara, por departamento, la participacion presidencial con la de Congreso.
+# Congreso NO se puede sumar por corporacion: un mismo elector aparece en Senado,
+# Camara y CITREP, asi que se toma el MAXIMO por mesa entre las tres (mismo
+# criterio del KPI nacional de Congreso, ahora abierto por departamento).
+# El exterior (codigo RNEC 88) queda como una fila propia -tiene censo y votos-
+# pero sin geometria, por lo que entra en la tabla y no en el mapa. Por eso aqui
+# el censo de Congreso SI incluye exterior, a diferencia de censo_nac, que lo
+# pierde al exigir codmpio para cruzar con la geometria DANE.
+
+EXT_KEY <- 888L
+
+rnec_a_dep <- function(cod_rnec_dep) {
+  cod <- as.integer(cod_rnec_dep)
+  out <- as.integer(map_rnec_dane_dep$coddepto[match(cod, map_rnec_dane_dep$cod_rnec_dep)])
+  ifelse(cod == 88, EXT_KEY, out)
+}
+
+dep_lbl <- map_depto_nom %>%
+  transmute(dep_key = as.integer(coddepto), Depto) %>%
+  bind_rows(tibble(dep_key = EXT_KEY, Depto = "Exterior"))
+
+# ---- 1. Congreso: maximo por mesa, abierto por departamento -----------------3
+cong_dep_mesa <- function(anno_val) {
+
+  if (anno_val == 2026) {
+    df <- readRDS("../Congreso 2026/datos/ESCRUTINIO/escrutinio_definitivo/escrutinio_definitivo.rds") %>%
+      filter((corp == "SENADO" & codcirc %in% c(0, 4)) | (corp == "CAMARA" & codcirc %in% c(1, 4, 5, 9))) %>%
+      mutate(grupo_total = if_else(corp == "SENADO", "Senado", if_else(codcirc == 9, "CITREP", "Cámara")),
+             dep_rnec = as.integer(COD_DPTO))
+
+  } else if (anno_val == 2022) {
+    sen <- readRDS("../Congreso 2026/datos/2022/esc_sen_2022.rds") %>% mutate(grupo_total = "Senado")
+    cam <- readRDS("../Congreso 2026/datos/2022/esc_cam_2022.rds") %>% mutate(grupo_total = "Cámara")
+    df  <- bind_rows(sen, cam)
+    if (file.exists("../Congreso 2026/datos/2022/esc_ctp_2022.rds")) {
+      ctp <- readRDS("../Congreso 2026/datos/2022/esc_ctp_2022.rds") %>% mutate(grupo_total = "CITREP")
+      df  <- bind_rows(df, ctp)
+    }
+    if (!"coddepto2" %in% names(df)) df$coddepto2 <- NA_real_
+    df <- df %>%
+      mutate(
+        llave_mesa = paste0(str_pad(as.character(coddepto), 2, pad = "0"),
+                            str_pad(as.character(codmpio),  3, pad = "0"),
+                            str_pad(as.character(zona),     2, pad = "0"),
+                            str_pad(as.character(puesto),   2, pad = "0"),
+                            str_pad(as.character(nummesa),  4, pad = "0")),
+        # Las circunscripciones especiales de Camara 2022 vienen con coddepto 0;
+        # el departamento real esta en coddepto2.
+        dep_rnec = as.integer(if_else(coddepto == 0 & !is.na(coddepto2), coddepto2, coddepto)))
+
+  } else if (anno_val == 2018) {
+    sen <- readRDS("../Congreso 2026/datos/2018/ESCRUTINIO/escrutinio_2018_sen_partido.rds") %>% mutate(grupo_total = "Senado")
+    cam <- readRDS("../Congreso 2026/datos/2018/ESCRUTINIO/escrutinio_2018_cam_partido.rds") %>% mutate(grupo_total = "Cámara")
+    df  <- bind_rows(sen, cam) %>%
+      mutate(llave_mesa = paste0(str_pad(as.character(COD_DPTO), 2, pad = "0"),
+                                 str_pad(as.character(codmun),   3, pad = "0"),
+                                 str_pad(as.character(zona),     2, pad = "0"),
+                                 str_pad(as.character(puesto),   2, pad = "0"),
+                                 str_pad(as.character(nummesa),  4, pad = "0")),
+             dep_rnec = as.integer(COD_DPTO))
+  }
+
+  # Agrupar por (departamento, mesa) no altera el total nacional: las llaves
+  # colapsadas de 2022 solo existen en Camara, donde el maximo es la suma.
+  v <- df %>%
+    mutate(dep_key = rnec_a_dep(dep_rnec)) %>%
+    filter(!is.na(dep_key)) %>%
+    group_by(dep_key, llave_mesa, grupo_total) %>%
+    summarise(votos = sum(as.numeric(votos), na.rm = TRUE), .groups = "drop") %>%
+    pivot_wider(names_from = grupo_total, values_from = votos, values_fill = 0)
+
+  if (!"Senado" %in% names(v)) v$Senado <- 0
+  if (!"Cámara" %in% names(v)) v$Cámara <- 0
+  if (!"CITREP" %in% names(v)) v$CITREP <- 0
+
+  v %>%
+    mutate(max_votos = pmax(Senado, Cámara, CITREP, na.rm = TRUE)) %>%
+    group_by(dep_key) %>%
+    summarise(votos_cong = sum(max_votos, na.rm = TRUE), .groups = "drop") %>%
+    mutate(annoh = anno_val)
+}
+
+votos_cong_dep <- bind_rows(cong_dep_mesa(2026), cong_dep_mesa(2022), cong_dep_mesa(2018))
+
+# ---- 2. Censos por departamento (incluyendo exterior) -----------------------3
+censo_dep_ext <- function(d18, d22, d26) {
+  bind_rows(d18 %>% mutate(annoh = 2018),
+            d22 %>% mutate(annoh = 2022),
+            d26 %>% mutate(annoh = 2026)) %>%
+    mutate(dep_key = rnec_a_dep(COD_DPTO)) %>%
+    filter(!is.na(dep_key)) %>%
+    group_by(annoh, dep_key) %>%
+    summarise(censo_total = sum(censo, na.rm = TRUE), .groups = "drop")
+}
+
+censo_cong_dep_ext <- censo_dep_ext(cong_2018, cong_2022, divipol_cong_26)
+censo_pres_dep_ext <- censo_dep_ext(pres_2018, pres_2022, divipol_pres_26)
+
+# ---- 3. Votos presidenciales por departamento (escrutinio) ------------------3
+# El departamento sale de los dos primeros digitos de llave_mesa, que es el
+# codigo RNEC; asi el exterior (88) no se pierde como pasa al usar codmpio.
+votos_pres_por_dep <- function(df, anno_val, vuelta_val) {
+  df %>%
+    filter(!is.na(llave_mesa), !is.na(votos)) %>%
+    transmute(annoh = anno_val, vuelta = vuelta_val,
+              dep_key = rnec_a_dep(as.integer(str_sub(as.character(llave_mesa), 1, 2))),
+              votos = as.numeric(votos)) %>%
+    filter(!is.na(dep_key)) %>%
+    group_by(annoh, vuelta, dep_key) %>%
+    summarise(votos_pres = sum(votos, na.rm = TRUE), .groups = "drop")
+}
+
+pres_arm_dep <- readRDS(file.path(ruta_pres_pasadas,
+  "presidencia_preconteo_escrutinio_armonizado.rds"))$presidencia_mesa_candidato %>%
+  filter(anno %in% c(2018, 2022), vuelta %in% c("1ra", "2da"), fuente == "escrutinio")
+
+votos_pres_dep_ext <- bind_rows(
+  pres_arm_dep %>% filter(anno == 2018, vuelta == "1ra") %>% votos_pres_por_dep(2018, "Primera vuelta"),
+  pres_arm_dep %>% filter(anno == 2018, vuelta == "2da") %>% votos_pres_por_dep(2018, "Segunda vuelta"),
+  pres_arm_dep %>% filter(anno == 2022, vuelta == "1ra") %>% votos_pres_por_dep(2022, "Primera vuelta"),
+  pres_arm_dep %>% filter(anno == 2022, vuelta == "2da") %>% votos_pres_por_dep(2022, "Segunda vuelta"),
+  votos_pres_por_dep(readRDS(file.path(ruta_esc_1v, "mmv", "escrutinio_completo_1era.rds")),
+                     2026, "Primera vuelta"),
+  votos_pres_por_dep(readRDS(file.path(ruta_esc_2v, "mmv", "escrutinio_completo_2da.rds")),
+                     2026, "Segunda vuelta")
+)
+rm(pres_arm_dep); invisible(gc())
+
+# ---- 4. Tabla departamental y nacional --------------------------------------3
+pvc_dep <- expand_grid(annoh = c(2018, 2022, 2026),
+                       vuelta = c("Primera vuelta", "Segunda vuelta"),
+                       dep_key = sort(unique(dep_lbl$dep_key))) %>%
+  left_join(votos_pres_dep_ext,  by = c("annoh", "vuelta", "dep_key")) %>%
+  left_join(censo_pres_dep_ext %>% rename(censo_pres = censo_total), by = c("annoh", "dep_key")) %>%
+  left_join(votos_cong_dep,      by = c("annoh", "dep_key")) %>%
+  left_join(censo_cong_dep_ext %>% rename(censo_cong = censo_total), by = c("annoh", "dep_key")) %>%
+  left_join(dep_lbl, by = "dep_key") %>%
+  mutate(part_pres = if_else(!is.na(censo_pres) & censo_pres > 0 & !is.na(votos_pres),
+                             100 * votos_pres / censo_pres, NA_real_),
+         part_cong = if_else(!is.na(censo_cong) & censo_cong > 0 & !is.na(votos_cong),
+                             100 * votos_cong / censo_cong, NA_real_),
+         diferencia = part_pres - part_cong,
+         coddepto = if_else(dep_key == EXT_KEY, NA_integer_, dep_key)) %>%
+  filter(!is.na(Depto)) %>%
+  select(vuelta, annoh, dep_key, coddepto, Depto, part_pres, part_cong, diferencia) %>%
+  arrange(vuelta, annoh, dep_key)
+
+# Nacional: se agrega sobre el mismo universo de la tabla (todos los
+# departamentos mas el exterior) para que el KPI y la tabla cuadren.
+pvc_nac <- expand_grid(annoh = c(2018, 2022, 2026),
+                       vuelta = c("Primera vuelta", "Segunda vuelta")) %>%
+  left_join(votos_pres_dep_ext %>% group_by(annoh, vuelta) %>%
+              summarise(votos_pres = sum(votos_pres), .groups = "drop"),
+            by = c("annoh", "vuelta")) %>%
+  left_join(censo_pres_dep_ext %>% group_by(annoh) %>%
+              summarise(censo_pres = sum(censo_total), .groups = "drop"), by = "annoh") %>%
+  left_join(votos_cong_dep %>% group_by(annoh) %>%
+              summarise(votos_cong = sum(votos_cong), .groups = "drop"), by = "annoh") %>%
+  left_join(censo_cong_dep_ext %>% group_by(annoh) %>%
+              summarise(censo_cong = sum(censo_total), .groups = "drop"), by = "annoh") %>%
+  mutate(part_pres = 100 * votos_pres / censo_pres,
+         part_cong = 100 * votos_cong / censo_cong,
+         diferencia = part_pres - part_cong) %>%
+  select(vuelta, annoh, part_pres, part_cong, diferencia) %>%
+  arrange(vuelta, annoh)
+
+saveRDS(list(nacional = pvc_nac, departamental = pvc_dep), "datos_pres_vs_congreso.rds")
+message("Listo: datos_pres_vs_congreso.rds | ", nrow(pvc_dep), " filas departamentales | ",
+        n_distinct(pvc_dep$dep_key), " territorios")
+
+
+# =====================================================================3
+#  SECCION 03-4b PARTICIPACION MUNICIPAL PRESIDENCIAL ----
+# =====================================================================3
+# Mismo criterio que la municipal de Congreso: votos del escrutinio sobre el
+# censo, que viene a nivel de puesto de votacion y se suma hasta el municipio.
+# El exterior no entra: no tiene municipio ni geometria.
+
+censo_pres_mpio <- bind_rows(
+  pres_2018       %>% mutate(annoh = 2018),
+  pres_2022       %>% mutate(annoh = 2022),
+  divipol_pres_26 %>% mutate(annoh = 2026)
+) %>%
+  left_join(map_rnec_codmpio %>% select(code_RNEC, codmpio), by = "code_RNEC") %>%
+  filter(!is.na(codmpio)) %>%
+  group_by(annoh, codmpio) %>%
+  summarise(censo_total = sum(censo, na.rm = TRUE), .groups = "drop")
+
+votos_pres_mpio <- cand_largo %>%
+  filter(fuente == "escrutinio", !is.na(codmpio)) %>%
+  group_by(anno, vuelta, codmpio) %>%
+  summarise(votos_total = sum(votos, na.rm = TRUE), .groups = "drop") %>%
+  mutate(vuelta = if_else(vuelta == "1ra", "Primera vuelta", "Segunda vuelta"))
+
+muni_info_pres <- todos_municipios %>% distinct(codmpio, Municipio, Depto)
+
+pres_part_mpio <- expand_grid(
+  annoh  = c(2018, 2022, 2026),
+  vuelta = c("Primera vuelta", "Segunda vuelta"),
+  codmpio = sort(unique(muni_info_pres$codmpio))
+) %>%
+  left_join(votos_pres_mpio, by = c("annoh" = "anno", "vuelta", "codmpio")) %>%
+  left_join(censo_pres_mpio, by = c("annoh", "codmpio")) %>%
+  left_join(muni_info_pres, by = "codmpio") %>%
+  mutate(votos_total = replace_na(votos_total, 0),
+         participacion = if_else(!is.na(censo_total) & censo_total > 0,
+                                 100 * votos_total / censo_total, NA_real_)) %>%
+  filter(!is.na(Municipio)) %>%
+  select(vuelta, annoh, codmpio, Municipio, Depto, participacion) %>%
+  pivot_wider(names_from = annoh, values_from = participacion, names_prefix = "part_") %>%
+  mutate(cambio_22 = part_2026 - part_2022,
+         cambio_18 = part_2026 - part_2018) %>%
+  arrange(vuelta, codmpio)
+
+saveRDS(list(municipal = pres_part_mpio), "datos_pres_municipal.rds")
+message("Listo: datos_pres_municipal.rds | ", nrow(pres_part_mpio), " filas | ",
+        n_distinct(pres_part_mpio$codmpio), " municipios por vuelta")
+
+
+# =====================================================================3
+#  SECCION 03-4 CONCENTRACIÓN DEL VOTO POR PARTIDO ---------------------
+# =====================================================================3
+# Índice de concentración ajustado (0 = reparto disperso; 100 = un partido
+# concentra prácticamente todo el voto). Cámara territorial se resume como
+# promedio ponderado por votos de los departamentos.
+resumir_concentracion <- function(df, grupos) {
+  df %>%
+    group_by(across(all_of(c(grupos, "codparti")))) %>%
+    summarise(votos = sum(votos, na.rm = TRUE), .groups = "drop") %>%
+    group_by(across(all_of(grupos))) %>%
+    mutate(votos_total = sum(votos), p = if_else(votos_total > 0, votos / votos_total, NA_real_)) %>%
+    summarise(
+      votos_total = first(votos_total), n_partidos = n(),
+      concentracion = if_else(n_partidos <= 1, 100,
+        100 * (1 - (n_partidos / (n_partidos - 1)) * (1 - sum(p^2, na.rm = TRUE)))),
+      .groups = "drop"
+    )
+}
+
+base_concentracion <- base_congreso %>%
+  filter(
+    annoh %in% c(2018, 2022, 2026),
+    ((corp == "SENADO" & codcirc == 0) | (corp == "CAMARA" & codcirc == 1)),
+    !is.na(votos), votos >= 0, !is.na(codparti), !codparti %in% c(997, 998),
+    COD_DPTO != 88
+  ) %>%
+  mutate(
+    corporacion = if_else(corp == "SENADO", "Senado nacional", "Cámara territorial"),
+    arena = if_else(corp == "SENADO", "Nacional", as.character(coddepto))
+  )
+
+conc_arena <- resumir_concentracion(base_concentracion, c("annoh", "corporacion", "arena"))
+
+conc_nacional <- conc_arena %>%
+  group_by(annoh, corporacion) %>%
+  summarise(
+    concentracion = weighted.mean(concentracion, w = votos_total, na.rm = TRUE),
+    n_partidos = round(weighted.mean(n_partidos, w = votos_total, na.rm = TRUE)),
+    .groups = "drop"
+  ) %>%
+  arrange(corporacion, annoh) %>%
+  group_by(corporacion) %>%
+  mutate(comparacion_previa = concentracion - lag(concentracion)) %>%
+  ungroup()
+
+conc_depto <- resumir_concentracion(base_concentracion, c("annoh", "corporacion", "coddepto", "Depto")) %>%
+  group_by(corporacion, coddepto) %>%
+  arrange(annoh, .by_group = TRUE) %>%
+  mutate(comparacion_previa = concentracion - lag(concentracion)) %>%
+  ungroup()
+
+# Relación descriptiva: quintiles de participación municipal y concentración
+# mediana por quintil, con los mismos filtros de corporación y año.
+conc_municipal <- resumir_concentracion(base_concentracion, c("annoh", "corporacion", "codmpio")) %>%
+  select(annoh, corporacion, codmpio, concentracion)
+
+participacion_municipal_conc <- base_concentracion %>%
+  group_by(annoh, corporacion, codmpio) %>%
+  summarise(votos = sum(votos, na.rm = TRUE), .groups = "drop") %>%
+  left_join(
+    base_concentracion %>% distinct(annoh, corporacion, codmpio, code_RNEC, zona, puesto, censo) %>%
+      group_by(annoh, corporacion, codmpio) %>%
+      summarise(censo = sum(censo, na.rm = TRUE), .groups = "drop"),
+    by = c("annoh", "corporacion", "codmpio")
+  ) %>%
+  mutate(participacion = if_else(censo > 0, 100 * votos / censo, NA_real_))
+
+conc_participacion <- participacion_municipal_conc %>%
+  left_join(conc_municipal, by = c("annoh", "corporacion", "codmpio")) %>%
+  filter(!is.na(participacion), !is.na(concentracion)) %>%
+  group_by(annoh, corporacion) %>%
+  mutate(quintil = ntile(participacion, 5)) %>%
+  group_by(annoh, corporacion, quintil) %>%
+  summarise(
+    participacion_mediana = median(participacion, na.rm = TRUE),
+    concentracion_mediana = median(concentracion, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+saveRDS(list(nacional = conc_nacional, departamental = conc_depto,
+             participacion = conc_participacion), "datos_concentracion.rds")
+message("Listo: datos_concentracion.rds")
+
 # =====================================================================3
 #  SECCION 03-5 PARTICIPACIÓN EXTERIOR ----
 # =====================================================================3
@@ -1635,6 +2564,122 @@ saveRDS(list(
 ), "datos_exterior_part.rds")
 
 message("Listo: datos_exterior_part.rds generados con Senado y Cámara")
+
+
+# =====================================================================3
+#  SECCION 03-5b PARTICIPACION EXTERIOR PRESIDENCIAL ----
+# =====================================================================3
+# Igual que la del exterior de Congreso, pero por vuelta y sin corporacion.
+# Los puestos 81-86 son los dias de votacion anticipada: sus votos cuentan, pero
+# su censo esta anulado por corregir_censo_exterior() porque es el mismo censo
+# repetido cada dia.
+
+dias_ext_pres <- c("81" = "Lunes", "82" = "Martes", "83" = "Miércoles",
+                   "84" = "Jueves", "85" = "Viernes", "86" = "Sábado")
+niveles_dia <- c("Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo")
+
+censo_ext_pres <- bind_rows(
+  pres_2018       %>% mutate(annoh = 2018),
+  pres_2022       %>% mutate(annoh = 2022),
+  divipol_pres_26 %>% mutate(annoh = 2026)
+) %>%
+  filter(COD_DPTO == 88) %>%
+  group_by(annoh) %>%
+  summarise(censo = sum(censo, na.rm = TRUE), .groups = "drop")
+
+# El exterior no tiene codmpio: se reconoce por los dos primeros digitos de
+# llave_mesa, que son el codigo RNEC del departamento (88).
+votos_ext_pres <- cand_largo %>%
+  filter(fuente == "escrutinio", str_sub(as.character(llave_mesa), 1, 2) == "88") %>%
+  mutate(vuelta = if_else(vuelta == "1ra", "Primera vuelta", "Segunda vuelta"),
+         puesto = str_sub(as.character(llave_mesa), 8, 9))
+
+part_ext_pres <- votos_ext_pres %>%
+  group_by(vuelta, annoh = anno) %>%
+  summarise(votos = sum(votos, na.rm = TRUE), .groups = "drop") %>%
+  left_join(censo_ext_pres, by = "annoh") %>%
+  mutate(part_pct = 100 * votos / censo,
+         annoh = factor(annoh, levels = c(2018, 2022, 2026))) %>%
+  arrange(vuelta, annoh)
+
+votos_ext_dia_pres <- votos_ext_pres %>%
+  filter(anno == 2026) %>%
+  mutate(dia = factor(coalesce(unname(dias_ext_pres[puesto]), "Domingo"), levels = niveles_dia)) %>%
+  group_by(vuelta, dia) %>%
+  summarise(votos = sum(votos, na.rm = TRUE), .groups = "drop") %>%
+  complete(vuelta, dia, fill = list(votos = 0)) %>%
+  group_by(vuelta) %>%
+  mutate(prop_pct = 100 * votos / sum(votos),
+         resaltar = if_else(dia == "Domingo", "Domingo", "Lunes a sábado")) %>%
+  ungroup()
+
+# ---- Votacion por pais (2026) ----------------------------------------------3
+# El DIVIPOL trunca nompuesto a 40 caracteres y antepone el dia en los puestos
+# anticipados ("LUNES ACCRA CONSULADO"), asi que el cruce con el diccionario de
+# paises se hace sobre una clave normalizada y, lo que quede suelto, por prefijo.
+norm_pto_ext <- function(x) {
+  y <- toupper(iconv(x, to = "ASCII//TRANSLIT"))
+  y <- str_replace(y, "^(LUNES|MARTES|MIERCOLES|JUEVES|VIERNES|SABADO|DOMINGO)\\s+", "")
+  str_squish(y)
+}
+
+dic_norm_ext <- dic_pais_ext_divipol %>% filter(!is.na(pais)) %>%
+  mutate(k = norm_pto_ext(nompuesto)) %>% distinct(k, pais, iso3)
+
+resolver_pais_ext <- function(claves) {
+  idx <- match(claves, dic_norm_ext$k)
+  for (i in which(is.na(idx))) {
+    j <- which(startsWith(dic_norm_ext$k, claves[i]) | startsWith(claves[i], dic_norm_ext$k))
+    if (length(j) == 1) idx[i] <- j
+  }
+  idx
+}
+
+puestos_ext_pres <- divipol_pres_26 %>% filter(COD_DPTO == 88) %>%
+  mutate(k = norm_pto_ext(nompuesto))
+idx_pais <- resolver_pais_ext(puestos_ext_pres$k)
+puestos_ext_pres <- puestos_ext_pres %>%
+  mutate(pais = dic_norm_ext$pais[idx_pais], iso3 = dic_norm_ext$iso3[idx_pais],
+         # Dos consulados que el diccionario de Congreso no cubre.
+         pais = case_when(k == "PARIS - NANTES" ~ "Francia",
+                          k == "MOSCU - CONSULADO" ~ "Rusia", TRUE ~ pais),
+         iso3 = case_when(k == "PARIS - NANTES" ~ "FRA",
+                          k == "MOSCU - CONSULADO" ~ "RUS", TRUE ~ iso3))
+
+message("Exterior presidencial: ", sum(!is.na(puestos_ext_pres$iso3)), " de ",
+        nrow(puestos_ext_pres), " puestos con pais")
+
+votos_puesto_ext <- votos_ext_pres %>%
+  filter(anno == 2026) %>%
+  mutate(code_RNEC = as.numeric(str_sub(as.character(llave_mesa), 1, 5)),
+         zona      = as.numeric(str_sub(as.character(llave_mesa), 6, 7))) %>%
+  group_by(vuelta, code_RNEC, zona, puesto) %>%
+  summarise(votos = sum(votos, na.rm = TRUE), .groups = "drop")
+
+censo_pais_pres <- puestos_ext_pres %>% filter(!is.na(iso3)) %>%
+  group_by(iso3) %>% summarise(censo = sum(censo, na.rm = TRUE), .groups = "drop")
+
+ext_pais_pres <- votos_puesto_ext %>%
+  left_join(puestos_ext_pres %>% select(code_RNEC, zona, puesto, pais, iso3),
+            by = c("code_RNEC", "zona", "puesto")) %>%
+  filter(!is.na(iso3)) %>%
+  group_by(vuelta, iso3, pais) %>%
+  summarise(votos = sum(votos, na.rm = TRUE), .groups = "drop") %>%
+  group_by(vuelta) %>% mutate(prop_votos_pct = 100 * votos / sum(votos)) %>% ungroup() %>%
+  left_join(censo_pais_pres, by = "iso3") %>%
+  mutate(participacion_pct = if_else(censo > 0, 100 * votos / censo, NA_real_))
+
+mapa_mundo_pres <- bind_rows(
+  mundo %>% mutate(iso3 = .data[[col_iso_mundo]]) %>% select(iso3, name) %>%
+    inner_join(ext_pais_pres %>% filter(vuelta == "Primera vuelta"), by = "iso3"),
+  mundo %>% mutate(iso3 = .data[[col_iso_mundo]]) %>% select(iso3, name) %>%
+    inner_join(ext_pais_pres %>% filter(vuelta == "Segunda vuelta"), by = "iso3")
+)
+
+saveRDS(list(part_ext = part_ext_pres, votos_dia = votos_ext_dia_pres,
+             mapa_mundo = mapa_mundo_pres, censo_ext = censo_ext_pres),
+        "datos_exterior_presidencia.rds")
+message("Listo: datos_exterior_presidencia.rds | ", n_distinct(ext_pais_pres$pais), " paises")
 
 # =====================================================================3
 #  SECCION 03-6 PARTICIPACIÓN ESPECIALES ----
@@ -2118,6 +3163,207 @@ saveRDS(list(
 
 message("Listo: datos de riesgo generados y geojson exportado.")
 
+
+# =====================================================================3
+#  SECCION 03-9b RIESGO (MOE) Y PARTICIPACION ----
+#  Los datos de riesgo de la Registraduria no son publicables, asi que el
+#  analisis se rehace con el Mapa y Factores de Riesgo Electoral de la MOE,
+#  que si es publico. La seccion anterior y su datos_riesgo.rds quedan intactos
+#  por si vuelve a hacer falta.
+# =====================================================================3
+ruta_moe <- file.path("../../Trabajo MOE/Datos observatorio/Datos observatorio",
+                      "Mapa de Riesgo Electoral/2026")
+
+moe_raw <- suppressWarnings(read_excel(
+  file.path(ruta_moe, "Base MRE - Final Consolidado Publicación.xlsx"),
+  sheet = "Base Riesgos MRE - Nacional"))
+
+# La escala de la MOE es 0 sin riesgo, 1 medio, 2 alto, 3 extremo.
+niveles_moe <- c("Sin riesgo", "Medio", "Alto", "Extremo")
+
+# Injerencia e intensidad vienen abiertas por grupo armado. Se toma el maximo
+# entre grupos para no llenar las graficas con una fila por estructura; un solo
+# municipio llega a 4 en injerencia, se topa en 3 para no inventar una categoria.
+moe <- moe_raw %>%
+  filter(!is.na(Code_DANE)) %>%
+  transmute(
+    codmpio          = as.integer(Code_DANE),
+    injerencia       = pmin(pmax(`Injer EGC/ACSN`, `Injer ELN`, `Injer CNSB/SM/Fr57`,
+                                 `Injer EMC/EMBF`, na.rm = TRUE), 3),
+    intensidad       = pmin(pmax(`Intens EGC/ACSN`, `Intens ELN`, `Intens CNSB/SM/Fr57`,
+                                 `Intens EMC/EMBF`, `Intens No Identificados`, na.rm = TRUE), 3),
+    desplazamiento   = `DespForz`,
+    libertad_prensa  = `ViolLibPrensa`,
+    violencia_polsoc = `ViolPolSoc`,
+    riesgo_txt       = str_squish(`Riesgo Consolidado factores de violencia`)
+  ) %>%
+  mutate(riesgo_niv = case_when(riesgo_txt == "Sin Riesgo"     ~ 0L,
+                                riesgo_txt == "Riesgo Medio"   ~ 1L,
+                                riesgo_txt == "Riesgo Alto"    ~ 2L,
+                                riesgo_txt == "Riesgo Extremo" ~ 3L,
+                                TRUE ~ NA_integer_)) %>%
+  filter(!is.na(codmpio)) %>%
+  distinct(codmpio, .keep_all = TRUE)
+
+base_moe <- part_sen_26_riesgo %>% inner_join(moe, by = "codmpio")
+
+vars_moe <- tibble::tribble(
+  ~col,                ~etiqueta,
+  "riesgo_niv",        "Riesgo de violencia",
+  "injerencia",        "Injerencia de grupos armados",
+  "intensidad",        "Intensidad del conflicto",
+  "desplazamiento",    "Desplazamiento forzado",
+  "libertad_prensa",   "Violencia contra la prensa",
+  "violencia_polsoc",  "Violencia política y social")
+
+moe_largo <- purrr::pmap_dfr(vars_moe, function(col, etiqueta)
+  tibble(variable = etiqueta, nivel_num = base_moe[[col]], part_senado = base_moe$part_senado)) %>%
+  filter(!is.na(nivel_num), !is.na(part_senado))
+
+# 1. Participacion en municipios con y sin riesgo (cualquier nivel > 0)
+moe_barras <- moe_largo %>%
+  mutate(grupo = if_else(nivel_num > 0, "Con riesgo", "Sin riesgo")) %>%
+  group_by(variable, grupo) %>%
+  summarise(part_media = mean(part_senado), n_mun = n(), .groups = "drop")
+
+# 2. Participacion segun el nivel de riesgo
+moe_lineas <- moe_largo %>%
+  group_by(variable, nivel_num) %>%
+  summarise(part_media = mean(part_senado), n_mun = n(), .groups = "drop") %>%
+  mutate(nivel = niveles_moe[nivel_num + 1])
+
+# 3. Mapa: con/sin riesgo cruzado con participacion alta/baja.
+#    La MOE no tiene categoria "bajo", asi que aqui solo hay con y sin riesgo.
+q_moe <- quantile(base_moe$part_senado, probs = c(1/3, 2/3), na.rm = TRUE)
+
+base_mapa_moe <- base_moe %>%
+  mutate(
+    exposicion = if_else(riesgo_niv > 0, "Con riesgo", "Sin riesgo"),
+    nivel_part = case_when(is.na(part_senado)     ~ "Media",
+                           part_senado < q_moe[1] ~ "Baja",
+                           part_senado > q_moe[2] ~ "Alta",
+                           TRUE                   ~ "Media"),
+    grupo_mapa = case_when(
+      exposicion == "Sin riesgo" & nivel_part == "Alta" ~ "Sin riesgo - Part. alta",
+      exposicion == "Sin riesgo" & nivel_part == "Baja" ~ "Sin riesgo - Part. baja",
+      exposicion == "Con riesgo" & nivel_part == "Alta" ~ "Con riesgo - Part. alta",
+      exposicion == "Con riesgo" & nivel_part == "Baja" ~ "Con riesgo - Part. baja",
+      TRUE ~ "Part. media o sin datos"))
+
+tabla_critica_moe <- base_mapa_moe %>%
+  filter(exposicion == "Con riesgo", nivel_part == "Baja") %>%
+  group_by(Depto) %>%
+  summarise(n_mun = n(), part_prom = mean(part_senado, na.rm = TRUE),
+            municipios_lista = paste(Municipio[order(part_senado)][1:min(30, n())], collapse = ", "),
+            .groups = "drop") %>%
+  arrange(desc(n_mun), part_prom) %>%
+  slice(1:12)
+
+# El geojson anterior salia con Depto.x / Depto.y porque el shape ya traia una
+# columna Depto y el join la duplicaba; por eso el tooltip decia "(undefined)".
+# Aqui se recorta el shape a codmpio antes de unir, y las columnas quedan limpias.
+sf_riesgo_moe <- readRDS(file.path(ruta_general, "shapes", "muni_simpl_sanandres_cache.rds"))$sf_obj %>%
+  mutate(codmpio = as.integer(codmpio)) %>%
+  select(codmpio) %>%
+  inner_join(base_mapa_moe %>%
+               select(codmpio, Municipio, Depto, grupo_mapa, part_senado,
+                      riesgo_txt, injerencia, intensidad),
+             by = "codmpio") %>%
+  st_transform(4326)
+
+file_geojson_moe <- "riesgo_moe_mapa.geojson"
+if (file.exists(file_geojson_moe)) file.remove(file_geojson_moe)
+st_write(sf_riesgo_moe, file_geojson_moe, driver = "GeoJSON", quiet = TRUE)
+
+saveRDS(list(plot_barras = moe_barras, plot_lineas = moe_lineas, tabla = tabla_critica_moe),
+        "datos_riesgo_moe.rds")
+message("Listo: datos_riesgo_moe.rds | municipios cruzados con la MOE: ", nrow(base_moe),
+        " | con riesgo de violencia: ", sum(base_mapa_moe$exposicion == "Con riesgo"))
+
+
+# =====================================================================3
+#  SECCION 03-9c RIESGO (MOE) Y PARTICIPACION PRESIDENCIAL ----
+# =====================================================================3
+# Lo mismo de la seccion anterior, pero con la participacion presidencial de
+# cada vuelta en lugar de la de Senado. Reutiliza el cruce municipal de la MOE
+# (objeto 'moe') y la misma lista de factores.
+
+part_pres_riesgo <- pres_part_mpio %>%
+  select(vuelta, codmpio, Municipio, Depto, part_pres = part_2026) %>%
+  filter(!is.na(part_pres))
+
+base_moe_pres <- part_pres_riesgo %>% inner_join(moe, by = "codmpio")
+
+moe_largo_pres <- purrr::pmap_dfr(vars_moe, function(col, etiqueta)
+  base_moe_pres %>% transmute(vuelta, variable = etiqueta,
+                              nivel_num = .data[[col]], part_pres)) %>%
+  filter(!is.na(nivel_num), !is.na(part_pres))
+
+# 1. Participacion en municipios con y sin riesgo (cualquier nivel > 0)
+moe_barras_pres <- moe_largo_pres %>%
+  mutate(grupo = if_else(nivel_num > 0, "Con riesgo", "Sin riesgo")) %>%
+  group_by(vuelta, variable, grupo) %>%
+  summarise(part_media = mean(part_pres), n_mun = n(), .groups = "drop")
+
+# 2. Participacion segun el nivel de riesgo
+moe_lineas_pres <- moe_largo_pres %>%
+  group_by(vuelta, variable, nivel_num) %>%
+  summarise(part_media = mean(part_pres), n_mun = n(), .groups = "drop") %>%
+  mutate(nivel = niveles_moe[nivel_num + 1])
+
+# 3. Mapa: con/sin riesgo cruzado con participacion alta/baja. Los terciles se
+#    calculan dentro de cada vuelta, que tienen niveles de participacion distintos.
+base_mapa_moe_pres <- base_moe_pres %>%
+  group_by(vuelta) %>%
+  mutate(q1 = quantile(part_pres, 1/3, na.rm = TRUE),
+         q2 = quantile(part_pres, 2/3, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(
+    exposicion = if_else(riesgo_niv > 0, "Con riesgo", "Sin riesgo"),
+    nivel_part = case_when(is.na(part_pres)  ~ "Media",
+                           part_pres < q1    ~ "Baja",
+                           part_pres > q2    ~ "Alta",
+                           TRUE              ~ "Media"),
+    grupo_mapa = case_when(
+      exposicion == "Sin riesgo" & nivel_part == "Alta" ~ "Sin riesgo - Part. alta",
+      exposicion == "Sin riesgo" & nivel_part == "Baja" ~ "Sin riesgo - Part. baja",
+      exposicion == "Con riesgo" & nivel_part == "Alta" ~ "Con riesgo - Part. alta",
+      exposicion == "Con riesgo" & nivel_part == "Baja" ~ "Con riesgo - Part. baja",
+      TRUE ~ "Part. media o sin datos"))
+
+tabla_critica_moe_pres <- base_mapa_moe_pres %>%
+  filter(exposicion == "Con riesgo", nivel_part == "Baja") %>%
+  group_by(vuelta, Depto) %>%
+  summarise(n_mun = n(), part_prom = mean(part_pres, na.rm = TRUE),
+            municipios_lista = paste(Municipio[order(part_pres)][1:min(30, n())], collapse = ", "),
+            .groups = "drop") %>%
+  arrange(vuelta, desc(n_mun), part_prom) %>%
+  group_by(vuelta) %>% slice(1:12) %>% ungroup()
+
+# Un solo geojson con las dos vueltas en columnas: la geometria municipal pesa y
+# duplicarla en dos archivos no aporta nada.
+ancho_moe_pres <- base_mapa_moe_pres %>%
+  mutate(v = if_else(vuelta == "Primera vuelta", "1v", "2v")) %>%
+  select(codmpio, Municipio, Depto, riesgo_txt, injerencia, intensidad,
+         v, grupo_mapa, part_pres) %>%
+  pivot_wider(names_from = v, values_from = c(grupo_mapa, part_pres))
+
+sf_riesgo_moe_pres <- readRDS(file.path(ruta_general, "shapes", "muni_simpl_sanandres_cache.rds"))$sf_obj %>%
+  mutate(codmpio = as.integer(codmpio)) %>%
+  select(codmpio) %>%
+  inner_join(ancho_moe_pres, by = "codmpio") %>%
+  st_transform(4326)
+
+file_geojson_moe_pres <- "riesgo_moe_presidencia.geojson"
+if (file.exists(file_geojson_moe_pres)) file.remove(file_geojson_moe_pres)
+st_write(sf_riesgo_moe_pres, file_geojson_moe_pres, driver = "GeoJSON", quiet = TRUE)
+
+saveRDS(list(plot_barras = moe_barras_pres, plot_lineas = moe_lineas_pres,
+             tabla = tabla_critica_moe_pres),
+        "datos_riesgo_moe_presidencia.rds")
+message("Listo: datos_riesgo_moe_presidencia.rds | municipios cruzados: ",
+        n_distinct(base_moe_pres$codmpio), " | con riesgo: ",
+        n_distinct(base_mapa_moe_pres$codmpio[base_mapa_moe_pres$exposicion == "Con riesgo"]))
 # =====================================================================3
 #  SECCION 04-1 VOTOS EN BLANCO, NULOS Y NO MARCADOS ----
 # =====================================================================3
@@ -2344,7 +3590,8 @@ e26 <- tibble(
   circ = str_to_upper(str_squish(e26r$circ)),
   congresista = str_squish(as.character(getcol(e26r, "nomcandi"))),
   cod_depto = suppressWarnings(as.integer(getcol(e26r, "COD_DPTO"))),
-  depto = str_squish(as.character(getcol(e26r, "Depto")))
+  depto = str_squish(as.character(getcol(e26r, "Depto"))),
+  genero = str_squish(str_to_upper(as.character(getcol(e26r, "genero"))))
 ) %>%
   mutate(
     es_coal   = !is.na(sin_coal) & sin_coal != "" & str_to_upper(sin_coal) != "NA",
@@ -2371,14 +3618,16 @@ e26 <- tibble(
     ),
     en_barras = TRUE
   ) %>%
-  select(annoh, corp, tipo, color_base, partido, coalicion, congresista, circ, depto, en_barras)
+  select(annoh, corp, tipo, color_base, partido, coalicion, congresista,
+         circ, depto, en_barras, genero)
 
 # Cepeda (Senado) y Quilcué (Cámara): estatuto oposición, fuera de barras
 oposicion_26 <- tibble(
   annoh = 2026, corp = c("Senado", "Cámara"), tipo = "Partido",
   color_base = "PACTO HISTÓRICO", partido = "MOVIMIENTO POLÍTICO PACTO HISTÓRICO",
   coalicion = NA_character_, congresista = c("IVÁN CEPEDA CASTRO", "AÍDA QUILCUÉ VIVAS"),
-  circ = "ESTATUTO OPOSICIÓN", depto = NA_character_, en_barras = FALSE
+  circ = "ESTATUTO OPOSICIÓN", depto = NA_character_, en_barras = FALSE,
+  genero = c("M", "F")
 )
 e26 <- bind_rows(e26, oposicion_26)
 
@@ -2391,7 +3640,8 @@ e22 <- tibble(
   corp_raw = str_to_upper(str_squish(e22r$Corpóración)),
   nomparti = str_squish(e22r$nomparti),
   circ_raw = str_squish(as.character(e22r$Circunscripción)),
-  congresista = str_to_upper(str_squish(as.character(e22r$nomcandi)))
+  congresista = str_to_upper(str_squish(as.character(e22r$nomcandi))),
+  genero = str_squish(str_to_upper(as.character(e22r$genero)))
 )
 
 fix_22 <- c(
@@ -2418,7 +3668,7 @@ e22 <- e22 %>%
     P = str_to_upper(nomparti), PO = str_to_upper(nomparti_orig),
     circ_num = suppressWarnings(as.integer(circ_raw)),
     es_citrep = corp_raw %in% c("CAMARA","CÁMARA") & !is.na(circ_num) & circ_num >= 1 & circ_num <= 16,
-    es_oposicion = str_detect(corp_raw, "ESTATUTO|OPOSICI"),
+    es_oposicion = str_detect(circ_raw, "ESTATUTO|OPOSICI"),
     es_comunes = str_detect(P, "COMUNES"),
     es_afro_esp = str_detect(P, "FERNANDO R.?OS HIDALGO|PALENQUE"),
     cambio = P != PO,
@@ -2441,7 +3691,8 @@ e22 <- e22 %>%
     depto = if_else(es_citrep | is.na(circ_num), circ_raw, NA_character_),
     en_barras = !(es_oposicion | es_comunes)
   ) %>%
-  select(annoh, corp, tipo, color_base, partido, coalicion, congresista, circ = circ_raw, depto, en_barras)
+  select(annoh, corp, tipo, color_base, partido, coalicion, congresista,
+         circ = circ_raw, depto, en_barras, genero)
 
 # ======================= CANONIZAR NOMBRES + COLOR =======================3
 canon <- function(x) {
@@ -2499,7 +3750,10 @@ electos_ind <- bind_rows(e26, e22) %>%
     color = unname(color_map[partido_color]),
     color = if_else(is.na(color), "#B0B0B0", color)   # gris para no mapeados
   ) %>%
-  select(annoh, corp, tipo, partido_color, color, partido, coalicion, congresista, circ, depto, en_barras)
+  mutate(sexo = case_when(genero == "F" ~ "Mujeres", genero == "M" ~ "Hombres",
+                          TRUE ~ NA_character_)) %>%
+  select(annoh, corp, tipo, partido_color, color, partido, coalicion, congresista,
+         circ, depto, en_barras, sexo)
 
 comp_tipo <- electos_ind %>%
   filter(en_barras) %>%
