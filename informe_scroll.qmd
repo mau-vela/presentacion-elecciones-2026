@@ -4904,17 +4904,17 @@ html`<div style="flex:1;padding:12px 16px 6px;border:1px solid #EAF0F6;border-ra
 ::::
 
 
-<!-- ============ SECCIÓN 04 — PRIMERA VUELTA PRESIDENCIAL 2026 ============ -->
+<!-- ============ SECCIÓN 04 — PRESIDENCIA 2026 ============ -->
 
 ::: {.seccion-portada}
 ::: {.eyebrow}
-04 · Primera vuelta presidencial
+04 · Elección presidencial
 :::
 
-# Primera Vuelta Presidencial 2026
+# Presidencia Primera y Segunda vuelta 2026
 
 ::: {.lede}
-Preconteo, resultados y participación electoral. 
+Preconteo, resultados y participación electoral.
 :::
 :::
 
@@ -5076,11 +5076,16 @@ pv_resumen = (vuelta) => {
 ```
 
 ```{ojs}
-pv_resumen("Primera vuelta")
+viewof pv_vuelta = filtroSegmentado(["Primera vuelta", "Segunda vuelta"], {value: "Primera vuelta", label: "Vuelta"})
+html`<div class="filtro-caja">${viewof pv_vuelta}</div>`
 ```
 
 ```{ojs}
-html`<div style="display:grid;grid-template-columns:minmax(0,2.5fr) minmax(0,1fr);gap:20px;align-items:start;">${pv_grafico("Primera vuelta")}${pv_tabla("Primera vuelta")}</div>`
+pv_resumen(pv_vuelta)
+```
+
+```{ojs}
+html`<div style="display:grid;grid-template-columns:minmax(0,2.5fr) minmax(0,1fr);gap:20px;align-items:start;">${pv_grafico(pv_vuelta)}${pv_tabla(pv_vuelta)}</div>`
 ```
 
 ## Comparación territorial
@@ -5200,7 +5205,12 @@ territorios cerraron antes de las 5:30 p.m.`;
 ```
 
 ```{ojs}
-pd_resumen("Primera vuelta")
+viewof pd_vuelta = filtroSegmentado(["Primera vuelta", "Segunda vuelta"], {value: "Primera vuelta", label: "Vuelta"})
+html`<div class="filtro-caja">${viewof pd_vuelta}</div>`
+```
+
+```{ojs}
+pd_resumen(pd_vuelta)
 ```
 
 :::: {style="display: flex; gap: 24px; align-items: flex-start;"}
@@ -5209,7 +5219,7 @@ pd_resumen("Primera vuelta")
 ```{ojs}
 {
   const div = html`<div style="height:540px; border:1px solid #EAF0F6; border-radius:8px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.03);"></div>`;
-  const map = pd_mapa("Primera vuelta", div);
+  const map = pd_mapa(pd_vuelta, div);
   invalidation.then(() => map.remove());
   return div;
 }
@@ -5218,7 +5228,7 @@ pd_resumen("Primera vuelta")
 
 ::: {style="flex: 0 0 46%; width: 46%;"}
 ```{ojs}
-html`${pd_tabla("Primera vuelta")}`
+html`${pd_tabla(pd_vuelta)}`
 ```
 :::
 
@@ -5338,15 +5348,20 @@ pe_nota = (vuelta) => {
 ```
 
 ```{ojs}
-pe_kpis("Primera vuelta")
+viewof pe_vuelta = filtroSegmentado(["Primera vuelta", "Segunda vuelta"], {value: "Primera vuelta", label: "Vuelta"})
+html`<div class="filtro-caja">${viewof pe_vuelta}</div>`
 ```
 
 ```{ojs}
-pe_tabla("Primera vuelta")
+pe_kpis(pe_vuelta)
 ```
 
 ```{ojs}
-pe_nota("Primera vuelta")
+pe_tabla(pe_vuelta)
+```
+
+```{ojs}
+pe_nota(pe_vuelta)
 ```
 
 ## Cambio de votos por candidato
@@ -5439,20 +5454,21 @@ la de **${baja.candidato}** (${pe_fD(baja.cambio_neto)} votos, ${pe_fP(baja.camb
 ```
 
 ```{ojs}
-viewof pc_anno_1v = filtroSegmentado([2026, 2022, 2018], {value:2026, format:x=>`${x}`, label:"Año"})
-html`<div class="filtro-caja">${viewof pc_anno_1v}</div>`
+viewof pc_vuelta = filtroSegmentado(["Primera vuelta", "Segunda vuelta"], {value: "Primera vuelta", label: "Vuelta"})
+viewof pc_anno = filtroSegmentado([2026, 2022, 2018], {value:2026, format:x=>`${x}`, label:"Año"})
+html`<div class="filtro-caja">${viewof pc_vuelta}${viewof pc_anno}</div>`
 ```
 
 ```{ojs}
-pe_resumen_cand("Primera vuelta", pc_anno_1v)
+pe_resumen_cand(pc_vuelta, pc_anno)
 ```
 
 ```{ojs}
-pe_tabla_cand("Primera vuelta", pc_anno_1v)
+pe_tabla_cand(pc_vuelta, pc_anno)
 ```
 
 ```{ojs}
-pe_nota_cand("Primera vuelta", pc_anno_1v)
+pe_nota_cand(pc_vuelta, pc_anno)
 ```
 
 ::: {.subseccion}
@@ -5515,11 +5531,16 @@ pp_grafica = (vuelta) => {
 ```
 
 ```{ojs}
-pp_kpi("Primera vuelta")
+viewof ppn_vuelta = filtroSegmentado(["Primera vuelta", "Segunda vuelta"], {value: "Primera vuelta", label: "Vuelta"})
+html`<div class="filtro-caja">${viewof ppn_vuelta}</div>`
 ```
 
 ```{ojs}
-pp_grafica("Primera vuelta")
+pp_kpi(ppn_vuelta)
+```
+
+```{ojs}
+pp_grafica(ppn_vuelta)
 ```
 
 ## Participación departamental
@@ -5574,73 +5595,306 @@ pp_dep_tabla = (vuelta) => {
 ```
 
 ```{ojs}
-pp_dep_texto("Primera vuelta")
+//| label: leaflet-setup-ppd
+L_ppd = require("leaflet@1.9.4")
+```
+
+```{ojs}
+html`<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">`
+```
+
+```{ojs}
+geo_deptos_ppd = FileAttachment("geo_deptos.geojson").json()
+```
+
+```{ojs}
+ppd_var = c => c === "Nivel 2026" ? "part_2026" : (c === "Cambio vs 2022" ? "cambio_22" : "cambio_18")
+ppd_suf = c => c === "Nivel 2026" ? "%" : " pp"
+
+// Mapa único reactivo a vuelta y criterio: antes eran seis mapas de R, uno por
+// combinación, que no podían responder a un filtro de OJS.
+ppd_pinta = (map, vuelta, crit) => {
+  if (map._dl) { map.removeLayer(map._dl); map._dl = null; }
+  if (map._legend) { map._legend.remove(); map._legend = null; }
+
+  const vk = ppd_var(crit), esCambio = vk !== "part_2026";
+  const d = pp_dep.filter(x => x.vuelta === vuelta && x[vk] != null);
+  const lookup = new Map(d.map(x => [+x.coddepto, x]));
+  const vals = d.map(x => x[vk]);
+  const vMin = d3.min(vals), vMax = d3.max(vals);
+  const m = Math.max(Math.abs(vMin), Math.abs(vMax));
+  const escala = esCambio
+    ? d3.scaleDiverging([-m, 0, m], d3.interpolateRdBu)
+    : d3.scaleSequential([vMin, vMax], d3.interpolateBlues);
+  const colorOf = v => v == null ? "#eeeeee" : escala(v);
+
+  map._dl = L_ppd.geoJSON(geo_deptos_ppd, {
+    style: f => {
+      const x = lookup.get(+f.properties.coddepto);
+      return { weight: 0.6, color: "#ffffff", fillColor: colorOf(x ? x[vk] : null), fillOpacity: 0.88 };
+    },
+    onEachFeature: (f, lyr) => {
+      const x = lookup.get(+f.properties.coddepto);
+      lyr.bindTooltip(x
+        ? `<b>${x.Depto}</b><br>2026: ${pp_pct(x.part_2026)}<br>vs 2022: ${pp_pp(x.cambio_22)} &nbsp;·&nbsp; vs 2018: ${pp_pp(x.cambio_18)}`
+        : "<b>Sin datos</b>", { sticky: true });
+      lyr.on("mouseover", () => lyr.setStyle({ weight: 2, color: "#0B2E63" }));
+      lyr.on("mouseout",  () => lyr.setStyle({ weight: 0.6, color: "#ffffff" }));
+    }
+  }).addTo(map);
+
+  const legend = L_ppd.control({ position: "bottomright" });
+  legend.onAdd = () => {
+    const dv = L_ppd.DomUtil.create("div");
+    dv.style = "background:#fff; padding:10px 12px; border-radius:6px; box-shadow:0 1px 4px rgba(0,0,0,.2); font-size:11px; width:150px;";
+    const a = esCambio ? -m : vMin, b = esCambio ? m : vMax;
+    const f = v => v.toFixed(1).replace(".", ",") + ppd_suf(crit);
+    dv.innerHTML = `<div style="font-weight:700; color:#0B2E63; margin-bottom:6px; font-size:12px;">${crit}</div>
+      <div style="display:flex; justify-content:space-between; font-size:10.5px; color:#475569; margin-bottom:4px; font-weight:600;">
+        <span>${f(a)}</span><span>${f(b)}</span></div>
+      <div style="height:10px; width:100%; border-radius:4px; border:1px solid #CBD5E1;
+                  background:linear-gradient(to right, ${colorOf(a)}, ${colorOf((a+b)/2)}, ${colorOf(b)});"></div>`;
+    return dv;
+  };
+  legend.addTo(map);
+  map._legend = legend;
+}
+```
+
+```{ojs}
+viewof ppd_vuelta = filtroSegmentado(["Primera vuelta", "Segunda vuelta"], {value: "Primera vuelta", label: "Vuelta"})
+viewof ppd_crit = filtroSegmentado(["Nivel 2026", "Cambio vs 2022", "Cambio vs 2018"], {value: "Nivel 2026", label: "Criterio"})
+html`<div class="filtro-caja">${viewof ppd_vuelta}${viewof ppd_crit}</div>`
+```
+
+```{ojs}
+pp_dep_texto(ppd_vuelta)
 ```
 
 :::: {.columns}
 
 ::: {.column width="55%"}
-```{r}
-#| label: mapa-part-dep-presidencia
-# Un mapa por vuelta y variable. setView explícito: dentro de una pestaña oculta
-# leaflet no puede medir el contenedor y sin centro fijo el mapa sale en gris.
-mapa_pres_dep <- function(vuelta_sel, var, titulo, es_cambio) {
-  mp <- sf_deptos %>%
-    mutate(coddepto = as.integer(coddepto)) %>%
-    left_join(datos_pres_esc$part_dep %>% filter(vuelta == vuelta_sel) %>%
-                mutate(coddepto = as.integer(coddepto)), by = "coddepto")
-  vals <- mp[[var]]
-  pal <- if (es_cambio) {
-    m <- max(abs(vals), na.rm = TRUE)
-    colorNumeric(c("#cb181d", "#f7f7f7", "#2171b5"), domain = c(-m, m), na.color = "#eeeeee")
-  } else {
-    colorBin("Blues", domain = vals, bins = 5, na.color = "#eeeeee")
-  }
-  lab <- sprintf("<b>%s</b><br>2026: %s%%<br>vs 2022: %s pp &nbsp;·&nbsp; vs 2018: %s pp",
-    mp$Depto, formatC(mp$part_2026, 1, format = "f", decimal.mark = ","),
-    formatC(mp$cambio_22, 1, format = "f", decimal.mark = ","),
-    formatC(mp$cambio_18, 1, format = "f", decimal.mark = ",")) %>% lapply(htmltools::HTML)
-
-  leaflet(mp, height = 540) %>%
-    add_basemap() %>%
-    addPolygons(weight = 0.6, color = "#ffffff", fillColor = pal(vals), fillOpacity = 0.88,
-                label = lab,
-                highlightOptions = highlightOptions(weight = 2, color = "#0B2E63", bringToFront = TRUE)) %>%
-    add_nombres_dep() %>%
-    setView(lng = -73.5, lat = 4.4, zoom = 5) %>%
-    { if (es_cambio) {
-        addLegend(., pal = pal, values = vals, title = titulo, position = "bottomright",
-                  bins = 5, opacity = 0.9, labFormat = labelFormat(suffix = " pp"))
-      } else {
-        addLegend(., pal = pal, values = vals, title = titulo, position = "bottomright",
-                  labFormat = labelFormat(suffix = "%"))
-      } }
+```{ojs}
+viewof ppd_map = {
+  const div = html`<div style="height:540px; border:1px solid #EAF0F6; border-radius:8px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.03);"></div>`;
+  const map = L_ppd.map(div, { scrollWheelZoom: true }).setView([4.4, -73.5], 5);
+  L_ppd.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}", { attribution: "Tiles © Esri — Esri, DeLorme, NAVTEQ" }).addTo(map);
+  nombresDep(L_ppd).addTo(map);
+  invalidation.then(() => map.remove());
+  setTimeout(() => map.invalidateSize(), 200);
+  div.value = map;
+  return div;
 }
 ```
 
-::: {.panel-tabset}
-### Nivel 2026
-```{r}
-mapa_pres_dep("Primera vuelta", "part_2026", "Participación 2026 (%)", FALSE)
+```{ojs}
+ppd_pintar = ppd_pinta(ppd_map, ppd_vuelta, ppd_crit)
 ```
-### Cambio vs 2022
-```{r}
-mapa_pres_dep("Primera vuelta", "cambio_22", "Cambio 2026 − 2022 (pp)", TRUE)
-```
-### Cambio vs 2018
-```{r}
-mapa_pres_dep("Primera vuelta", "cambio_18", "Cambio 2026 − 2018 (pp)", TRUE)
-```
-:::
 :::
 
 ::: {.column width="45%"}
 ```{ojs}
-pp_dep_tabla("Primera vuelta")
+pp_dep_tabla(ppd_vuelta)
 ```
 :::
 
 ::::
+
+## Participación presidencial frente a Congreso
+
+```{r}
+#| label: pres-vs-congreso-ojs
+datos_pvc <- readRDS("datos_pres_vs_congreso.rds")
+ojs_define(pvc_nac_ojs = datos_pvc$nacional)
+ojs_define(pvc_dep_ojs = datos_pvc$departamental)
+```
+
+```{ojs}
+//| label: leaflet-setup-pvc
+L_pvc = require("leaflet@1.9.4")
+```
+
+```{ojs}
+html`<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">`
+```
+
+```{ojs}
+geo_deptos_pvc = FileAttachment("geo_deptos.geojson").json()
+```
+
+```{ojs}
+pvc_nac = transpose(pvc_nac_ojs)
+pvc_dep = transpose(pvc_dep_ojs)
+
+// Escala divergente fija para que los tres años sean comparables entre sí.
+// Positivo (azul) = la participación presidencial supera a la de Congreso.
+pvc_cortes  = [-15, -7.5, -2.5, 2.5, 7.5, 15]
+pvc_colores = ["#A50F15", "#DE2D26", "#FCAE91", "#F1F1F1", "#9ECAE1", "#4292C6", "#08519C"]
+pvc_rotulos = ["−15 pp o menos", "−15 a −7,5 pp", "−7,5 a −2,5 pp", "−2,5 a +2,5 pp",
+               "+2,5 a +7,5 pp", "+7,5 a +15 pp", "+15 pp o más"]
+pvc_color = v => {
+  if (v == null || isNaN(v)) return "#eeeeee";
+  let i = 0; while (i < pvc_cortes.length && v >= pvc_cortes[i]) i++;
+  return pvc_colores[i];
+}
+
+pvc_filtra = (vuelta, anno) => pvc_dep.filter(x => x.vuelta === vuelta && +x.annoh === +anno);
+```
+
+```{ojs}
+viewof pvc_vuelta = filtroSegmentado(["Primera vuelta", "Segunda vuelta"], {value: "Primera vuelta", label: "Vuelta"})
+viewof pvc_anno = filtroSegmentado([2026, 2022, 2018], {value: 2026, format: x => `${x}`, label: "Año"})
+html`<div class="filtro-caja">${viewof pvc_vuelta}${viewof pvc_anno}</div>`
+```
+
+```{ojs}
+pvc_kpi = {
+  const a = pvc_nac.find(d => d.vuelta === pvc_vuelta && +d.annoh === +pvc_anno);
+  if (!a) return md``;
+  const bloque = (rotulo, valor, pie, color) => `
+    <div>
+      <div style="font-size:.72rem; letter-spacing:.06em; text-transform:uppercase; color:#8494A8; font-weight:700;">${rotulo}</div>
+      <div style="font-family:Archivo,sans-serif; font-size:2.6rem; font-weight:800; color:${color}; line-height:1.1; margin:.15rem 0 .1rem;">${valor}</div>
+      <div style="font-size:.82rem; color:#5A6B80;">${pie}</div>
+    </div>`;
+  const cuerpo =
+    bloque(`Presidencia ${pvc_anno}`, pp_pct(a.part_pres), pvc_vuelta.toLowerCase(), "#0B2E63") +
+    bloque(`Congreso ${pvc_anno}`, pp_pct(a.part_cong), "máximo por mesa entre corporaciones", "#0B2E63") +
+    bloque("Diferencia", pp_pp(a.diferencia),
+           a.diferencia >= 0 ? "presidencia por encima" : "Congreso por encima",
+           a.diferencia >= 0 ? "#1B5E33" : "#9B2C2C");
+  return html`
+  <div style="display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:center;
+              gap:1rem 4.5rem; margin:1.1rem 0 1.6rem; text-align:center;">${cuerpo}</div>`;
+}
+```
+
+```{ojs}
+pvc_texto = {
+  const d = pvc_filtra(pvc_vuelta, pvc_anno).filter(x => x.diferencia != null);
+  if (!d.length) return md``;
+  const orden = d.slice().sort((a, b) => b.diferencia - a.diferencia);
+  const arriba = orden.slice(0, 2), abajo = orden.slice(-2).reverse();
+  const sobre = d.filter(x => x.diferencia > 0).length;
+
+  // Cambio de la diferencia entre 2026 y 2022: mide dónde se abrió o se cerró
+  // más la brecha entre las dos elecciones, para la vuelta seleccionada.
+  const m26 = new Map(pvc_filtra(pvc_vuelta, 2026).map(x => [x.Depto, x.diferencia]));
+  const m22 = new Map(pvc_filtra(pvc_vuelta, 2022).map(x => [x.Depto, x.diferencia]));
+  const camb = [...m26.keys()].filter(k => m22.has(k) && m26.get(k) != null && m22.get(k) != null)
+    .map(k => ({Depto: k, v: m26.get(k) - m22.get(k)}))
+    .sort((a, b) => b.v - a.v);
+  const cSube = camb.slice(0, 2), cBaja = camb.slice(-2).reverse();
+  const lista = xs => xs.map(x => `**${x.Depto}** (${pp_pp(x.v)})`).join(" y ");
+
+  return md`En la **${pvc_vuelta.toLowerCase()} de ${pvc_anno}** la participación presidencial fue superior
+a la de Congreso en **${sobre} de ${d.length}** territorios. La brecha más amplia a favor de presidencia se
+dio en **${arriba[0].Depto}** (${pp_pp(arriba[0].diferencia)}) y **${arriba[1].Depto}**
+(${pp_pp(arriba[1].diferencia)}); las mayores diferencias a favor de Congreso, en **${abajo[0].Depto}**
+(${pp_pp(abajo[0].diferencia)}) y **${abajo[1].Depto}** (${pp_pp(abajo[1].diferencia)}).
+Entre 2022 y 2026 la brecha se amplió sobre todo en ${lista(cSube)} y se redujo sobre todo en ${lista(cBaja)}.`;
+}
+```
+
+:::: {style="display: flex; gap: 24px; align-items: flex-start;"}
+
+::: {style="flex: 0 0 54%; width: 54%;"}
+```{ojs}
+viewof pvc_map = {
+  const div = html`<div style="height:540px; border:1px solid #EAF0F6; border-radius:8px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.03);"></div>`;
+  const map = L_pvc.map(div, { scrollWheelZoom: true }).setView([4.4, -73.5], 5);
+  L_pvc.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}", { attribution: "Tiles © Esri — Esri, DeLorme, NAVTEQ" }).addTo(map);
+  nombresDep(L_pvc).addTo(map);
+  setTimeout(() => map.invalidateSize(), 200);
+  div.value = map;
+  return div;
+}
+```
+
+```{ojs}
+pvc_pintar = {
+  const map = pvc_map;
+  if (map._dl) map.removeLayer(map._dl);
+  if (map._legend) map.removeControl(map._legend);
+
+  // El exterior no tiene geometría departamental: queda solo en la tabla.
+  const lookup = new Map(pvc_filtra(pvc_vuelta, pvc_anno)
+    .filter(x => x.coddepto != null).map(x => [+x.coddepto, x]));
+
+  map._dl = L_pvc.geoJSON(geo_deptos_pvc, {
+    style: f => {
+      const x = lookup.get(+f.properties.coddepto);
+      return { weight: 0.5, color: "#ffffff", fillColor: pvc_color(x?.diferencia), fillOpacity: 0.88 };
+    },
+    onEachFeature: (f, lyr) => {
+      const x = lookup.get(+f.properties.coddepto);
+      lyr.bindTooltip(x
+        ? `<b>${x.Depto}</b><br>Presidencia: ${pp_pct(x.part_pres)}<br>Congreso: ${pp_pct(x.part_cong)}<br>Diferencia: ${pp_pp(x.diferencia)}`
+        : "<b>Sin datos</b>", { sticky: true });
+      lyr.on("mouseover", () => lyr.setStyle({ weight: 2, color: "#0B2E63" }));
+      lyr.on("mouseout",  () => lyr.setStyle({ weight: 0.5, color: "#ffffff" }));
+    }
+  }).addTo(map);
+
+  const legend = L_pvc.control({ position: "bottomright" });
+  legend.onAdd = () => {
+    const dv = L_pvc.DomUtil.create("div");
+    dv.style = "background:#fff; padding:10px 12px; border-radius:6px; box-shadow:0 1px 4px rgba(0,0,0,.2); font-size:11px;";
+    dv.innerHTML = `<div style="font-weight:700; color:#0B2E63; margin-bottom:6px; font-size:12px;">Presidencia − Congreso</div>` +
+      pvc_rotulos.map((r, i) => `<div style="display:flex; align-items:center; gap:8px; margin:2px 0;">
+         <span style="width:16px; height:12px; border-radius:2px; border:1px solid #CBD5E1; background:${pvc_colores[i]}; display:inline-block;"></span>
+         <span style="color:#334155;">${r}</span></div>`).reverse().join('');
+    return dv;
+  };
+  legend.addTo(map);
+  map._legend = legend;
+}
+```
+:::
+
+::: {style="flex: 0 0 46%; width: 46%;"}
+```{ojs}
+pvc_tabla = {
+  const data = pvc_filtra(pvc_vuelta, pvc_anno).slice()
+    .sort((a, b) => (b.diferencia ?? -999) - (a.diferencia ?? -999));
+  const th = "padding:12px 8px; background:#5E7C99; color:#ffffff; font-weight:600; font-size:12px; position:sticky; top:0; z-index:2; border-bottom:2px solid #4A637A;";
+
+  const tbody = data.map((d, i) => `
+    <tr style='border-bottom:1px solid #E2E8F0; ${filaRango(i, data.length, true)}'>
+      <td style='padding:9px 8px; text-align:left;'><strong style='color:#1F2937; font-size:12.5px;'>${d.Depto}</strong></td>
+      <td style='padding:9px 6px; text-align:right; color:#334155; font-variant-numeric:tabular-nums; font-size:12.5px;'>${pp_pct(d.part_pres)}</td>
+      <td style='padding:9px 6px; text-align:right; color:#334155; font-variant-numeric:tabular-nums; font-size:12.5px;'>${pp_pct(d.part_cong)}</td>
+      <td style='padding:9px 8px; text-align:right;'><span style='display:inline-block; padding:3px 9px; border-radius:10px; white-space:nowrap; font-size:11px; font-weight:700; font-variant-numeric:tabular-nums; background:${d.diferencia >= 0 ? "#E8F1FA" : "#FBEAEA"}; color:${d.diferencia >= 0 ? "#0B2E63" : "#9B2C2C"};'>${pp_pp(d.diferencia)}</span></td>
+    </tr>`).join('');
+
+  return html`
+  <div style="background:#fff; border:1px solid #EAF0F6; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.02); display:flex; flex-direction:column; height:540px; overflow:hidden;">
+    <div style="padding:10px 16px; border-bottom:1px solid #CBD5E1; background:#F1F5F9;">
+      <div style="font-weight:800; color:#0B2E63; font-size:13.5px; text-transform:uppercase;">Presidencia frente a Congreso</div>
+      <div style="font-size:10.5px; color:#94A3B8; margin-top:2px;">${pvc_vuelta} ${pvc_anno} · incluye el voto en el exterior</div>
+      <div style="margin-top:6px;">${leyendaRango(true)}</div>
+    </div>
+    <div style="overflow-y:auto; flex:1;">
+      <table style="width:100%; border-collapse:collapse; font-family:sans-serif;">
+        <thead><tr>
+          <th style="${th} text-align:left;">Departamento</th>
+          <th style="${th} text-align:right;">Presidencia</th>
+          <th style="${th} text-align:right;">Congreso</th>
+          <th style="${th} text-align:right;">Diferencia</th>
+        </tr></thead>
+        <tbody>${tbody}</tbody>
+      </table>
+    </div>
+  </div>`;
+}
+```
+:::
+
+::::
+
+::: {style="font-size:11.5px; color:#64748B; margin-top:12px;"}
+**Nota:** en Congreso la participación se calcula tomando en cada mesa el máximo entre Senado, Cámara y CITREP, porque un mismo elector vota en varias corporaciones y sumarlas lo contaría dos veces.
+:::
 
 ## Participación municipal
 
@@ -5793,23 +6047,24 @@ pm_tabla = (vuelta, crit, top, filtroNodo) => {
 ```
 
 ```{ojs}
-viewof pm_crit_1v = filtroSegmentado(["Nivel 2026", "Cambio vs 2022", "Cambio vs 2018"], {value: "Nivel 2026", label: "Criterio"})
-html`<div class="filtro-caja">${viewof pm_crit_1v}</div>`
+viewof pm_vuelta = filtroSegmentado(["Primera vuelta", "Segunda vuelta"], {value: "Primera vuelta", label: "Vuelta"})
+viewof pm_crit = filtroSegmentado(["Nivel 2026", "Cambio vs 2022", "Cambio vs 2018"], {value: "Nivel 2026", label: "Criterio"})
+html`<div class="filtro-caja">${viewof pm_vuelta}${viewof pm_crit}</div>`
 ```
 
 ```{ojs}
-viewof pm_top_1v = filtroSelect(["Top 20 más alto", "Top 20 más bajo"], {value: "Top 20 más alto"})
+viewof pm_top = filtroSelect(["Top 20 más alto", "Top 20 más bajo"], {value: "Top 20 más alto"})
 ```
 
 ```{ojs}
-pm_texto("Primera vuelta", pm_crit_1v)
+pm_texto(pm_vuelta, pm_crit)
 ```
 
 :::: {style="display: flex; gap: 24px; align-items: flex-start;"}
 
 ::: {style="flex: 0 0 54%; width: 54%;"}
 ```{ojs}
-viewof pm_map_1v = {
+viewof pm_map = {
   const div = html`<div style="height:540px; border:1px solid #EAF0F6; border-radius:8px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.03);"></div>`;
   const map = L_pm.map(div, { scrollWheelZoom: true }).setView([4.4, -73.5], 5);
   L_pm.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}", { attribution: "Tiles © Esri — Esri, DeLorme, NAVTEQ" }).addTo(map);
@@ -5821,13 +6076,13 @@ viewof pm_map_1v = {
 ```
 
 ```{ojs}
-pm_pintar_1v = pm_pinta(pm_map_1v, "Primera vuelta", pm_crit_1v)
+pm_pintar = pm_pinta(pm_map, pm_vuelta, pm_crit)
 ```
 :::
 
 ::: {style="flex: 0 0 46%; width: 46%;"}
 ```{ojs}
-pm_tabla("Primera vuelta", pm_crit_1v, pm_top_1v, viewof pm_top_1v)
+pm_tabla(pm_vuelta, pm_crit, pm_top, viewof pm_top)
 ```
 :::
 
@@ -5933,15 +6188,20 @@ exp_texto_dia = (vuelta) => {
 ```
 
 ```{ojs}
-exp_texto("Primera vuelta")
+viewof ex_vuelta = filtroSegmentado(["Primera vuelta", "Segunda vuelta"], {value: "Primera vuelta", label: "Vuelta"})
+html`<div class="filtro-caja">${viewof ex_vuelta}</div>`
 ```
 
 ```{ojs}
-exp_kpi("Primera vuelta")
+exp_texto(ex_vuelta)
 ```
 
 ```{ojs}
-exp_texto_dia("Primera vuelta")
+exp_kpi(ex_vuelta)
+```
+
+```{ojs}
+exp_texto_dia(ex_vuelta)
 ```
 
 :::: {style="display: flex; gap: 24px; align-items: stretch; margin-top: 20px; margin-bottom: 40px;"}
@@ -5949,14 +6209,14 @@ exp_texto_dia("Primera vuelta")
 ::: {style="flex: 1; background:#fff; border:1px solid #EAF0F6; border-radius:8px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,0.02);"}
 <div style="font-weight:800; color:#0B2E63; margin-bottom:12px; text-align:center; font-size:13.5px;">Participación histórica</div>
 ```{ojs}
-exp_graf_hist("Primera vuelta")
+exp_graf_hist(ex_vuelta)
 ```
 :::
 
 ::: {style="flex: 1; background:#fff; border:1px solid #EAF0F6; border-radius:8px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,0.02);"}
 <div style="font-weight:800; color:#0B2E63; margin-bottom:12px; text-align:center; font-size:13.5px;">Distribución de votos por día (voto anticipado)</div>
 ```{ojs}
-exp_graf_dia("Primera vuelta")
+exp_graf_dia(ex_vuelta)
 ```
 :::
 
@@ -5998,32 +6258,45 @@ mapa_ext_pres <- function(vuelta_sel, tipo) {
 ```
 
 ```{ojs}
-viewof exp_crit_1v = filtroSegmentado(["Proporción del total de votos", "Participación sobre censo"], {value: "Proporción del total de votos", label: "Mostrar en el mapa"})
-html`<div class="filtro-caja">${viewof exp_crit_1v}</div>`
+viewof exp_crit = filtroSegmentado(["Proporción del total de votos", "Participación sobre censo"], {value: "Proporción del total de votos", label: "Mostrar en el mapa"})
+html`<div class="filtro-caja">${viewof exp_crit}</div>`
 ```
 
 :::: {style="position: relative; height: 480px; width: 100%; border: 1px solid #EAF0F6; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.02);"}
 
-::: {#mapa-extp-1v-prop .extp-mapa-1v style="position:absolute; width:100%; height:100%; top:0; left:0; transition: opacity 0.3s;"}
+::: {#mapa-extp-1v-prop .extp-mapa style="position:absolute; width:100%; height:100%; top:0; left:0; transition: opacity 0.3s;"}
 ```{r}
 mapa_ext_pres("Primera vuelta", "proporcion")
 ```
 :::
-::: {#mapa-extp-1v-part .extp-mapa-1v style="position:absolute; width:100%; height:100%; top:0; left:0; transition: opacity 0.3s;"}
+::: {#mapa-extp-1v-part .extp-mapa style="position:absolute; width:100%; height:100%; top:0; left:0; transition: opacity 0.3s;"}
 ```{r}
 mapa_ext_pres("Primera vuelta", "participacion")
+```
+:::
+::: {#mapa-extp-2v-prop .extp-mapa style="position:absolute; width:100%; height:100%; top:0; left:0; transition: opacity 0.3s;"}
+```{r}
+mapa_ext_pres("Segunda vuelta", "proporcion")
+```
+:::
+::: {#mapa-extp-2v-part .extp-mapa style="position:absolute; width:100%; height:100%; top:0; left:0; transition: opacity 0.3s;"}
+```{r}
+mapa_ext_pres("Segunda vuelta", "participacion")
 ```
 :::
 
 ::::
 
 ```{ojs}
-exp_update_1v = {
-  document.querySelectorAll(".extp-mapa-1v").forEach(el => {
+exp_update = {
+  // El mapa mundial se dibuja en R, que no reacciona a los filtros: se generan
+  // las cuatro combinaciones y se muestra la que corresponde a vuelta y criterio.
+  document.querySelectorAll(".extp-mapa").forEach(el => {
     el.style.opacity = "0"; el.style.pointerEvents = "none"; el.style.zIndex = "0";
   });
-  const id = exp_crit_1v === "Participación sobre censo" ? "mapa-extp-1v-part" : "mapa-extp-1v-prop";
-  const t = document.getElementById(id);
+  const v = ex_vuelta === "Segunda vuelta" ? "2v" : "1v";
+  const c = exp_crit === "Participación sobre censo" ? "part" : "prop";
+  const t = document.getElementById(`mapa-extp-${v}-${c}`);
   if (t) { t.style.opacity = "1"; t.style.pointerEvents = "auto"; t.style.zIndex = "10"; }
 }
 ```
@@ -6221,25 +6494,30 @@ mv_tabla = (vuelta) => {
 ```
 
 ```{ojs}
-mv_texto("Primera vuelta")
+viewof mv_vuelta = filtroSegmentado(["Primera vuelta", "Segunda vuelta"], {value: "Primera vuelta", label: "Vuelta"})
+html`<div class="filtro-caja">${viewof mv_vuelta}</div>`
+```
+
+```{ojs}
+mv_texto(mv_vuelta)
 ```
 
 ::::: {style="display: flex; gap: 24px; align-items: stretch; margin-bottom: 40px;"}
 
 :::: {style="flex: 1.25;"}
 ```{ojs}
-html`<div style="font-weight:800; color:#0B2E63; margin-bottom:8px; font-size:13.5px; text-transform:uppercase;">Participación en municipios con y sin riesgo</div>${mv_graf_barras("Primera vuelta")}`
+html`<div style="font-weight:800; color:#0B2E63; margin-bottom:8px; font-size:13.5px; text-transform:uppercase;">Participación en municipios con y sin riesgo</div>${mv_graf_barras(mv_vuelta)}`
 ```
 ::::
 
 :::: {style="flex: 0.75;"}
 ```{ojs}
-viewof mv_var_1v = filtroSelect(mv_orden("Primera vuelta").slice().reverse(), {value: "Riesgo de violencia", label: "Factor"})
-html`<div class="filtro-caja">${viewof mv_var_1v}</div>`
+viewof mv_var = filtroSelect(mv_orden(mv_vuelta).slice().reverse(), {value: "Riesgo de violencia", label: "Factor"})
+html`<div class="filtro-caja">${viewof mv_var}</div>`
 ```
 
 ```{ojs}
-html`<div style="font-weight:800; color:#0B2E63; margin-bottom:8px; font-size:13.5px; text-transform:uppercase;">Participación según el nivel de riesgo</div>${mv_graf_niveles("Primera vuelta", mv_var_1v)}`
+html`<div style="font-weight:800; color:#0B2E63; margin-bottom:8px; font-size:13.5px; text-transform:uppercase;">Participación según el nivel de riesgo</div>${mv_graf_niveles(mv_vuelta, mv_var)}`
 ```
 ::::
 
@@ -6248,14 +6526,14 @@ html`<div style="font-weight:800; color:#0B2E63; margin-bottom:8px; font-size:13
 <h3 style="font-weight:800; color:#0B2E63; font-size:16px; text-transform:uppercase; margin-top:32px; margin-bottom:16px; border-bottom: 2px solid #0B2E63; padding-bottom: 8px;">Distribución territorial del riesgo y la participación</h3>
 
 ```{ojs}
-mv_texto_mapa("Primera vuelta")
+mv_texto_mapa(mv_vuelta)
 ```
 
 ::::: {style="display: flex; gap: 24px; align-items: flex-start;"}
 
 :::: {style="flex: 0 0 52%; width: 52%;"}
 ```{ojs}
-viewof mv_map_1v = {
+viewof mv_map = {
   const div = html`<div style="height:550px; border:1px solid #EAF0F6; border-radius:8px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.03);"></div>`;
   const map = L_mv.map(div, { scrollWheelZoom: true }).setView([4.5, -73], 5);
   L_mv.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}", { attribution: "Tiles © Esri — Esri, DeLorme, NAVTEQ" }).addTo(map);
@@ -6267,184 +6545,527 @@ viewof mv_map_1v = {
 ```
 
 ```{ojs}
-mv_pintar_1v = mv_pinta(mv_map_1v, "Primera vuelta")
+mv_pintar = mv_pinta(mv_map, mv_vuelta)
 ```
 ::::
 
 :::: {style="flex: 1;"}
 ```{ojs}
-mv_tabla("Primera vuelta")
+mv_tabla(mv_vuelta)
 ```
 ::::
 
 :::::
 
-:::
-
-
-<!-- ============ SECCIÓN 05 — SEGUNDA VUELTA PRESIDENCIAL 2026 ============ -->
-
-::: {.seccion-portada}
-::: {.eyebrow}
-05 · Segunda vuelta presidencial
-:::
-
-# Segunda Vuelta Presidencial 2026
-
-::: {.lede}
-Preconteo, resultados y participación electoral.
-:::
-:::
-
-
-::: {.contenido-seccion}
-
 ::: {.subseccion}
-### Preconteo
+### Resultados electorales
 :::
 
-## Velocidad del preconteo
+## Ganador por municipio
 
-```{ojs}
-pv_resumen("Segunda vuelta")
+```{r}
+#| label: ganador-presidencia-ojs
+datos_gan_pres <- readRDS("datos_ganador_presidencia.rds")
+ojs_define(gm_ojs = datos_gan_pres$municipal)
+ojs_define(gd_ojs = datos_gan_pres$departamental)
 ```
 
 ```{ojs}
-html`<div style="display:grid;grid-template-columns:minmax(0,2.5fr) minmax(0,1fr);gap:20px;align-items:start;">${pv_grafico("Segunda vuelta")}${pv_tabla("Segunda vuelta")}</div>`
+geo_mpios_gm = FileAttachment("geo_mpios.geojson").json()
 ```
 
-## Comparación territorial
+```{ojs}
+gm_datos = transpose(gm_ojs)
+gd_datos = transpose(gd_ojs)
 
-::: {.mapa-full}
+gm_n = v => v == null ? "—" : Math.round(v).toLocaleString("es-CO")
+gm_pct = v => v == null ? "—" : v.toFixed(1).replace(".", ",") + "%"
+
+// Un color por candidato, graduado según el porcentaje con que ganó: más
+// oscuro cuanto más contundente fue el triunfo en ese municipio.
+gm_rampas = ({
+  "Abelardo de la Espriella": ["#FEF3B0", "#8A5A06"],
+  "Iván Cepeda Castro":       ["#E3D0FB", "#42157F"]
+})
+gm_gris = "#D4DAE2"
+
+gm_escalas = (vuelta) => {
+  const d = gm_datos.filter(x => x.vuelta === vuelta && x.pct_ganador != null);
+  const dom = d3.extent(d, x => x.pct_ganador);
+  const esc = new Map();
+  for (const [nom, par] of Object.entries(gm_rampas))
+    esc.set(nom, d3.scaleLinear().domain(dom).range(par)
+                    .interpolate(d3.interpolateLab).clamp(true));
+  return { esc, dom };
+}
+gm_color = (esc, d) => esc.has(d.ganador) ? esc.get(d.ganador)(d.pct_ganador) : gm_gris
+
+gm_texto = (vuelta) => {
+  const d = gm_datos.filter(x => x.vuelta === vuelta);
+  const porGanador = d3.rollups(d, v => v.length, x => x.ganador)
+    .sort((a, b) => b[1] - a[1]);
+  const votos = d3.rollups(d, v => d3.sum(v, x => x.votos_totales), x => x.ganador)
+    .sort((a, b) => b[1] - a[1]);
+  const contundente = d.slice().sort((a, b) => b.ventaja_pp - a.ventaja_pp)[0];
+  const renido = d.slice().sort((a, b) => a.ventaja_pp - b.ventaja_pp)[0];
+  const cerrados = d.filter(x => x.ventaja_pp < 5).length;
+
+  return md`En la **${vuelta.toLowerCase()} de 2026**,
+${porGanador.map(([n, k]) => `**${n}** ganó en **${k}** municipios`).join(" y ")}.
+Por volumen de votación, los municipios ganados por **${votos[0][0]}** suman ${gm_n(votos[0][1])} votos
+frente a ${gm_n(votos[1][1])} de los de **${votos[1][0]}**. El triunfo más contundente fue el de
+**${contundente.ganador}** en **${contundente.Municipio}** (${contundente.Depto},
+${gm_pct(contundente.pct_ganador)}) y el más estrecho el de **${renido.ganador}** en
+**${renido.Municipio}** (${renido.Depto}, ventaja de ${gm_pct(renido.ventaja_pp)}).
+En **${cerrados}** municipios la diferencia fue menor a 5 puntos.
+Los porcentajes van sobre votos válidos, es decir candidaturas más votos en blanco.`;
+}
+
+// Mapa de burbujas: un círculo por municipio, colocado en su centroide y
+// separado con una simulación de fuerzas para que no se tapen. El área del
+// círculo es proporcional a la votación, no al tamaño del municipio, que es
+// justo lo que hace engañoso a un coropleta municipal.
+gm_mapa = (vuelta) => {
+  const width = 520, height = 660, pad = 10;
+  const d = gm_datos.filter(x => x.vuelta === vuelta);
+  const porCod = new Map(d.map(x => [+x.codmpio, x]));
+  const { esc } = gm_escalas(vuelta);
+
+  // OJO: geoIdentity, no geoMercator. Los anillos de geo_mpios.geojson vienen
+  // con la orientación invertida, y las proyecciones esféricas de D3 leen cada
+  // polígono como "todo el planeta menos el municipio": geoBounds devuelve el
+  // mundo entero y todos los centroides caen en el mismo punto. geoIdentity
+  // trata lon/lat como plano y no depende de esa orientación. Colombia está
+  // sobre el ecuador, así que la distorsión es mínima.
+  const proj = d3.geoIdentity().reflectY(true)
+    .fitExtent([[pad, pad], [width - pad, height - pad]], geo_mpios_gm);
+  const path = d3.geoPath(proj);
+  const r = d3.scaleSqrt().domain([0, d3.max(d, x => x.votos_totales) || 1]).range([1, 22]);
+
+  const dpi = window.devicePixelRatio || 1;
+  const cv = html`<canvas width="${width * dpi}" height="${height * dpi}"
+    style="width:${width}px; height:${height}px; display:block; cursor:default;"></canvas>`;
+  const ctx = cv.getContext("2d");
+  ctx.scale(dpi, dpi);
+
+  // Malla municipal de fondo, tenue.
+  ctx.save();
+  ctx.globalAlpha = 0.55;
+  ctx.strokeStyle = "#CBD5E1";
+  ctx.lineWidth = 0.35;
+  ctx.beginPath();
+  path.context(ctx)(geo_mpios_gm);
+  ctx.stroke();
+  ctx.restore();
+  path.context(null);
+
+  const nodos = geo_mpios_gm.features.map(f => {
+    const datum = porCod.get(+f.properties.codmpio);
+    const [cx, cy] = path.centroid(f);
+    return { cx, cy, x: cx, y: cy, datum, r: datum ? r(datum.votos_totales) : 0 };
+  }).filter(n => n.datum && isFinite(n.cx));
+
+  // Calibrado sobre los datos reales: con estos valores el desplazamiento
+  // mediano frente al centroide es de ~5 km y el del percentil 90 de ~26 km,
+  // sin círculos tapados ni salidos del lienzo.
+  d3.forceSimulation(nodos)
+    .force("x", d3.forceX(n => n.cx).strength(0.3))
+    .force("y", d3.forceY(n => n.cy).strength(0.3))
+    .force("collide", d3.forceCollide(n => n.r + 0.4))
+    .stop()
+    .tick(300);
+
+  let sel = null;
+  const dibuja = () => {
+    ctx.clearRect(0, 0, width, height);
+    ctx.save();
+    ctx.globalAlpha = 0.55;
+    ctx.strokeStyle = "#CBD5E1";
+    ctx.lineWidth = 0.35;
+    ctx.beginPath();
+    path.context(ctx)(geo_mpios_gm);
+    ctx.stroke();
+    ctx.restore();
+    path.context(null);
+
+    for (const n of nodos) {
+      ctx.beginPath();
+      ctx.globalAlpha = !sel || n === sel ? 1 : 0.3;
+      ctx.fillStyle = gm_color(esc, n.datum);
+      ctx.strokeStyle = n === sel ? "#0B2E63" : "#ffffff";
+      ctx.lineWidth = n === sel ? 1.6 : 0.5;
+      ctx.arc(n.x, n.y, n.r, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = "#1F2937";
+    ctx.textAlign = "center";
+    ctx.font = '600 11px Archivo, system-ui, sans-serif';
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 3;
+    for (const n of nodos) {
+      if (n.r > 12) {
+        ctx.strokeText(n.datum.Municipio, n.x, n.y + 3);
+        ctx.fillText(n.datum.Municipio, n.x, n.y + 3);
+      }
+    }
+  };
+  dibuja();
+
+  const tip = html`<div style="position:absolute; pointer-events:none; display:none; z-index:20;
+    background:#fff; border:1px solid #CBD5E1; border-radius:6px; padding:8px 10px;
+    box-shadow:0 2px 8px rgba(0,0,0,.15); font-size:11.5px; line-height:1.45; color:#334155;
+    max-width:220px; box-sizing:border-box;"></div>`;
+
+  d3.select(cv)
+    .on("mousemove", evt => {
+      const [mx, my] = d3.pointer(evt);
+      let hit = null, best = Infinity;
+      for (const n of nodos) {
+        const dx = n.x - mx, dy = n.y - my, dist = dx * dx + dy * dy;
+        if (dist < best && dist < (n.r + 4) ** 2) { best = dist; hit = n; }
+      }
+      if (hit !== sel) { sel = hit; dibuja(); }
+      if (!hit) { tip.style.display = "none"; return; }
+      const x = hit.datum;
+      tip.innerHTML = `<b>${x.Municipio}</b> <span style="color:#94A3B8">(${x.Depto})</span><br>
+        <span style="color:${gm_color(esc, x)}; font-weight:700;">${x.ganador}</span>
+        ${gm_pct(x.pct_ganador)}<br>${x.segundo ?? "—"} ${gm_pct(x.pct_segundo)}<br>
+        <span style="color:#64748B">Ventaja ${gm_pct(x.ventaja_pp)} · ${gm_n(x.votos_totales)} votos
+        (${gm_n(x.votos_validos)} válidos)</span>`;
+      tip.style.display = "block";
+      // Se voltea al lado contrario si no cabe, y luego se limita al lienzo:
+      // sin este tope el tooltip de los círculos grandes de la izquierda salía
+      // con left negativo y quedaba cortado.
+      const off = 14, tw = tip.offsetWidth, th = tip.offsetHeight;
+      let lx = mx + off + tw > width ? mx - off - tw : mx + off;
+      let ly = my + off + th > height ? my - off - th : my + off;
+      tip.style.left = Math.max(0, Math.min(lx, width - tw)) + "px";
+      tip.style.top  = Math.max(0, Math.min(ly, height - th)) + "px";
+    })
+    .on("mouseleave", () => { sel = null; dibuja(); tip.style.display = "none"; });
+
+  return html`<div style="position:relative; width:${width}px; margin:0 auto;">${cv}${tip}${gm_leyenda(vuelta)}</div>`;
+}
+
+// Leyenda dentro del mapa, abajo a la izquierda. Va en dos columnas para que
+// sea baja y ancha en vez de alta: medido sobre la geometría proyectada, el
+// territorio a partir de y=560 no baja de x=249, así que una caja de 230x100
+// pegada a la esquina inferior izquierda no pisa el mapa en ninguna vuelta.
+gm_leyenda = (vuelta) => {
+  const d = gm_datos.filter(x => x.vuelta === vuelta);
+  const { esc, dom } = gm_escalas(vuelta);
+  const maxV = d3.max(d, x => x.votos_totales) || 1;
+  const r = d3.scaleSqrt().domain([0, maxV]).range([1, 22]);
+  const refs = [Math.round(maxV / 25), Math.round(maxV / 5), maxV];
+
+  const rampa = (nom, corto) => {
+    const e = esc.get(nom);
+    const paradas = d3.range(0, 1.001, 0.1)
+      .map(t => e(dom[0] + t * (dom[1] - dom[0]))).join(", ");
+    return `<div style="margin-bottom:4px;">
+      <div style="font-size:9.5px; font-weight:700; color:#1F2937; line-height:1.15;">${corto}</div>
+      <div style="height:7px; border-radius:2px; border:1px solid #CBD5E1;
+                  background:linear-gradient(to right, ${paradas});"></div>
+    </div>`;
+  };
+
+  // Círculos concéntricos alineados por la base: ocupan poco y se leen directo.
+  const rMax = r(maxV), w = rMax * 2 + 50, h = rMax * 2 + 4;
+  const circulos = refs.map(v => {
+    const rr = r(v), cy = h - 2 - rr;
+    return `<circle cx="${rMax + 2}" cy="${cy}" r="${rr}" fill="none" stroke="#94A3B8" stroke-width="1"/>
+      <line x1="${rMax + 2}" y1="${cy - rr}" x2="${rMax * 2 + 6}" y2="${cy - rr}"
+            stroke="#CBD5E1" stroke-width="0.7"/>
+      <text x="${rMax * 2 + 9}" y="${cy - rr + 3}" font-size="8" fill="#64748B">${gm_n(v)}</text>`;
+  }).join("");
+
+  const rotulo = "font-size:8.5px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; color:#64748B;";
+
+  return html`
+  <div style="position:absolute; left:2px; bottom:2px; z-index:10; display:flex; gap:10px;
+              max-width:236px; background:rgba(255,255,255,.94); border:1px solid #CBD5E1;
+              border-radius:6px; padding:6px 8px; box-shadow:0 1px 4px rgba(0,0,0,.12);
+              font-family:sans-serif;">
+    <div style="width:108px;">
+      <div style="${rotulo} margin-bottom:4px;">Ganador · % válidos</div>
+      ${rampa("Abelardo de la Espriella", "De la Espriella")}
+      ${rampa("Iván Cepeda Castro", "Cepeda")}
+      <div style="display:flex; justify-content:space-between; font-size:8px; color:#64748B;">
+        <span>${gm_pct(dom[0])}</span><span>${gm_pct(dom[1])}</span></div>
+    </div>
+    <div>
+      <div style="${rotulo} margin-bottom:3px;">Tamaño · votos</div>
+      <svg width="${w}" height="${h}" style="display:block; overflow:visible;">${circulos}</svg>
+    </div>
+  </div>`;
+}
+
+gm_tabla = (vuelta, criterio, filtroNodo) => {
+  const { esc } = gm_escalas(vuelta);
+  const th = "padding:10px 8px; background:#5E7C99; color:#ffffff; font-weight:600; font-size:11.5px; position:sticky; top:0; z-index:2;";
+  const punto = (nom, pct) => nom == null ? "—" :
+    `<span style="display:inline-flex; align-items:center; gap:5px;">
+       <span style="width:9px; height:9px; border-radius:50%; flex:none;
+                    background:${esc.has(nom) ? esc.get(nom)(pct) : gm_gris};
+                    border:1px solid #94A3B8; display:inline-block;"></span>
+       <span style="font-size:11px; color:#334155;">${nom}</span></span>`;
+
+  let cabeza, filas, subtitulo;
+
+  if (criterio === "Ganador por departamento") {
+    // En segunda vuelta solo compiten dos, así que la columna de tercero se
+    // omite en lugar de mostrarse vacía.
+    const d = gd_datos.filter(x => x.vuelta === vuelta);
+    const hayTercero = d.some(x => x.tercero != null);
+    subtitulo = `${d.length} territorios · de mayor a menor votación`;
+    cabeza = `<th style="${th} text-align:left;">Departamento</th>
+      <th style="${th} text-align:left;">Ganador</th>
+      <th style="${th} text-align:left;">Segundo</th>` +
+      (hayTercero ? `<th style="${th} text-align:left;">Tercero</th>` : "");
+    filas = d.map((x, i) => `
+      <tr style="border-bottom:1px solid #E2E8F0; background:${i % 2 ? "#F8FAFC" : "#ffffff"};">
+        <td style="padding:8px 10px; text-align:left;">
+          <strong style="color:#1F2937; font-size:12px;">${x.Depto}</strong>
+          <div style="font-size:10px; color:#94A3B8;">${gm_n(x.votos_totales)} votos</div></td>
+        <td style="padding:8px 6px;">${punto(x.ganador, x.pct_ganador)}
+          <div style="font-size:11px; font-weight:700; color:#0B2E63; font-variant-numeric:tabular-nums;">${gm_pct(x.pct_ganador)}</div></td>
+        <td style="padding:8px 6px;">${punto(x.segundo, x.pct_segundo)}
+          <div style="font-size:11px; color:#475569; font-variant-numeric:tabular-nums;">${gm_pct(x.pct_segundo)}</div></td>` +
+        (hayTercero ? `<td style="padding:8px 6px;">${punto(x.tercero, x.pct_tercero)}
+          <div style="font-size:11px; color:#475569; font-variant-numeric:tabular-nums;">${gm_pct(x.pct_tercero)}</div></td>` : "") +
+      `</tr>`).join("");
+  } else {
+    let d = gm_datos.filter(x => x.vuelta === vuelta).slice();
+    if (criterio === "Mayor votación") d.sort((a, b) => b.votos_totales - a.votos_totales);
+    else if (criterio === "Mayor ventaja") d.sort((a, b) => b.ventaja_pp - a.ventaja_pp);
+    else d.sort((a, b) => a.ventaja_pp - b.ventaja_pp);
+    d = d.slice(0, 20);
+    subtitulo = `Top 20 municipios · ${criterio.toLowerCase()}`;
+    cabeza = `<th style="${th} text-align:left;">Municipio</th>
+      <th style="${th} text-align:left;">Ganador</th>
+      <th style="${th} text-align:right;">%</th>
+      <th style="${th} text-align:right;">Votos</th>`;
+    filas = d.map((x, i) => `
+      <tr style="border-bottom:1px solid #E2E8F0; background:${i % 2 ? "#F8FAFC" : "#ffffff"};">
+        <td style="padding:8px 10px; text-align:left;">
+          <strong style="color:#1F2937; font-size:12px;">${x.Municipio}</strong>
+          <div style="font-size:10.5px; color:#94A3B8;">${x.Depto}</div></td>
+        <td style="padding:8px 6px; text-align:left;">${punto(x.ganador, x.pct_ganador)}</td>
+        <td style="padding:8px 6px; text-align:right; font-weight:700; color:#0B2E63; font-variant-numeric:tabular-nums; font-size:12px;">${gm_pct(x.pct_ganador)}</td>
+        <td style="padding:8px 8px; text-align:right; color:#64748B; font-variant-numeric:tabular-nums; font-size:11.5px;">${gm_n(x.votos_totales)}</td>
+      </tr>`).join("");
+  }
+
+  const cab = html`<div style="padding:10px 14px; border-bottom:1px solid #CBD5E1; background:#F1F5F9;
+              display:flex; justify-content:space-between; align-items:center; gap:12px;">
+    <div>
+      <div style="font-weight:800; color:#0B2E63; font-size:13px; text-transform:uppercase;">Resultados</div>
+      <div style="font-size:10.5px; color:#94A3B8; margin-top:2px;">${subtitulo}</div>
+    </div>
+    <div></div>
+  </div>`;
+  cab.lastElementChild.appendChild(filtroNodo);
+
+  const cuerpo = html`<div style="overflow-y:auto; flex:1;">
+    <table style="width:100%; border-collapse:collapse; font-family:sans-serif;">
+      <thead><tr>${cabeza}</tr></thead>
+      <tbody>${filas}</tbody>
+    </table></div>`;
+
+  return html`<div style="background:#fff; border:1px solid #EAF0F6; border-radius:8px;
+      box-shadow:0 1px 3px rgba(0,0,0,0.02); display:flex; flex-direction:column;
+      height:660px; overflow:hidden;">${cab}${cuerpo}</div>`;
+}
+```
 
 ```{ojs}
-pd_resumen("Segunda vuelta")
+viewof gm_vuelta = filtroSegmentado(["Primera vuelta", "Segunda vuelta"], {value: "Primera vuelta", label: "Vuelta"})
+html`<div class="filtro-caja">${viewof gm_vuelta}</div>`
+```
+
+```{ojs}
+viewof gm_crit = filtroSelect(
+  ["Mayor votación", "Mayor ventaja", "Más reñidos", "Ganador por departamento"],
+  {value: "Mayor votación"})
+```
+
+```{ojs}
+gm_texto(gm_vuelta)
 ```
 
 :::: {style="display: flex; gap: 24px; align-items: flex-start;"}
 
-::: {style="flex: 0 0 54%; width: 54%;"}
+::: {style="flex: 0 0 56%; width: 56%;"}
 ```{ojs}
-{
-  const div = html`<div style="height:540px; border:1px solid #EAF0F6; border-radius:8px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.03);"></div>`;
-  const map = pd_mapa("Segunda vuelta", div);
-  invalidation.then(() => map.remove());
-  return div;
+gm_mapa(gm_vuelta)
+```
+:::
+
+::: {style="flex: 0 0 44%; width: 44%;"}
+```{ojs}
+gm_tabla(gm_vuelta, gm_crit, viewof gm_crit)
+```
+:::
+
+::::
+
+## Votos en blanco, nulos y tarjetones no marcados
+
+```{r}
+#| label: datos-ve-presidencia-ojs
+datos_ve_pres <- readRDS("datos_ve_presidencia.rds")
+ojs_define(vp_nal_ojs = datos_ve_pres$nacional)
+ojs_define(vp_dep_ojs = datos_ve_pres$depto)
+ojs_define(vp_mpi_ojs = datos_ve_pres$mpio)
+```
+
+```{ojs}
+vp_nal = transpose(vp_nal_ojs)
+vp_dep = transpose(vp_dep_ojs)
+vp_mpi = transpose(vp_mpi_ojs)
+
+vp_pct = v => v == null ? "—" : v.toFixed(1).replace(".", ",") + "%"
+// El signo se decide sobre el valor ya redondeado: si no, un −0,04 se imprime
+// como "−0,0 pp", que se lee como una caída que en realidad no existe.
+vp_pp = v => {
+  if (v == null) return "—";
+  const r = Math.round(v * 10) / 10;
+  return (r > 0 ? "+" : r < 0 ? "−" : "") + Math.abs(r).toFixed(1).replace(".", ",") + " pp";
+}
+vp_n   = v => v == null ? "—" : Math.round(v).toLocaleString("es-CO")
+vp_col = ({"Primera vuelta": "#1F4E79", "Segunda vuelta": "#C2410C"})
+vp_dato = (vuelta, tipo, anno) =>
+  vp_nal.find(x => x.vuelta === vuelta && x.tipo_voto === tipo && +x.annoh === +anno)
+```
+
+```{ojs}
+viewof vp_tipo = filtroSegmentado(["Votos en blanco", "Votos nulos", "Votos no marcados"], {value: "Votos en blanco", label: "Tipo de voto"})
+html`<div class="filtro-caja">${viewof vp_tipo}</div>`
+```
+
+```{ojs}
+vp_texto_nal = {
+  const linea = (v) => {
+    const a = vp_dato(v, vp_tipo, 2018), b = vp_dato(v, vp_tipo, 2022), c = vp_dato(v, vp_tipo, 2026);
+    return {v, d18: a?.pct ?? 0, d22: b?.pct ?? 0, d26: c?.pct ?? 0};
+  };
+  const p = linea("Primera vuelta"), s = linea("Segunda vuelta");
+  const sentido = x => x.d26 > x.d18 ? "subió" : "bajó";
+  return html`
+  <div style="font-size:15px; color:#334155; line-height:1.6; margin-bottom:24px;">
+    <ul style="margin-top:0; padding-left:20px;">
+      <li style="margin-bottom:6px;">En <b>primera vuelta</b>, los <b>${vp_tipo.toLowerCase()}</b>
+        pasaron de ${vp_pct(p.d18)} en 2018 a ${vp_pct(p.d26)} en 2026: ${sentido(p)}
+        ${vp_pp(p.d26 - p.d18)}.</li>
+      <li>En <b>segunda vuelta</b> pasaron de ${vp_pct(s.d18)} a ${vp_pct(s.d26)},
+        ${vp_pp(s.d26 - s.d18)} frente a 2018 y ${vp_pp(s.d26 - s.d22)} frente a 2022.</li>
+    </ul>
+  </div>`;
+}
+```
+
+:::: {style="display: flex; gap: 24px; align-items: stretch; margin-bottom: 40px;"}
+
+::: {style="flex: 0.25; display:flex; flex-direction:column; justify-content:center; gap: 28px;"}
+```{ojs}
+vp_kpi = {
+  const bloque = (v) => {
+    const a = vp_dato(v, vp_tipo, 2026), b = vp_dato(v, vp_tipo, 2022);
+    const dif = (a?.pct ?? 0) - (b?.pct ?? 0);
+    return `
+      <div>
+        <div style="font-size:.72rem; letter-spacing:.06em; text-transform:uppercase;
+                    color:#8494A8; font-weight:700;">${v} 2026</div>
+        <div style="font-family:Archivo,sans-serif; font-size:2.4rem; font-weight:800;
+                    color:#0B2E63; line-height:1.1; margin:.15rem 0 .3rem;">${vp_pct(a?.pct)}</div>
+        <span style="display:inline-block; padding:2px 9px; border-radius:10px; font-size:11px;
+                     font-weight:700; background:${dif > 0 ? "#FBEAEA" : "#E8F5EC"};
+                     color:${dif > 0 ? "#9B2C2C" : "#1B5E33"};">${vp_pp(dif)} vs 2022</span>
+        <div style="font-size:.78rem; color:#5A6B80; margin-top:6px;">${vp_n(a?.votos)} votos</div>
+      </div>`;
+  };
+  return html`<div style="display:flex; flex-direction:column; gap:28px;">
+    ${bloque("Primera vuelta")}${bloque("Segunda vuelta")}</div>`;
 }
 ```
 :::
 
-::: {style="flex: 0 0 46%; width: 46%;"}
+::: {style="flex: 0.75; background:#fff; border:1px solid #EAF0F6; border-radius:8px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.02);"}
 ```{ojs}
-html`${pd_tabla("Segunda vuelta")}`
+vp_grafica = {
+  const d = vp_nal.filter(x => x.tipo_voto === vp_tipo);
+  return Plot.plot({
+    marginLeft: 50, marginRight: 30, marginTop: 20, height: 350,
+    style: {fontFamily: "sans-serif", fontSize: "12.5px"},
+    x: {type: "point", domain: [2018, 2022, 2026], padding: 0.5, label: null,
+        tickFormat: v => String(v)},
+    y: {label: "↑ Porcentaje sobre el total (%)", grid: true,
+        tickFormat: v => v + "%", insetTop: 35, insetBottom: 12},
+    color: {domain: ["Primera vuelta", "Segunda vuelta"],
+            range: [vp_col["Primera vuelta"], vp_col["Segunda vuelta"]], legend: true},
+    marks: [
+      Plot.lineY(d, {x: "annoh", y: "pct", stroke: "vuelta", strokeWidth: 2.5}),
+      Plot.dot(d, {x: "annoh", y: "pct", fill: "vuelta", r: 5}),
+      Plot.text(d, {x: "annoh", y: "pct", text: x => vp_pct(x.pct),
+        // dy dinámico: la serie que va arriba en ese año rotula hacia arriba.
+        dy: x => {
+          const otra = d.find(o => +o.annoh === +x.annoh && o.vuelta !== x.vuelta);
+          return (otra && x.pct >= otra.pct) ? -16 : 18;
+        },
+        fill: x => vp_col[x.vuelta], stroke: "white", strokeWidth: 4, paintOrder: "stroke",
+        fontSize: 12, fontWeight: "bold"}),
+      Plot.tip(d, Plot.pointer({x: "annoh", y: "pct",
+        title: x => `${x.vuelta} (${x.annoh})\n${vp_tipo}: ${vp_pct(x.pct)}\nVotos: ${vp_n(x.votos)}`,
+        fontSize: 14, fill: "#F8FAFC", stroke: "vuelta"}))
+    ]
+  });
+}
 ```
 :::
 
 ::::
 
-::: {style="font-size:11.5px; color:#64748B; margin-top:12px;"}
-**Nota:** el mapa muestra la hora en que cada departamento llegó al 100 % de sus mesas. Los archivos departamentales del preconteo presidencial solo registran el boletín de cierre de cada territorio, no su serie completa, por lo que no es posible calcular el paso por el 99 %. El voto en el exterior aparece en la tabla pero no en el mapa.
-:::
-
-:::
-
-
-::: {.subseccion}
-### Comparación de preconteo y escrutinio
-:::
-
-## Cambios generales
+<h3 style="font-weight:800; color:#0B2E63; font-size:16px; text-transform:uppercase; margin-top:32px; margin-bottom:16px; border-bottom: 2px solid #0B2E63; padding-bottom: 8px;">Detalle territorial</h3>
 
 ```{ojs}
-pe_kpis("Segunda vuelta")
+viewof vp_map_tipo = filtroSegmentado(["Votos en blanco", "Votos nulos", "Votos no marcados"], {value: "Votos en blanco", label: "Tipo"})
+viewof vp_map_vuelta = filtroSegmentado(["Primera vuelta", "Segunda vuelta"], {value: "Primera vuelta", label: "Vuelta"})
+viewof vp_map_nivel = filtroSegmentado(["Departamental", "Municipal"], {value: "Departamental", label: "Nivel"})
+viewof vp_map_top = filtroSelect(["Top 20 más alto", "Top 20 más bajo"], {value: "Top 20 más alto"})
 ```
 
 ```{ojs}
-pe_tabla("Segunda vuelta")
+html`<div class="filtro-caja">${viewof vp_map_tipo}${viewof vp_map_vuelta}${viewof vp_map_nivel}</div>`
 ```
 
 ```{ojs}
-pe_nota("Segunda vuelta")
-```
-
-## Cambio de votos por candidato
-
-```{ojs}
-viewof pc_anno_2v = filtroSegmentado([2026, 2022, 2018], {value:2026, format:x=>`${x}`, label:"Año"})
-html`<div class="filtro-caja">${viewof pc_anno_2v}</div>`
-```
-
-```{ojs}
-pe_resumen_cand("Segunda vuelta", pc_anno_2v)
-```
-
-```{ojs}
-pe_tabla_cand("Segunda vuelta", pc_anno_2v)
-```
-
-```{ojs}
-pe_nota_cand("Segunda vuelta", pc_anno_2v)
-```
-
-::: {.subseccion}
-### Participación Electoral
-:::
-
-## Participación a nivel nacional
-
-```{ojs}
-pp_kpi("Segunda vuelta")
+vp_texto_terr = {
+  const d = vp_dep.filter(x => x.tipo_voto === vp_map_tipo && x.vuelta === vp_map_vuelta
+                               && x.pct_2026 != null);
+  if (!d.length) return md``;
+  const alto = d.slice().sort((a, b) => b.pct_2026 - a.pct_2026);
+  const baja = d.filter(x => x.dif_22 != null).sort((a, b) => a.dif_22 - b.dif_22)[0];
+  return html`
+  <div style="font-size:15px; color:#334155; line-height:1.6; margin-bottom:24px;">
+    <ul style="margin-top:0; padding-left:20px;">
+      <li style="margin-bottom:6px;">Los niveles más altos de <b>${vp_map_tipo.toLowerCase()}</b> en la
+        ${vp_map_vuelta.toLowerCase()} se registran en <b>${alto[0].Depto}</b>
+        (${vp_pct(alto[0].pct_2026)}) y <b>${alto[1].Depto}</b> (${vp_pct(alto[1].pct_2026)}).</li>
+      <li style="margin-bottom:6px;">Los más bajos, en <b>${alto[alto.length-1].Depto}</b>
+        (${vp_pct(alto[alto.length-1].pct_2026)}) y <b>${alto[alto.length-2].Depto}</b>
+        (${vp_pct(alto[alto.length-2].pct_2026)}).</li>
+      <li>Frente a 2022, la mayor reducción se observa en <b>${baja.Depto}</b>
+        (${vp_pp(baja.dif_22)}).</li>
+    </ul>
+  </div>`;
+}
 ```
 
 ```{ojs}
-pp_grafica("Segunda vuelta")
-```
-
-## Participación departamental
-
-```{ojs}
-pp_dep_texto("Segunda vuelta")
-```
-
-:::: {.columns}
-
-::: {.column width="55%"}
-::: {.panel-tabset}
-### Nivel 2026
-```{r}
-mapa_pres_dep("Segunda vuelta", "part_2026", "Participación 2026 (%)", FALSE)
-```
-### Cambio vs 2022
-```{r}
-mapa_pres_dep("Segunda vuelta", "cambio_22", "Cambio 2026 − 2022 (pp)", TRUE)
-```
-### Cambio vs 2018
-```{r}
-mapa_pres_dep("Segunda vuelta", "cambio_18", "Cambio 2026 − 2018 (pp)", TRUE)
-```
-:::
-:::
-
-::: {.column width="45%"}
-```{ojs}
-pp_dep_tabla("Segunda vuelta")
-```
-:::
-
-::::
-
-## Participación presidencial frente a Congreso
-
-```{r}
-#| label: pres-vs-congreso-ojs
-datos_pvc <- readRDS("datos_pres_vs_congreso.rds")
-ojs_define(pvc_nac_ojs = datos_pvc$nacional)
-ojs_define(pvc_dep_ojs = datos_pvc$departamental)
-```
-
-```{ojs}
-//| label: leaflet-setup-pvc
-L_pvc = require("leaflet@1.9.4")
+//| label: leaflet-setup-vp
+L_vp = require("leaflet@1.9.4")
 ```
 
 ```{ojs}
@@ -6452,92 +7073,19 @@ html`<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.c
 ```
 
 ```{ojs}
-geo_deptos_pvc = FileAttachment("geo_deptos.geojson").json()
-```
-
-```{ojs}
-pvc_nac = transpose(pvc_nac_ojs)
-pvc_dep = transpose(pvc_dep_ojs)
-
-// Escala divergente fija para que los tres años sean comparables entre sí.
-// Positivo (azul) = la participación presidencial supera a la de Congreso.
-pvc_cortes  = [-15, -7.5, -2.5, 2.5, 7.5, 15]
-pvc_colores = ["#A50F15", "#DE2D26", "#FCAE91", "#F1F1F1", "#9ECAE1", "#4292C6", "#08519C"]
-pvc_rotulos = ["−15 pp o menos", "−15 a −7,5 pp", "−7,5 a −2,5 pp", "−2,5 a +2,5 pp",
-               "+2,5 a +7,5 pp", "+7,5 a +15 pp", "+15 pp o más"]
-pvc_color = v => {
-  if (v == null || isNaN(v)) return "#eeeeee";
-  let i = 0; while (i < pvc_cortes.length && v >= pvc_cortes[i]) i++;
-  return pvc_colores[i];
-}
-
-pvc_filtra = (vuelta, anno) => pvc_dep.filter(x => x.vuelta === vuelta && +x.annoh === +anno);
-```
-
-```{ojs}
-viewof pvc_vuelta = filtroSegmentado(["Segunda vuelta", "Primera vuelta"], {value: "Segunda vuelta", label: "Vuelta"})
-viewof pvc_anno = filtroSegmentado([2026, 2022, 2018], {value: 2026, format: x => `${x}`, label: "Año"})
-html`<div class="filtro-caja">${viewof pvc_vuelta}${viewof pvc_anno}</div>`
-```
-
-```{ojs}
-pvc_kpi = {
-  const a = pvc_nac.find(d => d.vuelta === pvc_vuelta && +d.annoh === +pvc_anno);
-  if (!a) return md``;
-  const bloque = (rotulo, valor, pie, color) => `
-    <div>
-      <div style="font-size:.72rem; letter-spacing:.06em; text-transform:uppercase; color:#8494A8; font-weight:700;">${rotulo}</div>
-      <div style="font-family:Archivo,sans-serif; font-size:2.6rem; font-weight:800; color:${color}; line-height:1.1; margin:.15rem 0 .1rem;">${valor}</div>
-      <div style="font-size:.82rem; color:#5A6B80;">${pie}</div>
-    </div>`;
-  const cuerpo =
-    bloque(`Presidencia ${pvc_anno}`, pp_pct(a.part_pres), pvc_vuelta.toLowerCase(), "#0B2E63") +
-    bloque(`Congreso ${pvc_anno}`, pp_pct(a.part_cong), "máximo por mesa entre corporaciones", "#0B2E63") +
-    bloque("Diferencia", pp_pp(a.diferencia),
-           a.diferencia >= 0 ? "presidencia por encima" : "Congreso por encima",
-           a.diferencia >= 0 ? "#1B5E33" : "#9B2C2C");
-  return html`
-  <div style="display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:center;
-              gap:1rem 4.5rem; margin:1.1rem 0 1.6rem; text-align:center;">${cuerpo}</div>`;
-}
-```
-
-```{ojs}
-pvc_texto = {
-  const d = pvc_filtra(pvc_vuelta, pvc_anno).filter(x => x.diferencia != null);
-  if (!d.length) return md``;
-  const orden = d.slice().sort((a, b) => b.diferencia - a.diferencia);
-  const arriba = orden.slice(0, 2), abajo = orden.slice(-2).reverse();
-  const sobre = d.filter(x => x.diferencia > 0).length;
-
-  // Cambio de la diferencia entre 2026 y 2022: mide dónde se abrió o se cerró
-  // más la brecha entre las dos elecciones, para la vuelta seleccionada.
-  const m26 = new Map(pvc_filtra(pvc_vuelta, 2026).map(x => [x.Depto, x.diferencia]));
-  const m22 = new Map(pvc_filtra(pvc_vuelta, 2022).map(x => [x.Depto, x.diferencia]));
-  const camb = [...m26.keys()].filter(k => m22.has(k) && m26.get(k) != null && m22.get(k) != null)
-    .map(k => ({Depto: k, v: m26.get(k) - m22.get(k)}))
-    .sort((a, b) => b.v - a.v);
-  const cSube = camb.slice(0, 2), cBaja = camb.slice(-2).reverse();
-  const lista = xs => xs.map(x => `**${x.Depto}** (${pp_pp(x.v)})`).join(" y ");
-
-  return md`En la **${pvc_vuelta.toLowerCase()} de ${pvc_anno}** la participación presidencial fue superior
-a la de Congreso en **${sobre} de ${d.length}** territorios. La brecha más amplia a favor de presidencia se
-dio en **${arriba[0].Depto}** (${pp_pp(arriba[0].diferencia)}) y **${arriba[1].Depto}**
-(${pp_pp(arriba[1].diferencia)}); las mayores diferencias a favor de Congreso, en **${abajo[0].Depto}**
-(${pp_pp(abajo[0].diferencia)}) y **${abajo[1].Depto}** (${pp_pp(abajo[1].diferencia)}).
-Entre 2022 y 2026 la brecha se amplió sobre todo en ${lista(cSube)} y se redujo sobre todo en ${lista(cBaja)}.`;
-}
+geo_mpios_vp = FileAttachment("geo_mpios.geojson").json()
+geo_deptos_vp = FileAttachment("geo_deptos.geojson").json()
 ```
 
 :::: {style="display: flex; gap: 24px; align-items: flex-start;"}
 
 ::: {style="flex: 0 0 54%; width: 54%;"}
 ```{ojs}
-viewof pvc_map = {
+viewof vp_mapa = {
   const div = html`<div style="height:540px; border:1px solid #EAF0F6; border-radius:8px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.03);"></div>`;
-  const map = L_pvc.map(div, { scrollWheelZoom: true }).setView([4.4, -73.5], 5);
-  L_pvc.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}", { attribution: "Tiles © Esri — Esri, DeLorme, NAVTEQ" }).addTo(map);
-  nombresDep(L_pvc).addTo(map);
+  const map = L_vp.map(div, { scrollWheelZoom: true }).setView([4.4, -73.5], 5);
+  L_vp.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}", { attribution: "Tiles © Esri — Esri, DeLorme, NAVTEQ" }).addTo(map);
+  invalidation.then(() => map.remove());
   setTimeout(() => map.invalidateSize(), 200);
   div.value = map;
   return div;
@@ -6545,38 +7093,61 @@ viewof pvc_map = {
 ```
 
 ```{ojs}
-pvc_pintar = {
-  const map = pvc_map;
-  if (map._dl) map.removeLayer(map._dl);
-  if (map._legend) map.removeControl(map._legend);
+vp_pintar = {
+  const map = vp_mapa;
+  if (map._dl) { map.removeLayer(map._dl); map._dl = null; }
+  if (map._dep) { map.removeLayer(map._dep); map._dep = null; }
+  if (map._nom) { map.removeLayer(map._nom); map._nom = null; }
+  if (map._legend) { map._legend.remove(); map._legend = null; }
 
-  // El exterior no tiene geometría departamental: queda solo en la tabla.
-  const lookup = new Map(pvc_filtra(pvc_vuelta, pvc_anno)
-    .filter(x => x.coddepto != null).map(x => [+x.coddepto, x]));
+  const esMpio = vp_map_nivel === "Municipal";
+  const geo = esMpio ? geo_mpios_vp : geo_deptos_vp;
+  const llave = esMpio ? "codmpio" : "coddepto";
+  const datos = (esMpio ? vp_mpi : vp_dep)
+    .filter(x => x.tipo_voto === vp_map_tipo && x.vuelta === vp_map_vuelta);
+  const lookup = new Map(datos.filter(x => x[llave] != null).map(x => [+x[llave], x]));
+  const vals = datos.map(x => x.pct_2026).filter(v => v != null);
 
-  map._dl = L_pvc.geoJSON(geo_deptos_pvc, {
+  const color = d3.scaleSequential([d3.min(vals) ?? 0, d3.max(vals) ?? 1], d3.interpolateBlues);
+  const colorOf = v => v == null ? "#eeeeee" : color(v);
+
+  map._dl = L_vp.geoJSON(geo, {
     style: f => {
-      const x = lookup.get(+f.properties.coddepto);
-      return { weight: 0.5, color: "#ffffff", fillColor: pvc_color(x?.diferencia), fillOpacity: 0.88 };
+      const x = lookup.get(+f.properties[llave]);
+      return { weight: 0.4, color: "#ffffff", fillColor: colorOf(x ? x.pct_2026 : null), fillOpacity: 0.9 };
     },
     onEachFeature: (f, lyr) => {
-      const x = lookup.get(+f.properties.coddepto);
-      lyr.bindTooltip(x
-        ? `<b>${x.Depto}</b><br>Presidencia: ${pp_pct(x.part_pres)}<br>Congreso: ${pp_pct(x.part_cong)}<br>Diferencia: ${pp_pp(x.diferencia)}`
-        : "<b>Sin datos</b>", { sticky: true });
+      const x = lookup.get(+f.properties[llave]);
+      const nom = x ? (esMpio ? x.Municipio : x.Depto) : "Sin datos";
+      const dep = (esMpio && x) ? ` <span style='color:#888'>(${x.Depto})</span>` : "";
+      lyr.bindTooltip(`<b>${nom}</b>${dep}<br>2026: ${vp_pct(x?.pct_2026)}<br>` +
+        `Cambio vs 22: ${vp_pp(x?.dif_22)}<br>Cambio vs 18: ${vp_pp(x?.dif_18)}`, { sticky: true });
       lyr.on("mouseover", () => lyr.setStyle({ weight: 2, color: "#0B2E63" }));
-      lyr.on("mouseout",  () => lyr.setStyle({ weight: 0.5, color: "#ffffff" }));
+      lyr.on("mouseout",  () => lyr.setStyle({ weight: 0.4, color: "#ffffff" }));
     }
   }).addTo(map);
 
-  const legend = L_pvc.control({ position: "bottomright" });
+  // Borde departamental solo cuando el coropleta es municipal; los nombres de
+  // departamento solo cuando es departamental.
+  if (esMpio) {
+    map._dep = L_vp.geoJSON(geo_deptos_vp, {
+      interactive: false,
+      style: () => ({ fill: false, color: "#37475A", weight: 1.2, opacity: 0.8 })
+    }).addTo(map);
+  } else {
+    map._nom = nombresDep(L_vp).addTo(map);
+  }
+
+  const legend = L_vp.control({ position: "bottomleft" });
   legend.onAdd = () => {
-    const dv = L_pvc.DomUtil.create("div");
-    dv.style = "background:#fff; padding:10px 12px; border-radius:6px; box-shadow:0 1px 4px rgba(0,0,0,.2); font-size:11px;";
-    dv.innerHTML = `<div style="font-weight:700; color:#0B2E63; margin-bottom:6px; font-size:12px;">Presidencia − Congreso</div>` +
-      pvc_rotulos.map((r, i) => `<div style="display:flex; align-items:center; gap:8px; margin:2px 0;">
-         <span style="width:16px; height:12px; border-radius:2px; border:1px solid #CBD5E1; background:${pvc_colores[i]}; display:inline-block;"></span>
-         <span style="color:#334155;">${r}</span></div>`).reverse().join('');
+    const dv = L_vp.DomUtil.create("div");
+    dv.style = "background:#fff; padding:10px 12px; border-radius:6px; box-shadow:0 1px 4px rgba(0,0,0,.2); font-size:11px; width:140px;";
+    const mMin = d3.min(vals) ?? 0, mMax = d3.max(vals) ?? 1;
+    dv.innerHTML = `<div style="font-weight:700; color:#0B2E63; margin-bottom:6px; font-size:12px;">${vp_map_tipo} (%)</div>
+      <div style="display:flex; justify-content:space-between; font-size:10.5px; color:#475569; margin-bottom:4px; font-weight:600;">
+        <span>${vp_pct(mMin)}</span><span>${vp_pct(mMax)}</span></div>
+      <div style="height:10px; width:100%; border-radius:4px; border:1px solid #CBD5E1;
+                  background:linear-gradient(to right, ${colorOf(mMin)}, ${colorOf((mMin+mMax)/2)}, ${colorOf(mMax)});"></div>`;
     return dv;
   };
   legend.addTo(map);
@@ -6587,35 +7158,383 @@ pvc_pintar = {
 
 ::: {style="flex: 0 0 46%; width: 46%;"}
 ```{ojs}
-pvc_tabla = {
-  const data = pvc_filtra(pvc_vuelta, pvc_anno).slice()
-    .sort((a, b) => (b.diferencia ?? -999) - (a.diferencia ?? -999));
+vp_tabla = {
+  const esMpio = vp_map_nivel === "Municipal";
+  const datos = (esMpio ? vp_mpi : vp_dep)
+    .filter(x => x.tipo_voto === vp_map_tipo && x.vuelta === vp_map_vuelta && x.pct_2026 != null)
+    .slice().sort((a, b) => b.pct_2026 - a.pct_2026);
+  const filas = esMpio
+    ? (vp_map_top === "Top 20 más alto" ? datos.slice(0, 20) : datos.slice(-20).reverse())
+    : datos;
+
+  const colr = v => v > 0 ? "#C00000" : (v < 0 ? "#1B7A3A" : "#5a6a80");
   const th = "padding:12px 8px; background:#5E7C99; color:#ffffff; font-weight:600; font-size:12px; position:sticky; top:0; z-index:2; border-bottom:2px solid #4A637A;";
 
-  const tbody = data.map((d, i) => `
-    <tr style='border-bottom:1px solid #E2E8F0; ${filaRango(i, data.length, true)}'>
-      <td style='padding:9px 8px; text-align:left;'><strong style='color:#1F2937; font-size:12.5px;'>${d.Depto}</strong></td>
-      <td style='padding:9px 6px; text-align:right; color:#334155; font-variant-numeric:tabular-nums; font-size:12.5px;'>${pp_pct(d.part_pres)}</td>
-      <td style='padding:9px 6px; text-align:right; color:#334155; font-variant-numeric:tabular-nums; font-size:12.5px;'>${pp_pct(d.part_cong)}</td>
-      <td style='padding:9px 8px; text-align:right;'><span style='display:inline-block; padding:3px 9px; border-radius:10px; white-space:nowrap; font-size:11px; font-weight:700; font-variant-numeric:tabular-nums; background:${d.diferencia >= 0 ? "#E8F1FA" : "#FBEAEA"}; color:${d.diferencia >= 0 ? "#0B2E63" : "#9B2C2C"};'>${pp_pp(d.diferencia)}</span></td>
+  const tbody = filas.map((d, i) => `
+    <tr style='border-bottom:1px solid #E2E8F0; ${filaRango(i, filas.length, !esMpio)}'>
+      <td style='padding:10px 8px; text-align:left;'>
+        <strong style='color:#1F2937; font-size:12.5px;'>${esMpio ? d.Municipio : d.Depto}</strong>
+        ${esMpio ? `<div style='font-size:10px; color:#94A3B8;'>${d.Depto}</div>` : ""}</td>
+      <td style='padding:10px 6px; text-align:right; font-weight:700; color:#0B2E63; font-variant-numeric:tabular-nums; font-size:12.5px;'>${vp_pct(d.pct_2026)}</td>
+      <td style='padding:10px 6px; text-align:right; color:${colr(d.dif_22)}; font-weight:600; font-variant-numeric:tabular-nums; font-size:12.5px;'>${vp_pp(d.dif_22)}</td>
+      <td style='padding:10px 6px; text-align:right; color:${colr(d.dif_18)}; font-weight:600; font-variant-numeric:tabular-nums; font-size:12.5px;'>${vp_pp(d.dif_18)}</td>
     </tr>`).join('');
 
+  const cab = html`<div style="padding:10px 16px; border-bottom:1px solid #CBD5E1; background:#F1F5F9;
+      display:flex; justify-content:space-between; align-items:center; gap:10px;">
+    <div style="font-weight:800; color:#0B2E63; font-size:13.5px; text-transform:uppercase;">${esMpio ? "Municipios destacados" : "Detalle territorial"}</div>
+    ${leyendaRango(!esMpio)}
+    <div style="font-size:12px; display:${esMpio ? "block" : "none"};"></div>
+  </div>`;
+  cab.lastElementChild.appendChild(viewof vp_map_top);
+
+  const cuerpo = html`<div style="overflow-y:auto; flex:1;">
+    <table style="width:100%; border-collapse:collapse; font-family:sans-serif;">
+      <thead><tr>
+        <th style="${th} text-align:left;">${esMpio ? "Municipio" : "Departamento"}</th>
+        <th style="${th} text-align:right;">2026</th>
+        <th style="${th} text-align:right;">Δ '22</th>
+        <th style="${th} text-align:right;">Δ '18</th>
+      </tr></thead><tbody>${tbody}</tbody></table></div>`;
+
+  return html`<div style="background:#fff; border:1px solid #EAF0F6; border-radius:8px;
+      box-shadow:0 1px 3px rgba(0,0,0,0.02); display:flex; flex-direction:column;
+      height:540px; overflow:hidden;">${cab}${cuerpo}</div>`;
+}
+```
+:::
+
+::::
+
+## Concentración de votos
+
+```{r}
+#| label: datos-concentracion-presidencia-ojs
+datos_conc_pres <- readRDS("datos_concentracion_presidencia.rds")
+ojs_define(cc_cand_ojs  = datos_conc_pres$candidatos)
+ojs_define(cc_mesas_ojs = datos_conc_pres$mesas)
+ojs_define(cc_tot_ojs   = datos_conc_pres$mesas_total)
+ojs_define(cc_mpios_ojs = datos_conc_pres$mpios)
+ojs_define(cc_info_ojs  = datos_conc_pres$info_mpio)
+```
+
+```{ojs}
+//| label: leaflet-setup-cc
+L_cc = require("leaflet@1.9.4")
+```
+
+```{ojs}
+html`<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">`
+```
+
+```{ojs}
+geo_mpios_cc = FileAttachment("geo_mpios.geojson").json()
+geo_deptos_cc = FileAttachment("geo_deptos.geojson").json()
+```
+
+```{ojs}
+cc_cands_t = transpose(cc_cand_ojs)
+cc_mesas_t = transpose(cc_mesas_ojs)
+cc_tot_t   = transpose(cc_tot_ojs)
+cc_mpios_t = transpose(cc_mpios_ojs)
+cc_info_t  = transpose(cc_info_ojs)
+
+cc_info = new Map(cc_info_t.map(d => [+d.codmpio, d]))
+cc_nom = c => cc_info.get(+c)?.Municipio ?? "—"
+cc_dep = c => cc_info.get(+c)?.Depto ?? ""
+cc_n = v => v == null ? "—" : Math.round(v).toLocaleString("es-CO")
+cc_p = v => v == null ? "—" : (Math.round(v * 10) / 10).toFixed(1).replace(".", ",") + "%"
+// Los cortes caen en múltiplos de 2,5, así que solo se muestra el decimal cuando existe.
+cc_lim = v => (Number.isInteger(v) ? String(v) : v.toFixed(1).replace(".", ",")) + "%"
+
+// Candidaturas disponibles para la elección seleccionada, en orden de votación.
+cc_lista = (anno, vuelta) => cc_cands_t
+  .filter(d => +d.anno === +anno && d.vuelta === vuelta)
+  .slice().sort((a, b) => a.orden - b.orden)
+
+// El rango [umbral, 100] siempre se parte en cuatro tramos iguales; con umbral
+// 100 queda una sola barra, la de las mesas donde el candidato lo obtuvo todo.
+cc_rangos = (umbral) => {
+  if (+umbral >= 100) return [{ini: 100, fin: 100, ultimo: true, etq: "100%"}];
+  const paso = (100 - umbral) / 4;
+  return d3.range(4).map(i => {
+    const ini = umbral + i * paso, fin = umbral + (i + 1) * paso, ultimo = i === 3;
+    return {ini, fin, ultimo,
+            etq: ultimo ? `${cc_lim(ini)} a 100%` : `${cc_lim(ini)} a <${cc_lim(fin)}`};
+  });
+}
+
+// bin b cubre [60+b*2,5, 60+(b+1)*2,5); el bin 16 es el 100 % exacto.
+cc_binIni = b => +b === 16 ? 100 : 60 + (+b) * 2.5
+cc_enRango = (b, r) => r.ini >= 100
+  ? +b === 16
+  : (+b === 16 ? r.ultimo : (cc_binIni(b) >= r.ini - 1e-9 && cc_binIni(b) < r.fin - 1e-9))
+```
+
+```{ojs}
+viewof cc_vuelta = filtroSegmentado(["Primera vuelta", "Segunda vuelta"], {value: "Primera vuelta", label: "Vuelta"})
+viewof cc_anno = filtroSegmentado([2026, 2022], {value: 2026, format: x => `${x}`, label: "Año"})
+```
+
+```{ojs}
+viewof cc_cand = {
+  // Este filtro se rehace al cambiar de elección: en segunda vuelta solo hay
+  // dos candidaturas, y los nombres cambian entre 2022 y 2026.
+  const lista = cc_lista(cc_anno, cc_vuelta);
+  return filtroSegmentado(lista.map(d => d.candidato),
+    {value: lista[0]?.candidato, label: "Candidatura"});
+}
+```
+
+```{ojs}
+viewof cc_nivel = filtroSegmentado(["Mesa de votación", "Municipio"], {value: "Mesa de votación", label: "Nivel"})
+viewof cc_umbral = filtroSegmentado([60, 70, 80, 90, 100], {value: 60, format: x => `${x}%`, label: "Umbral"})
+```
+
+```{ojs}
+html`<div class="filtro-caja">${viewof cc_vuelta}${viewof cc_anno}${viewof cc_cand}${viewof cc_nivel}${viewof cc_umbral}</div>`
+```
+
+```{ojs}
+cc_sel = {
+  // Todo lo que sigue parte de este objeto, para no repetir el filtrado en cada
+  // celda: unidades por municipio, barras por rango y totales.
+  const meta = cc_lista(cc_anno, cc_vuelta).find(d => d.candidato === cc_cand)
+            ?? cc_lista(cc_anno, cc_vuelta)[0];
+  const esMesa = cc_nivel === "Mesa de votación";
+  const rangos = cc_rangos(cc_umbral);
+  // En las tablas grandes la vuelta viene como 1 o 2, no como texto.
+  const vn = cc_vuelta === "Primera vuelta" ? 1 : 2;
+  const coincide = d => +d.anno === +cc_anno && +d.vuelta === vn && +d.codcandi === +meta.codcandi;
+
+  // Unidades por municipio: mesas sobre el umbral, o el propio municipio.
+  const porMpio = new Map();
+  const barras = rangos.map(r => ({...r, n: 0, votos: 0}));
+
+  if (esMesa) {
+    for (const d of cc_mesas_t) {
+      if (!coincide(d)) continue;
+      const i = rangos.findIndex(r => cc_enRango(d.bin, r));
+      if (i < 0) continue;
+      barras[i].n += d.n_mesas;
+      barras[i].votos += d.votos_cand;
+      const a = porMpio.get(+d.codmpio) ?? {n: 0, votos: 0};
+      a.n += d.n_mesas; a.votos += d.votos_cand;
+      porMpio.set(+d.codmpio, a);
+    }
+  } else {
+    for (const d of cc_mpios_t) {
+      if (!coincide(d)) continue;
+      const i = rangos.findIndex(r => r.ini >= 100
+        ? d.pct >= 99.999
+        : (d.pct >= r.ini - 1e-9 && (r.ultimo ? d.pct <= 100.001 : d.pct < r.fin - 1e-9)));
+      if (i < 0) continue;
+      barras[i].n += 1;
+      barras[i].votos += d.votos_cand;
+      porMpio.set(+d.codmpio, {n: 1, votos: d.votos_cand, pct: d.pct});
+    }
+  }
+
+  const totMesas = new Map(cc_tot_t
+    .filter(d => +d.anno === +cc_anno && +d.vuelta === vn)
+    .map(d => [+d.codmpio, d.total_mesas]));
+
+  const nTotal = d3.sum(barras, b => b.n);
+  const votosTotal = d3.sum(barras, b => b.votos);
+  return {meta, esMesa, rangos, barras, porMpio, totMesas, nTotal, votosTotal,
+          unidad: esMesa ? "mesas" : "municipios"};
+}
+```
+
+```{ojs}
+cc_texto = {
+  const s = cc_sel;
+  if (!s.nTotal) return md`En la **${cc_vuelta.toLowerCase()} de ${cc_anno}**, **${s.meta.candidato}**
+no superó el ${cc_lim(cc_umbral)} de los votos válidos en ninguna ${s.esMesa ? "mesa" : "municipio"}.`;
+
+  const share = 100 * s.votosTotal / s.meta.votos_totales;
+  const top = [...s.porMpio.entries()].sort((a, b) => b[1].n - a[1].n || b[1].votos - a[1].votos)[0];
+  const masFuerte = s.barras[s.barras.length - 1];
+
+  return md`En la **${cc_vuelta.toLowerCase()} de ${cc_anno}**, **${s.meta.candidato}** superó el
+**${cc_lim(cc_umbral)}** de los votos válidos en **${cc_n(s.nTotal)} ${s.unidad}**
+${s.esMesa ? `de **${cc_n(s.porMpio.size)}** municipios` : ""}, que reúnen
+**${cc_p(share)}** de su votación total (${cc_n(s.votosTotal)} de ${cc_n(s.meta.votos_totales)} votos).
+En el tramo más alto (**${masFuerte.etq}**) hay ${cc_n(masFuerte.n)} ${s.unidad}, con
+${cc_p(100 * masFuerte.votos / s.meta.votos_totales)} de su votación.
+${s.esMesa ? `El municipio con más ${s.unidad} sobre el umbral es **${cc_nom(top[0])}**
+(${cc_dep(top[0])}), con ${cc_n(top[1].n)} de ${cc_n(s.totMesas.get(+top[0]))}.` : ""}`;
+}
+```
+
+:::: {style="display: flex; gap: 20px; align-items: flex-start;"}
+
+::: {style="flex: 0 0 52%; width: 52%;"}
+```{ojs}
+viewof cc_mapa = {
+  const div = html`<div style="height:560px; border:1px solid #EAF0F6; border-radius:8px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.03);"></div>`;
+  const map = L_cc.map(div, { scrollWheelZoom: true }).setView([4.4, -73.5], 5);
+  L_cc.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}", { attribution: "Tiles © Esri — Esri, DeLorme, NAVTEQ" }).addTo(map);
+  invalidation.then(() => map.remove());
+  setTimeout(() => map.invalidateSize(), 200);
+  div.value = map;
+  return div;
+}
+```
+
+```{ojs}
+cc_pintar = {
+  const map = cc_mapa, s = cc_sel;
+  if (map._dl) { map.removeLayer(map._dl); map._dl = null; }
+  if (map._dep) { map.removeLayer(map._dep); map._dep = null; }
+  if (map._legend) { map._legend.remove(); map._legend = null; }
+
+  // Por mesa el color mide cuántas mesas hay en el municipio (cortes fijos para
+  // que los mapas de distintos candidatos sean comparables); por municipio mide
+  // con qué porcentaje ganó, del umbral hacia arriba.
+  const cortes = [1, 2, 6, 11, 26, 51, 101];
+  const etqCortes = ["1", "2 a 5", "6 a 10", "11 a 25", "26 a 50", "51 a 100", "101 o más"];
+  const palCortes = ["#B7D5EA", "#8BBCE0", "#5FA3D3", "#3182BD", "#08519C", "#08306B", "#041D40"];
+  const colorMesas = n => {
+    let i = 0; while (i < cortes.length - 1 && n >= cortes[i + 1]) i++;
+    return palCortes[i];
+  };
+  const escPct = d3.scaleSequential([+cc_umbral, 100], d3.interpolateBlues);
+  const colorOf = v => {
+    if (v == null) return null;
+    return s.esMesa ? colorMesas(v.n) : escPct(v.pct);
+  };
+
+  map._dl = L_cc.geoJSON(geo_mpios_cc, {
+    style: f => {
+      const v = s.porMpio.get(+f.properties.codmpio);
+      const c = colorOf(v);
+      return { weight: 0.25, color: "#ffffff",
+               fillColor: c ?? "#ffffff", fillOpacity: c ? 0.92 : 0.35 };
+    },
+    onEachFeature: (f, lyr) => {
+      const cod = +f.properties.codmpio, v = s.porMpio.get(cod);
+      const cab = `<b>${cc_nom(cod)}</b> <span style='color:#888'>(${cc_dep(cod)})</span>`;
+      lyr.bindTooltip(v
+        ? (s.esMesa
+            ? `${cab}<br>${cc_n(v.n)} de ${cc_n(s.totMesas.get(cod))} mesas sobre ${cc_lim(cc_umbral)}<br>
+               <span style='color:#64748B'>${cc_n(v.votos)} votos de ${s.meta.candidato}</span>`
+            : `${cab}<br>${s.meta.candidato}: ${cc_p(v.pct)} de los válidos<br>
+               <span style='color:#64748B'>${cc_n(v.votos)} votos</span>`)
+        : `${cab}<br><span style='color:#94A3B8'>Sin ${s.unidad} sobre el umbral</span>`,
+        { sticky: true });
+      lyr.on("mouseover", () => lyr.setStyle({ weight: 2, color: "#0B2E63" }));
+      lyr.on("mouseout",  () => lyr.setStyle({ weight: 0.25, color: "#ffffff" }));
+    }
+  }).addTo(map);
+
+  map._dep = L_cc.geoJSON(geo_deptos_cc, {
+    interactive: false,
+    style: () => ({ fill: false, color: "#37475A", weight: 1.1, opacity: 0.75 })
+  }).addTo(map);
+
+  const legend = L_cc.control({ position: "bottomleft" });
+  legend.onAdd = () => {
+    const dv = L_cc.DomUtil.create("div");
+    dv.style = "background:rgba(255,255,255,.94); padding:9px 11px; border-radius:6px; box-shadow:0 1px 4px rgba(0,0,0,.18); font-size:10.5px; font-family:sans-serif;";
+    if (s.esMesa) {
+      dv.innerHTML = `<div style="font-weight:700; color:#0B2E63; margin-bottom:5px; font-size:11px;">Mesas sobre ${cc_lim(cc_umbral)}</div>` +
+        etqCortes.map((e, i) => `<div style="display:flex; align-items:center; gap:7px; margin:2px 0;">
+          <span style="width:15px; height:11px; border-radius:2px; border:1px solid #CBD5E1; background:${palCortes[i]}; display:inline-block;"></span>
+          <span style="color:#334155;">${e}</span></div>`).join("");
+    } else {
+      dv.innerHTML = `<div style="font-weight:700; color:#0B2E63; margin-bottom:5px; font-size:11px; width:130px;">% sobre válidos</div>
+        <div style="display:flex; justify-content:space-between; font-size:9.5px; color:#475569; margin-bottom:3px; font-weight:600;">
+          <span>${cc_lim(cc_umbral)}</span><span>100%</span></div>
+        <div style="height:10px; width:130px; border-radius:3px; border:1px solid #CBD5E1;
+                    background:linear-gradient(to right, ${escPct(cc_umbral)}, ${escPct((+cc_umbral + 100) / 2)}, ${escPct(100)});"></div>`;
+    }
+    return dv;
+  };
+  legend.addTo(map);
+  map._legend = legend;
+}
+```
+:::
+
+::: {style="flex: 0 0 48%; width: 48%; display:flex; flex-direction:column; gap:14px;"}
+```{ojs}
+cc_barras = {
+  const s = cc_sel;
+  const d = s.barras.map(b => ({
+    etq: b.etq, n: b.n,
+    share: s.meta.votos_totales > 0 ? 100 * b.votos / s.meta.votos_totales : 0
+  }));
+  const plot = Plot.plot({
+    width: 470, height: 232, marginLeft: 56, marginBottom: 34, marginTop: 30,
+    style: {fontSize: "11.5px"},
+    x: {label: null, type: "band", domain: d.map(x => x.etq), padding: 0.28},
+    y: {label: `↑ ${s.esMesa ? "Mesas" : "Municipios"}`, grid: true, insetTop: 26,
+        tickFormat: v => cc_n(v)},
+    marks: [
+      Plot.barY(d, {x: "etq", y: "n", fill: "#355C7D", rx: 2, tip: true,
+        title: x => `${x.etq}\n${cc_n(x.n)} ${s.unidad}\n${cc_p(x.share)} de la votación`}),
+      Plot.text(d, {x: "etq", y: "n", text: x => cc_n(x.n), dy: -20,
+        fontSize: 12, fontWeight: "bold", fill: "#1F2D3A",
+        stroke: "white", strokeWidth: 4, paintOrder: "stroke"}),
+      // Debajo del conteo, qué parte de la votación del candidato representa.
+      Plot.text(d, {x: "etq", y: "n", text: x => `(${cc_p(x.share)})`, dy: -7,
+        fontSize: 10.5, fill: "#5E7C99",
+        stroke: "white", strokeWidth: 4, paintOrder: "stroke"}),
+      Plot.ruleY([0])
+    ]
+  });
+  return html`<div style="background:#fff; border:1px solid #EAF0F6; border-radius:8px; padding:10px 12px 4px; box-shadow:0 1px 3px rgba(0,0,0,0.02);">
+    <div style="font-weight:800; color:#0B2E63; font-size:12.5px; text-transform:uppercase;">${s.esMesa ? "Mesas" : "Municipios"} por rango de votación</div>
+    <div style="font-size:10.5px; color:#94A3B8; margin:2px 0 4px;">Entre paréntesis, la parte de la votación de ${s.meta.candidato} que representa cada tramo</div>
+    ${plot}</div>`;
+}
+```
+
+```{ojs}
+cc_tabla = {
+  const s = cc_sel;
+  const filas = [...s.porMpio.entries()]
+    .map(([cod, v]) => ({cod, ...v, total: s.totMesas.get(+cod) ?? null}))
+    .sort((a, b) => s.esMesa ? (b.n - a.n || b.votos - a.votos) : (b.pct - a.pct))
+    .slice(0, 20);
+  const th = "padding:8px 7px; background:#5E7C99; color:#ffffff; font-weight:600; font-size:11px; position:sticky; top:0; z-index:2;";
+
+  const cuerpo = filas.length ? filas.map((d, i) => `
+    <tr style="border-bottom:1px solid #E2E8F0; background:${i % 2 ? "#F8FAFC" : "#ffffff"};">
+      <td style="padding:7px 9px; text-align:left;">
+        <strong style="color:#1F2937; font-size:11.5px;">${cc_nom(d.cod)}</strong>
+        <div style="font-size:10px; color:#94A3B8;">${cc_dep(d.cod)}</div></td>
+      ${s.esMesa
+        ? `<td style="padding:7px 6px; text-align:right; font-weight:700; color:#0B2E63; font-variant-numeric:tabular-nums; font-size:11.5px;">${cc_n(d.n)}</td>
+           <td style="padding:7px 6px; text-align:right; color:#64748B; font-variant-numeric:tabular-nums; font-size:11px;">${cc_n(d.total)}</td>
+           <td style="padding:7px 8px; text-align:right; font-weight:600; color:#334155; font-variant-numeric:tabular-nums; font-size:11.5px;">${cc_p(d.total ? 100 * d.n / d.total : null)}</td>`
+        : `<td style="padding:7px 6px; text-align:right; font-weight:700; color:#0B2E63; font-variant-numeric:tabular-nums; font-size:11.5px;">${cc_p(d.pct)}</td>
+           <td style="padding:7px 8px; text-align:right; color:#64748B; font-variant-numeric:tabular-nums; font-size:11px;" colspan="2">${cc_n(d.votos)} votos</td>`}
+    </tr>`).join("")
+    : `<tr><td colspan="4" style="padding:22px 12px; text-align:center; color:#94A3B8; font-size:12px;">
+         Ninguna ${s.esMesa ? "mesa" : "municipio"} supera el ${cc_lim(cc_umbral)} con esta candidatura.</td></tr>`;
+
   return html`
-  <div style="background:#fff; border:1px solid #EAF0F6; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.02); display:flex; flex-direction:column; height:540px; overflow:hidden;">
-    <div style="padding:10px 16px; border-bottom:1px solid #CBD5E1; background:#F1F5F9;">
-      <div style="font-weight:800; color:#0B2E63; font-size:13.5px; text-transform:uppercase;">Presidencia frente a Congreso</div>
-      <div style="font-size:10.5px; color:#94A3B8; margin-top:2px;">${pvc_vuelta} ${pvc_anno} · incluye el voto en el exterior</div>
-      <div style="margin-top:6px;">${leyendaRango(true)}</div>
+  <div style="background:#fff; border:1px solid #EAF0F6; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.02); display:flex; flex-direction:column; height:314px; overflow:hidden;">
+    <div style="padding:9px 13px; border-bottom:1px solid #CBD5E1; background:#F1F5F9;">
+      <div style="font-weight:800; color:#0B2E63; font-size:12.5px; text-transform:uppercase;">Top 20 municipios</div>
+      <div style="font-size:10px; color:#94A3B8; margin-top:1px;">${s.esMesa
+        ? "Mesas sobre el umbral y qué parte son del total de mesas del municipio"
+        : "Porcentaje del candidato sobre los votos válidos del municipio"}</div>
     </div>
     <div style="overflow-y:auto; flex:1;">
       <table style="width:100%; border-collapse:collapse; font-family:sans-serif;">
         <thead><tr>
-          <th style="${th} text-align:left;">Departamento</th>
-          <th style="${th} text-align:right;">Presidencia</th>
-          <th style="${th} text-align:right;">Congreso</th>
-          <th style="${th} text-align:right;">Diferencia</th>
+          <th style="${th} text-align:left;">Municipio</th>
+          ${s.esMesa
+            ? `<th style="${th} text-align:right;">Mesas</th>
+               <th style="${th} text-align:right;">Total</th>
+               <th style="${th} text-align:right;">% del mpio.</th>`
+            : `<th style="${th} text-align:right;">% válidos</th>
+               <th style="${th} text-align:right;" colspan="2">Votos</th>`}
         </tr></thead>
-        <tbody>${tbody}</tbody>
+        <tbody>${cuerpo}</tbody>
       </table>
     </div>
   </div>`;
@@ -6624,179 +7543,6 @@ pvc_tabla = {
 :::
 
 ::::
-
-::: {style="font-size:11.5px; color:#64748B; margin-top:12px;"}
-**Nota:** en Congreso la participación se calcula tomando en cada mesa el máximo entre Senado, Cámara y CITREP, porque un mismo elector vota en varias corporaciones y sumarlas lo contaría dos veces.
-:::
-
-## Participación municipal
-
-```{ojs}
-viewof pm_crit_2v = filtroSegmentado(["Nivel 2026", "Cambio vs 2022", "Cambio vs 2018"], {value: "Nivel 2026", label: "Criterio"})
-html`<div class="filtro-caja">${viewof pm_crit_2v}</div>`
-```
-
-```{ojs}
-viewof pm_top_2v = filtroSelect(["Top 20 más alto", "Top 20 más bajo"], {value: "Top 20 más alto"})
-```
-
-```{ojs}
-pm_texto("Segunda vuelta", pm_crit_2v)
-```
-
-:::: {style="display: flex; gap: 24px; align-items: flex-start;"}
-
-::: {style="flex: 0 0 54%; width: 54%;"}
-```{ojs}
-viewof pm_map_2v = {
-  const div = html`<div style="height:540px; border:1px solid #EAF0F6; border-radius:8px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.03);"></div>`;
-  const map = L_pm.map(div, { scrollWheelZoom: true }).setView([4.4, -73.5], 5);
-  L_pm.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}", { attribution: "Tiles © Esri — Esri, DeLorme, NAVTEQ" }).addTo(map);
-  invalidation.then(() => map.remove());
-  setTimeout(() => map.invalidateSize(), 200);
-  div.value = map;
-  return div;
-}
-```
-
-```{ojs}
-pm_pintar_2v = pm_pinta(pm_map_2v, "Segunda vuelta", pm_crit_2v)
-```
-:::
-
-::: {style="flex: 0 0 46%; width: 46%;"}
-```{ojs}
-pm_tabla("Segunda vuelta", pm_crit_2v, pm_top_2v, viewof pm_top_2v)
-```
-:::
-
-::::
-
-## Participación de colombianos en el exterior
-
-```{ojs}
-exp_texto("Segunda vuelta")
-```
-
-```{ojs}
-exp_kpi("Segunda vuelta")
-```
-
-```{ojs}
-exp_texto_dia("Segunda vuelta")
-```
-
-:::: {style="display: flex; gap: 24px; align-items: stretch; margin-top: 20px; margin-bottom: 40px;"}
-
-::: {style="flex: 1; background:#fff; border:1px solid #EAF0F6; border-radius:8px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,0.02);"}
-<div style="font-weight:800; color:#0B2E63; margin-bottom:12px; text-align:center; font-size:13.5px;">Participación histórica</div>
-```{ojs}
-exp_graf_hist("Segunda vuelta")
-```
-:::
-
-::: {style="flex: 1; background:#fff; border:1px solid #EAF0F6; border-radius:8px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,0.02);"}
-<div style="font-weight:800; color:#0B2E63; margin-bottom:12px; text-align:center; font-size:13.5px;">Distribución de votos por día (voto anticipado)</div>
-```{ojs}
-exp_graf_dia("Segunda vuelta")
-```
-:::
-
-::::
-
-### Distribución de la votación por país
-
-```{ojs}
-viewof exp_crit_2v = filtroSegmentado(["Proporción del total de votos", "Participación sobre censo"], {value: "Proporción del total de votos", label: "Mostrar en el mapa"})
-html`<div class="filtro-caja">${viewof exp_crit_2v}</div>`
-```
-
-:::: {style="position: relative; height: 480px; width: 100%; border: 1px solid #EAF0F6; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.02);"}
-
-::: {#mapa-extp-2v-prop .extp-mapa-2v style="position:absolute; width:100%; height:100%; top:0; left:0; transition: opacity 0.3s;"}
-```{r}
-mapa_ext_pres("Segunda vuelta", "proporcion")
-```
-:::
-::: {#mapa-extp-2v-part .extp-mapa-2v style="position:absolute; width:100%; height:100%; top:0; left:0; transition: opacity 0.3s;"}
-```{r}
-mapa_ext_pres("Segunda vuelta", "participacion")
-```
-:::
-
-::::
-
-```{ojs}
-exp_update_2v = {
-  document.querySelectorAll(".extp-mapa-2v").forEach(el => {
-    el.style.opacity = "0"; el.style.pointerEvents = "none"; el.style.zIndex = "0";
-  });
-  const id = exp_crit_2v === "Participación sobre censo" ? "mapa-extp-2v-part" : "mapa-extp-2v-prop";
-  const t = document.getElementById(id);
-  if (t) { t.style.opacity = "1"; t.style.pointerEvents = "auto"; t.style.zIndex = "10"; }
-}
-```
-
-## Participación y violencia
-
-```{ojs}
-mv_texto("Segunda vuelta")
-```
-
-::::: {style="display: flex; gap: 24px; align-items: stretch; margin-bottom: 40px;"}
-
-:::: {style="flex: 1.25;"}
-```{ojs}
-html`<div style="font-weight:800; color:#0B2E63; margin-bottom:8px; font-size:13.5px; text-transform:uppercase;">Participación en municipios con y sin riesgo</div>${mv_graf_barras("Segunda vuelta")}`
-```
-::::
-
-:::: {style="flex: 0.75;"}
-```{ojs}
-viewof mv_var_2v = filtroSelect(mv_orden("Segunda vuelta").slice().reverse(), {value: "Riesgo de violencia", label: "Factor"})
-html`<div class="filtro-caja">${viewof mv_var_2v}</div>`
-```
-
-```{ojs}
-html`<div style="font-weight:800; color:#0B2E63; margin-bottom:8px; font-size:13.5px; text-transform:uppercase;">Participación según el nivel de riesgo</div>${mv_graf_niveles("Segunda vuelta", mv_var_2v)}`
-```
-::::
-
-:::::
-
-<h3 style="font-weight:800; color:#0B2E63; font-size:16px; text-transform:uppercase; margin-top:32px; margin-bottom:16px; border-bottom: 2px solid #0B2E63; padding-bottom: 8px;">Distribución territorial del riesgo y la participación</h3>
-
-```{ojs}
-mv_texto_mapa("Segunda vuelta")
-```
-
-::::: {style="display: flex; gap: 24px; align-items: flex-start;"}
-
-:::: {style="flex: 0 0 52%; width: 52%;"}
-```{ojs}
-viewof mv_map_2v = {
-  const div = html`<div style="height:550px; border:1px solid #EAF0F6; border-radius:8px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.03);"></div>`;
-  const map = L_mv.map(div, { scrollWheelZoom: true }).setView([4.5, -73], 5);
-  L_mv.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}", { attribution: "Tiles © Esri — Esri, DeLorme, NAVTEQ" }).addTo(map);
-  invalidation.then(() => map.remove());
-  setTimeout(() => map.invalidateSize(), 200);
-  div.value = map;
-  return div;
-}
-```
-
-```{ojs}
-mv_pintar_2v = mv_pinta(mv_map_2v, "Segunda vuelta")
-```
-::::
-
-:::: {style="flex: 1;"}
-```{ojs}
-mv_tabla("Segunda vuelta")
-```
-::::
-
-:::::
 
 :::
 

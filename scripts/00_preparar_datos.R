@@ -3364,6 +3364,275 @@ saveRDS(list(plot_barras = moe_barras_pres, plot_lineas = moe_lineas_pres,
 message("Listo: datos_riesgo_moe_presidencia.rds | municipios cruzados: ",
         n_distinct(base_moe_pres$codmpio), " | con riesgo: ",
         n_distinct(base_mapa_moe_pres$codmpio[base_mapa_moe_pres$exposicion == "Con riesgo"]))
+
+
+# =====================================================================3
+#  SECCION 04-0 GANADOR PRESIDENCIAL POR MUNICIPIO ----
+# =====================================================================3
+# Alimenta el mapa de burbujas: un circulo por municipio, con tamano segun la
+# votacion total y color segun quien gano, graduado por el porcentaje con que
+# gano.
+#   - Los PORCENTAJES van sobre votos VALIDOS: candidaturas mas votos en blanco.
+#     Nulos (997) y no marcados (998) no son votos validos y quedan fuera.
+#   - El TAMANO del circulo usa el total de votos depositados, que es cuanta
+#     gente voto en ese municipio.
+
+votos_mpio_cand <- cand_largo %>%
+  filter(anno == 2026, fuente == "escrutinio", !is.na(codmpio)) %>%
+  group_by(vuelta, codmpio, codcandi) %>%
+  summarise(votos = sum(votos, na.rm = TRUE), .groups = "drop")
+
+base_mpio_pres <- votos_mpio_cand %>%
+  group_by(vuelta, codmpio) %>%
+  summarise(votos_totales = sum(votos, na.rm = TRUE),
+            votos_validos = sum(votos[!codcandi %in% c(997, 998)], na.rm = TRUE),
+            .groups = "drop")
+
+# Ganador y segundo entre candidaturas reales. El voto en blanco (996) cuenta
+# para el denominador pero no compite por el primer lugar.
+top2_mpio <- votos_mpio_cand %>%
+  filter(!codcandi %in% c(996, 997, 998)) %>%
+  group_by(vuelta, codmpio) %>%
+  slice_max(votos, n = 2, with_ties = FALSE) %>%
+  mutate(pos = row_number()) %>%
+  ungroup() %>%
+  left_join(nombres_cand %>% filter(anno == 2026) %>% select(vuelta, codcandi, candidato),
+            by = c("vuelta", "codcandi"))
+
+ganador_mpio_pres <- top2_mpio %>%
+  filter(pos == 1) %>%
+  select(vuelta, codmpio, codcandi, ganador = candidato, votos_ganador = votos) %>%
+  left_join(top2_mpio %>% filter(pos == 2) %>%
+              select(vuelta, codmpio, segundo = candidato, votos_segundo = votos),
+            by = c("vuelta", "codmpio")) %>%
+  left_join(base_mpio_pres, by = c("vuelta", "codmpio")) %>%
+  left_join(todos_municipios %>% distinct(codmpio, Municipio, Depto), by = "codmpio") %>%
+  mutate(vuelta = if_else(vuelta == "1ra", "Primera vuelta", "Segunda vuelta"),
+         pct_ganador = if_else(votos_validos > 0, 100 * votos_ganador / votos_validos, NA_real_),
+         pct_segundo = if_else(votos_validos > 0, 100 * votos_segundo / votos_validos, NA_real_),
+         ventaja_pp  = pct_ganador - pct_segundo) %>%
+  filter(!is.na(Municipio)) %>%
+  select(vuelta, codmpio, Municipio, Depto, ganador, votos_ganador, pct_ganador,
+         segundo, votos_segundo, pct_segundo, ventaja_pp, votos_validos, votos_totales) %>%
+  arrange(vuelta, codmpio)
+
+# ---- Ranking por departamento (primero, segundo y tercero) -------------------3
+# El exterior no tiene codmpio, asi que se reconoce por el prefijo 88 de
+# llave_mesa y entra como una fila mas de la tabla.
+votos_dep_cand <- cand_largo %>%
+  filter(anno == 2026, fuente == "escrutinio") %>%
+  mutate(dep = if_else(str_sub(as.character(llave_mesa), 1, 2) == "88",
+                       NA_integer_, as.integer(floor(codmpio / 1000))),
+         es_ext = str_sub(as.character(llave_mesa), 1, 2) == "88") %>%
+  filter(es_ext | !is.na(dep)) %>%
+  group_by(vuelta, dep, es_ext, codcandi) %>%
+  summarise(votos = sum(votos, na.rm = TRUE), .groups = "drop")
+
+base_dep_pres <- votos_dep_cand %>%
+  group_by(vuelta, dep, es_ext) %>%
+  summarise(votos_totales = sum(votos, na.rm = TRUE),
+            votos_validos = sum(votos[!codcandi %in% c(997, 998)], na.rm = TRUE),
+            .groups = "drop")
+
+top3_dep <- votos_dep_cand %>%
+  filter(!codcandi %in% c(996, 997, 998)) %>%
+  group_by(vuelta, dep, es_ext) %>%
+  slice_max(votos, n = 3, with_ties = FALSE) %>%
+  mutate(pos = row_number()) %>%
+  ungroup() %>%
+  left_join(nombres_cand %>% filter(anno == 2026) %>% select(vuelta, codcandi, candidato),
+            by = c("vuelta", "codcandi")) %>%
+  left_join(base_dep_pres, by = c("vuelta", "dep", "es_ext")) %>%
+  mutate(pct = if_else(votos_validos > 0, 100 * votos / votos_validos, NA_real_))
+
+ganador_dep_pres <- top3_dep %>%
+  select(vuelta, dep, es_ext, pos, candidato, pct, votos_validos, votos_totales) %>%
+  pivot_wider(names_from = pos, values_from = c(candidato, pct),
+              names_glue = "{.value}_{pos}") %>%
+  left_join(map_depto_nom %>% transmute(dep = as.integer(coddepto), Depto), by = "dep") %>%
+  mutate(vuelta = if_else(vuelta == "1ra", "Primera vuelta", "Segunda vuelta"),
+         Depto = if_else(es_ext, "Exterior", Depto),
+         coddepto = if_else(es_ext, NA_integer_, dep)) %>%
+  filter(!is.na(Depto)) %>%
+  select(vuelta, coddepto, Depto,
+         ganador = candidato_1, pct_ganador = pct_1,
+         segundo = candidato_2, pct_segundo = pct_2,
+         tercero = candidato_3, pct_tercero = pct_3,
+         votos_validos, votos_totales) %>%
+  arrange(vuelta, desc(votos_totales))
+
+saveRDS(list(municipal = ganador_mpio_pres, departamental = ganador_dep_pres),
+        "datos_ganador_presidencia.rds")
+message("Listo: datos_ganador_presidencia.rds | ", nrow(ganador_mpio_pres), " filas municipales | ",
+        nrow(ganador_dep_pres), " filas departamentales")
+
+
+# =====================================================================3
+#  SECCION 04-1b VOTOS EN BLANCO, NULOS Y NO MARCADOS (PRESIDENCIA) ----
+# =====================================================================3
+# Mismo tratamiento que la seccion 04-1 de Congreso, pero abierto por vuelta en
+# lugar de por corporacion. El porcentaje va sobre el total de votos
+# depositados, que es el denominador con el que se reportan estas tres cifras.
+
+base_ve_pres <- cand_largo %>%
+  filter(anno %in% c(2018, 2022, 2026), fuente == "escrutinio") %>%
+  mutate(vuelta = if_else(vuelta == "1ra", "Primera vuelta", "Segunda vuelta"),
+         tipo_voto = case_when(codcandi == 996 ~ "Votos en blanco",
+                               codcandi == 997 ~ "Votos nulos",
+                               codcandi == 998 ~ "Votos no marcados",
+                               TRUE            ~ "Válidos"))
+
+# 1. Nacional
+tot_nal_vep <- base_ve_pres %>%
+  group_by(vuelta, annoh = anno) %>%
+  summarise(tot = sum(votos, na.rm = TRUE), .groups = "drop")
+
+ve_nal_pres <- base_ve_pres %>%
+  filter(tipo_voto != "Válidos") %>%
+  group_by(vuelta, annoh = anno, tipo_voto) %>%
+  summarise(votos = sum(votos, na.rm = TRUE), .groups = "drop") %>%
+  left_join(tot_nal_vep, by = c("vuelta", "annoh")) %>%
+  mutate(pct = if_else(tot > 0, 100 * votos / tot, NA_real_))
+
+# 2. Departamental. El exterior no tiene coddepto: queda agrupado como NA y se
+#    nombra "Exterior", igual que en la seccion de Congreso.
+tot_dep_vep <- base_ve_pres %>%
+  group_by(vuelta, annoh = anno, coddepto) %>%
+  summarise(tot = sum(votos, na.rm = TRUE), .groups = "drop")
+
+ve_dep_pres <- base_ve_pres %>%
+  filter(tipo_voto != "Válidos") %>%
+  group_by(vuelta, annoh = anno, tipo_voto, coddepto) %>%
+  summarise(votos = sum(votos, na.rm = TRUE), .groups = "drop") %>%
+  left_join(tot_dep_vep, by = c("vuelta", "annoh", "coddepto")) %>%
+  mutate(pct = if_else(tot > 0, 100 * votos / tot, NA_real_)) %>%
+  select(vuelta, annoh, tipo_voto, coddepto, pct) %>%
+  pivot_wider(names_from = annoh, values_from = pct, names_prefix = "pct_") %>%
+  mutate(dif_22 = pct_2026 - pct_2022,
+         dif_18 = pct_2026 - pct_2018) %>%
+  left_join(map_depto_nom %>% transmute(coddepto = as.integer(coddepto), Depto), by = "coddepto") %>%
+  mutate(Depto = if_else(is.na(Depto), "Exterior", Depto)) %>%
+  arrange(vuelta, tipo_voto, coddepto)
+
+# 3. Municipal (sin exterior, que no tiene municipio)
+tot_mpi_vep <- base_ve_pres %>%
+  filter(!is.na(codmpio)) %>%
+  group_by(vuelta, annoh = anno, codmpio) %>%
+  summarise(tot = sum(votos, na.rm = TRUE), .groups = "drop")
+
+ve_mpi_pres <- base_ve_pres %>%
+  filter(tipo_voto != "Válidos", !is.na(codmpio)) %>%
+  group_by(vuelta, annoh = anno, tipo_voto, codmpio) %>%
+  summarise(votos = sum(votos, na.rm = TRUE), .groups = "drop") %>%
+  left_join(tot_mpi_vep, by = c("vuelta", "annoh", "codmpio")) %>%
+  mutate(pct = if_else(tot > 0, 100 * votos / tot, NA_real_)) %>%
+  select(vuelta, annoh, tipo_voto, codmpio, pct) %>%
+  pivot_wider(names_from = annoh, values_from = pct, names_prefix = "pct_") %>%
+  mutate(dif_22 = pct_2026 - pct_2022,
+         dif_18 = pct_2026 - pct_2018) %>%
+  left_join(todos_municipios %>% distinct(codmpio, Municipio, Depto), by = "codmpio") %>%
+  filter(!is.na(Municipio)) %>%
+  arrange(vuelta, tipo_voto, codmpio)
+
+saveRDS(list(nacional = ve_nal_pres, depto = ve_dep_pres, mpio = ve_mpi_pres),
+        "datos_ve_presidencia.rds")
+message("Listo: datos_ve_presidencia.rds | nacional: ", nrow(ve_nal_pres),
+        " | depto: ", nrow(ve_dep_pres), " | mpio: ", nrow(ve_mpi_pres))
+
+
+# =====================================================================3
+#  SECCION 04-3 CONCENTRACION DEL VOTO PRESIDENCIAL ----
+# =====================================================================3
+# Donde se concentra el voto de cada candidatura: mesas (o municipios) en las
+# que supera un umbral del voto valido. El umbral es interactivo (60 a 100), y
+# la grafica siempre parte ese rango en cuatro tramos iguales, asi que los
+# cortes posibles son 60, 70, 77.5, 80, 85, 90, 92.5, 95, 97.5 y 100: todos
+# multiplos de 2,5. Por eso el conteo por mesa se guarda en bins de 2,5 puntos
+# desde 60, que permiten reconstruir cualquiera de los cinco umbrales sin
+# arrastrar el detalle mesa por mesa.
+#   bin 0..15 -> [60 + bin*2.5, 60 + (bin+1)*2.5)
+#   bin 16    -> exactamente 100 %
+
+CONC_ANNOS <- c(2022, 2026)
+
+base_conc <- cand_largo %>%
+  filter(anno %in% CONC_ANNOS, fuente == "escrutinio", !is.na(codmpio)) %>%
+  select(anno, vuelta, llave_mesa, codmpio, codcandi, votos)
+
+# Votos validos de la mesa: todo menos nulos (997) y no marcados (998).
+validos_mesa_conc <- base_conc %>%
+  group_by(anno, vuelta, llave_mesa) %>%
+  summarise(validos = sum(votos[!codcandi %in% c(997, 998)], na.rm = TRUE), .groups = "drop")
+
+# Las tres candidaturas mas votadas de cada eleccion (en segunda vuelta hay dos).
+conc_candidatos <- base_conc %>%
+  filter(!codcandi %in% c(996, 997, 998)) %>%
+  group_by(anno, vuelta, codcandi) %>%
+  summarise(votos_totales = sum(votos, na.rm = TRUE), .groups = "drop") %>%
+  group_by(anno, vuelta) %>%
+  slice_max(votos_totales, n = 3, with_ties = FALSE) %>%
+  mutate(orden = row_number()) %>%
+  ungroup() %>%
+  left_join(nombres_cand %>% select(anno, vuelta, codcandi, candidato),
+            by = c("anno", "vuelta", "codcandi")) %>%
+  mutate(vuelta = if_else(vuelta == "1ra", "Primera vuelta", "Segunda vuelta")) %>%
+  arrange(anno, vuelta, orden)
+
+# Porcentaje del candidato sobre validos, en cada mesa
+pct_mesa_conc <- base_conc %>%
+  semi_join(conc_candidatos %>%
+              mutate(vuelta = if_else(vuelta == "Primera vuelta", "1ra", "2da")) %>%
+              select(anno, vuelta, codcandi),
+            by = c("anno", "vuelta", "codcandi")) %>%
+  group_by(anno, vuelta, llave_mesa, codmpio, codcandi) %>%
+  summarise(votos_cand = sum(votos, na.rm = TRUE), .groups = "drop") %>%
+  left_join(validos_mesa_conc, by = c("anno", "vuelta", "llave_mesa")) %>%
+  mutate(pct = if_else(validos > 0, 100 * votos_cand / validos, NA_real_))
+
+# En las tres tablas grandes la vuelta va como 1 o 2 y no como texto: repetir
+# "Primera vuelta" en 47.000 filas agrega ~700 KB al HTML publicado.
+conc_mesas <- pct_mesa_conc %>%
+  filter(!is.na(pct), pct >= 60) %>%
+  mutate(bin = if_else(pct >= 100, 16L, as.integer(pmin(floor((pct - 60) / 2.5), 15L)))) %>%
+  group_by(anno, vuelta, codcandi, codmpio, bin) %>%
+  summarise(n_mesas = n(), votos_cand = sum(votos_cand, na.rm = TRUE), .groups = "drop") %>%
+  mutate(vuelta = if_else(vuelta == "1ra", 1L, 2L))
+
+# Total de mesas de cada municipio, para poder decir que proporcion representan
+conc_mesas_total <- base_conc %>%
+  group_by(anno, vuelta, codmpio) %>%
+  summarise(total_mesas = n_distinct(llave_mesa), .groups = "drop") %>%
+  mutate(vuelta = if_else(vuelta == "1ra", 1L, 2L))
+
+# Nivel municipio: porcentaje del candidato sobre los validos del municipio
+validos_mpio_conc <- base_conc %>%
+  group_by(anno, vuelta, codmpio) %>%
+  summarise(validos = sum(votos[!codcandi %in% c(997, 998)], na.rm = TRUE), .groups = "drop")
+
+conc_mpios <- base_conc %>%
+  semi_join(conc_candidatos %>%
+              mutate(vuelta = if_else(vuelta == "Primera vuelta", "1ra", "2da")) %>%
+              select(anno, vuelta, codcandi),
+            by = c("anno", "vuelta", "codcandi")) %>%
+  group_by(anno, vuelta, codmpio, codcandi) %>%
+  summarise(votos_cand = sum(votos, na.rm = TRUE), .groups = "drop") %>%
+  left_join(validos_mpio_conc, by = c("anno", "vuelta", "codmpio")) %>%
+  # Se redondea a dos decimales: en pantalla solo se muestra uno, y guardar el
+  # double completo multiplica por tres el tamano que este bloque agrega al HTML.
+  mutate(pct = if_else(validos > 0, round(100 * votos_cand / validos, 2), NA_real_),
+         vuelta = if_else(vuelta == "1ra", 1L, 2L)) %>%
+  filter(!is.na(pct)) %>%
+  select(anno, vuelta, codcandi, codmpio, votos_cand, pct)
+
+conc_info_mpio <- todos_municipios %>% distinct(codmpio, Municipio, Depto) %>%
+  mutate(codmpio = as.integer(codmpio))
+
+saveRDS(list(candidatos = conc_candidatos, mesas = conc_mesas,
+             mesas_total = conc_mesas_total, mpios = conc_mpios,
+             info_mpio = conc_info_mpio),
+        "datos_concentracion_presidencia.rds")
+message("Listo: datos_concentracion_presidencia.rds | candidatos: ", nrow(conc_candidatos),
+        " | mesas(bins): ", nrow(conc_mesas), " | mpios: ", nrow(conc_mpios))
 # =====================================================================3
 #  SECCION 04-1 VOTOS EN BLANCO, NULOS Y NO MARCADOS ----
 # =====================================================================3
