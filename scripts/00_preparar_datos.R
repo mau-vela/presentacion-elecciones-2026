@@ -44,7 +44,8 @@ leer_divipol <- function(ruta_basicos) {
       puesto = str_pad(chr0(fw(linea,8,9)), 2, pad="0"),
       Depto_divipol = chr0(fw(linea,10,21)), Municipio_divipol = chr0(fw(linea,22,51)),
       nompuesto = chr0(fw(linea,52,91)),
-      potencial_hombres = num0(fw(linea,93,100)), potencial_mujeres = num0(fw(linea,101,108)),
+      # En el TXT van primero las mujeres (93-100) y luego los hombres (101-108)
+      potencial_mujeres = num0(fw(linea,93,100)), potencial_hombres = num0(fw(linea,101,108)),
       n_mesas_puesto = num0(fw(linea,109,114))
     ) %>%
     mutate(censo = potencial_hombres + potencial_mujeres, code_RNEC = COD_DPTO*1000 + codmun) %>%
@@ -113,11 +114,15 @@ pres_2018_base <- read_excel(rp("Divipol Presidente 2018.xlsx"), sheet="Base Mad
             puesto=str_remove(as.character(Puesto),"^0+(?!$)"),
             hombres=as.integer(hombres), mujeres=as.integer(mujeres), censo=as.integer(total),
             mesas=as.integer(mesas))
-pres_2018_cons <- read_excel(rp("Divipol Presidente 2018.xlsx"), sheet="Consulados ", range="A1:L233") %>%
+# Se lee la hoja completa: antes el rango A1:L233 dejaba por fuera los tres
+# ultimos puestos de Venezuela (22.177 de censo y 33 mesas). La fila TOTAL del
+# final queda con dd no numerico y se descarta con el filtro.
+pres_2018_cons <- read_excel(rp("Divipol Presidente 2018.xlsx"), sheet="Consulados ") %>%
+  filter(!is.na(suppressWarnings(as.numeric(dd)))) %>%
   transmute(coddepto=as.numeric(dd), codmun=as.numeric(mm), zona=as.numeric(zz),
             puesto=str_remove(as.character(pp),"^0+(?!$)"),
             hombres=as.integer(hombres), mujeres=as.integer(mujeres), censo=as.integer(total),
-            mesas=mesas)
+            mesas=as.integer(mesas))
 censo_pres_2018 <- bind_rows(pres_2018_base %>% filter(coddepto != 88), pres_2018_cons)
 
 # 2022 (ambos traen 'mesas' en el Excel; el lector la detecta sola)
@@ -497,6 +502,9 @@ cand26_tipo <- c26_base %>%
     DESC_TPPART = case_when(
       is.na(DESC_TPPART) & circ=="Territorial" & territorio_join=="56" & codparti %in% c(3011,3117) ~ "COALICIONES",
       is.na(DESC_TPPART) & circ=="Territorial" & territorio_join=="56" & codparti %in% c(1,3,8,11,20,26) ~ "PARTIDO O MOVIMIENTO POLITICO CON PERSONERIA JURIDICA",
+      # Partido Politico La Fuerza (codparti 26) tiene personeria juridica; no
+      # paso el umbral, pero no es un grupo significativo de ciudadanos.
+      codparti == 26 ~ "PARTIDO O MOVIMIENTO POLITICO CON PERSONERIA JURIDICA",
       TRUE ~ DESC_TPPART),
     tipo_part = recode_tipo_part(DESC_TPPART), annoh = 2026)
 
@@ -664,6 +672,20 @@ sc22 <- cand22_tipo %>% fix_pers() %>% left_join(nom22, by="codparti") %>%
 sincoal <- bind_rows(sc26, sc22)
 n_part  <- tibble(annoh = c(2022L, 2026L), n_partidos = c(22L, 27L))
 
+# --- Partidos con personeria: hombres/mujeres por corporacion-circunscripcion,
+# igual que GSC y Coaliciones. Mismo universo de candidaturas que sincoal.
+hm_base <- bind_rows(
+  hm_base,
+  bind_rows(cand26_tipo %>% fix_pers() %>% left_join(nom26, by = "codparti") %>%
+              mutate(partido = map26(str_to_upper(nom)), annoh = 2026L),
+            cand22_tipo %>% fix_pers() %>% left_join(nom22, by = "codparti") %>%
+              mutate(partido = map22(str_to_upper(nom)), annoh = 2022L)) %>%
+    filter(tipo_part == "Partido con personería jurídica", !is.na(partido), genero %in% c("F", "M")) %>%
+    transmute(tema = "Partidos", annoh, corpcirc = paste(corp, circ, sep = " · "),
+              genero = if_else(genero == "F", "Mujeres", "Hombres")) %>%
+    count(tema, annoh, corpcirc, genero, name = "n")
+)
+
 
 ## ===== Candidaturas de Presidencia (1ra y 2da vuelta) =====
 ruta_basicos_pres2 <- ruta_basicos_pres  # 2da vuelta (ya definida arriba)
@@ -710,9 +732,13 @@ leer_candidatos_pres <- function(carpeta, codificacion = "UTF-8") {
   
   lp <- lp[!is.na(lp) & nchar(lp) > 0]
   
+  # La linea de PARTIDOS.TXT termina con un flag de una letra ("N") separado del
+  # nombre por un bloque de espacios. Cortar en el primer bloque de dos o mas
+  # espacios deja solo el nombre; con str_sub hasta 210 el squish pegaba el flag
+  # y todos los partidos salian con una " N" al final.
   part <- tibble(
     codparti = as.integer(str_trim(str_sub(lp, 1, 5))),
-    partido  = str_squish(str_sub(lp, 6, 210))
+    partido  = str_squish(str_split_fixed(str_sub(lp, 6), " {2,}", 2)[, 1])
   )
   
   cand %>% 
@@ -1418,11 +1444,20 @@ mesas_comp_cand <- inner_join(
 ) %>% mutate(comparable = TRUE)
 
 nombres_cand <- cand_largo %>%
+  # Mismo flag " N" del archivo de partidos: en el escrutinio de segunda vuelta
+  # 2026 llega pegado al nombre y ademas sin tildes ("Pacto Histrico N").
+  mutate(nomparti = str_squish(str_remove(as.character(nomparti), "\\s+N$"))) %>%
   group_by(anno, vuelta, codcandi) %>%
   summarise(candidato = titulo_es(mejor_variante(nomcandi)),
             partido   = titulo_es(mejor_variante(nomparti)), .groups = "drop") %>%
   mutate(candidato = coalesce(candidato, partido, paste("Código", codcandi)),
-         partido   = coalesce(partido, candidato))
+         partido   = coalesce(partido, candidato)) %>%
+  # Las tildes que perdio la segunda vuelta se recuperan de la primera. Se
+  # unifica por nombre de candidato, no por codigo: los codigos cambian de una
+  # vuelta a otra, el nombre no.
+  group_by(anno, candidato) %>%
+  mutate(partido = mejor_variante(partido)) %>%
+  ungroup()
 
 pres_esc_cand <- cand_largo %>%
   left_join(mesas_comp_cand, by = c("anno", "vuelta", "llave_mesa")) %>%
@@ -3633,6 +3668,125 @@ saveRDS(list(candidatos = conc_candidatos, mesas = conc_mesas,
         "datos_concentracion_presidencia.rds")
 message("Listo: datos_concentracion_presidencia.rds | candidatos: ", nrow(conc_candidatos),
         " | mesas(bins): ", nrow(conc_mesas), " | mpios: ", nrow(conc_mpios))
+
+
+# =====================================================================3
+#  SECCION 02-b CANDIDATURAS PRESIDENCIALES POR TIPO DE ORGANIZACION ----
+# =====================================================================3
+# No existe una base oficial que clasifique cada candidatura presidencial por
+# tipo de organizacion, asi que la clasificacion se declara aqui a mano y queda
+# versionada con el resto del proyecto. Los nombres de candidato y agrupacion
+# se toman de los archivos de la RNEC (preconteo de primera vuelta), no se
+# escriben a mano, para que coincidan con el resto del informe.
+
+TIPO_PART <- c(PJ = "Partido con personería jurídica",
+               GSC = "Movimientos sociales o GSC",
+               CO = "Coalición")
+
+cand_pres_tipo <- tibble::tribble(
+  ~anno, ~codcandi, ~tipo, ~renuncio,
+  # ---- 2026, primera vuelta (13 candidaturas en el tarjeton) ----
+  2026,  1L,  "PJ",  FALSE,   # Iván Cepeda Castro
+  2026,  2L,  "GSC", FALSE,   # Claudia López (dos GSC en coalición)
+  2026,  3L,  "GSC", FALSE,   # Raúl Santiago Botero
+  2026,  4L,  "GSC", FALSE,   # Abelardo de la Espriella
+  2026,  5L,  "CO",  FALSE,   # Óscar Mauricio Lizcano
+  2026,  6L,  "PJ",  FALSE,   # Miguel Uribe Londoño
+  2026,  7L,  "GSC", FALSE,   # Sondra Macollins
+  2026,  8L,  "PJ",  FALSE,   # Roy Barreras
+  2026,  9L,  "GSC", TRUE,    # Carlos Caicedo (renunció)
+  2026, 10L,  "PJ",  FALSE,   # Gustavo Matamoros
+  2026, 11L,  "CO",  FALSE,   # Paloma Valencia
+  2026, 12L,  "PJ",  FALSE,   # Sergio Fajardo
+  2026, 13L,  "GSC", TRUE     # Luis Gilberto Murillo (renunció)
+) %>%
+  mutate(vuelta = "Primera vuelta")
+
+# 2022 primera vuelta: los ocho del tarjeton. El archivo armonizado de 2022
+# escribe las agrupaciones sin tildes ("Coalicion Pacto Histórico"), asi que
+# aqui se usa el nombre correcto de la agrupacion en vez del de la fuente.
+cand_pres_tipo_22 <- tibble::tribble(
+  ~patron,       ~tipo,  ~agrupacion,
+  "PETRO",       "CO",   "Pacto Histórico",
+  "HERN.NDEZ",   "GSC",  "Liga de Gobernantes Anticorrupción",
+  "GUTI.RREZ",   "CO",   "Equipo por Colombia",
+  "FAJARDO",     "CO",   "Centro Esperanza",
+  "RODR.GUEZ",   "PJ",   "Colombia Justa Libres",
+  "BETANCOURT",  "PJ",   "Partido Verde Oxígeno",
+  "G.MEZ",       "PJ",   "Movimiento de Salvación Nacional",
+  "P.REZ",       "GSC",  "Colombia Piensa en Grande"
+)
+
+# Nombres y agrupaciones tal como los reporta la RNEC
+nom_pres_26 <- nombres_cand %>% filter(anno == 2026, vuelta == "1ra") %>%
+  select(codcandi, candidato, agrupacion = partido)
+
+cand_tipo_26 <- cand_pres_tipo %>%
+  left_join(nom_pres_26, by = "codcandi") %>%
+  transmute(anno, vuelta, candidato, agrupacion,
+            tipo = unname(TIPO_PART[tipo]), renuncio)
+
+cand_tipo_22 <- nombres_cand %>%
+  filter(anno == 2022, vuelta == "1ra", !codcandi %in% c(996, 997, 998)) %>%
+  select(codcandi, candidato) %>%
+  mutate(fila = vapply(candidato, function(x)
+    which(vapply(cand_pres_tipo_22$patron,
+                 function(p) str_detect(str_to_upper(x), p), logical(1)))[1], integer(1))) %>%
+  transmute(anno = 2022, vuelta = "Primera vuelta", candidato,
+            agrupacion = cand_pres_tipo_22$agrupacion[fila],
+            tipo = unname(TIPO_PART[cand_pres_tipo_22$tipo[fila]]), renuncio = FALSE)
+
+# Segunda vuelta: quienes pasaron, con el mismo tipo que traian de primera.
+# El cruce va por nombre SIN TILDES: el escrutinio de segunda vuelta de 2022
+# escribe "Rodolfo Hernandez" y el de primera "Rodolfo Hernández", asi que un
+# join por texto exacto dejaba esa candidatura sin tipo. Del cruce se toma
+# tambien el nombre y la agrupacion de primera vuelta, que vienen mejor escritos.
+clave_nom <- function(x) str_squish(str_to_upper(iconv(x, to = "ASCII//TRANSLIT")))
+
+pasan_2v <- bind_rows(
+  nombres_cand %>% filter(anno == 2026, vuelta == "2da", !codcandi %in% c(996, 997, 998)) %>%
+    transmute(anno = 2026, k = clave_nom(candidato)),
+  nombres_cand %>% filter(anno == 2022, vuelta == "2da", !codcandi %in% c(996, 997, 998)) %>%
+    transmute(anno = 2022, k = clave_nom(candidato)))
+
+cand_tipo_1v <- bind_rows(cand_tipo_26, cand_tipo_22)
+
+cand_tipo_2v <- pasan_2v %>%
+  left_join(cand_tipo_1v %>% transmute(anno, k = clave_nom(candidato), candidato, agrupacion, tipo),
+            by = c("anno", "k")) %>%
+  mutate(vuelta = "Segunda vuelta", renuncio = FALSE) %>%
+  select(anno, vuelta, candidato, agrupacion, tipo, renuncio)
+
+cand_pres_final <- bind_rows(cand_tipo_1v, cand_tipo_2v) %>%
+  arrange(desc(anno), vuelta, candidato)
+
+if (any(is.na(cand_pres_final$tipo)))
+  warning("Candidaturas presidenciales sin tipo asignado: ",
+          paste(cand_pres_final$candidato[is.na(cand_pres_final$tipo)], collapse = ", "))
+
+# Resumen por tipo, para la grafica de barras
+cand_pres_resumen <- cand_pres_final %>%
+  count(anno, vuelta, tipo, name = "n") %>%
+  group_by(anno, vuelta) %>%
+  mutate(pct = 100 * n / sum(n)) %>%
+  ungroup()
+
+# Embudo de GSC: listas que solicitan formulario frente a las que llegan al
+# tarjeton. Los conteos de solicitudes son de la Registraduria; los inscritos se
+# cuentan uno a uno porque varios GSC entraron dentro de coaliciones y no se ven
+# en la clasificacion por candidatura.
+gsc_pres_embudo <- tibble::tribble(
+  ~anno, ~solicitan, ~individuales, ~en_coalicion,
+  2026,  91L,        7L,            6L,
+  2022,  52L,        2L,            4L
+) %>%
+  mutate(inscriben = individuales + en_coalicion,
+         pct = 100 * inscriben / solicitan)
+
+saveRDS(list(candidaturas = cand_pres_final, resumen = cand_pres_resumen,
+             gsc = gsc_pres_embudo),
+        "datos_candidaturas_presidencia.rds")
+message("Listo: datos_candidaturas_presidencia.rds | ", nrow(cand_pres_final), " candidaturas")
 # =====================================================================3
 #  SECCION 04-1 VOTOS EN BLANCO, NULOS Y NO MARCADOS ----
 # =====================================================================3
@@ -3834,7 +3988,7 @@ homolog_tipo <- function(x) dplyr::case_when(
   x == "Partido con personería jurídica" ~ "Partido",
   x == "Organizaciones indígenas" ~ "Organización indígena",
   x == "Organizaciones afrodescendientes" ~ "Organización afro",
-  x %in% c("Organizaciones sociales", "Org. sociales o GSC CITREP") ~ "Organización social",
+  x %in% c("Organizaciones sociales", "Org. sociales o GSC CITREP") ~ "Organización CITREP",
   TRUE ~ NA_character_
 )
 
@@ -3875,12 +4029,14 @@ e26 <- tibble(
     color_base = case_when(es_citrep ~ "CITREP", es_coal ~ sin_coal, TRUE ~ nomparti),
     tipo = case_when(
       es_citrep & str_detect(str_to_upper(nomparti), "SOY URAB") ~ "GSC",
-      es_citrep ~ "Organización social",
+      es_citrep ~ "Organización CITREP",
       str_detect(str_to_upper(partido), "DEMÓCRATA|DEMOCRATA") & str_detect(circ, "AFRO") ~ "Organización afro",   # Demócrata tiene personería
       es_coal ~ "Coaliciones",
       str_detect(circ, "INDIGENA|INDÍGENA") ~ "Organización indígena",
       str_detect(circ, "AFRO") ~ "Organización afro",
-      str_detect(str_to_upper(nomparti), "CREEMOS|LA FUERZA") ~ "GSC",
+      # La Fuerza NO es GSC: es un partido con personeria juridica que no paso
+      # el umbral (aun la conserva, pero podria perderla).
+      str_detect(str_to_upper(nomparti), "CREEMOS") ~ "GSC",
       str_detect(str_to_upper(nomparti), "MINGA") ~ "Organización indígena",
       str_detect(str_to_upper(nomparti), "NARANJ") ~ "Organización afro",
       TRUE ~ "Partido"
@@ -3947,7 +4103,7 @@ e22 <- e22 %>%
                      TRUE ~ str_to_title(corp_raw)),
     tipo = case_when(
       es_citrep & str_detect(P, "SOY URAB") ~ "GSC",
-      es_citrep ~ "Organización social",
+      es_citrep ~ "Organización CITREP",
       es_afro_esp ~ "Organización afro",
       str_detect(P, "AICO|AUTORIDADES IND|MAIS|ALTERNATIVO IND") ~ "Organización indígena",
       str_detect(P, "FUERZA CIUDADANA|GENTE EN MOVIMIENTO|LA FUERZA") ~ "GSC",
@@ -4012,6 +4168,75 @@ color_map <- c(
   "CITREP"="#C2AFF0"
 )
 
+# ---- Declaracion politica ante el CNE (estatuto de la oposicion) ------------3
+# 2026: declaraciones formales. Las CITREP y varias organizaciones quedan "Sin
+# declaracion"; el detalle de cada caso va en la nota de la seccion.
+bancada_26 <- c(
+  "PACTO HISTÓRICO"                = "Oposición",
+  "MAIS"                           = "Oposición",
+  "EN MARCHA"                      = "Oposición",
+  "CENTRO DEMOCRÁTICO"             = "Gobierno",
+  "PARTIDO LIBERAL COLOMBIANO"     = "Gobierno",
+  "PARTIDO CONSERVADOR COLOMBIANO" = "Gobierno",
+  "PARTIDO DE LA U"                = "Gobierno",
+  "PARTIDO CAMBIO RADICAL"         = "Gobierno",
+  "PARTIDO DEMÓCRATA COLOMBIANO"   = "Gobierno",
+  "COLOMBIA JUSTA LIBRES"          = "Gobierno",
+  "PARTIDO ASI"                    = "Gobierno",
+  "SALVACIÓN NACIONAL"             = "Gobierno",
+  "PARTIDO ALIANZA VERDE"          = "Independencia",
+  "NUEVO LIBERALISMO"              = "Independencia",
+  "PARTIDO MIRA"                   = "Independencia",
+  "LA FUERZA"                      = "Independencia",
+  "AICO"                           = "Independencia",
+  "PARTIDO ECOLOGISTA COLOMBIANO"  = "Independencia",
+  "DIGNIDAD Y COMPROMISO"          = "Independencia",
+  "COLOMBIA RENACIENTE"            = "Gobierno",
+  "ADA"                            = "Gobierno",
+  # CREEMOS no tiene declaracion formal ante el CNE, pero sus dos representantes
+  # anunciaron que integran la bancada de Gobierno.
+  "CREEMOS"                        = "Gobierno",
+  "EN MINGA POR COLOMBIA"          = "Sin declaración",
+  "CONSEJO COMUNITARIO EL NARANJO" = "Sin declaración",
+  "CITREP"                         = "Sin declaración"
+)
+
+# 2022: declaraciones ante el CNE del periodo 2022-2026, con las mismas tres
+# categorias que 2026. Tres casos no figuran en el listado de partidos y se
+# asignan por criterio, no por declaracion:
+#   - Pacto Historico es la coalicion del presidente y todos los partidos que la
+#     integran (UP, Polo, Colombia Humana, Comunista) estan como gobierno.
+#   - CITREP no son partidos y no declaran, igual que en 2026.
+#   - Fernando Rios Hidalgo: su movimiento se convirtio en el Partido Ecologista
+#     Colombiano, que declaro gobierno.
+bancada_22 <- c(
+  "PACTO HISTÓRICO"                = "Gobierno",
+  "PARTIDO LIBERAL COLOMBIANO"     = "Gobierno",
+  "PARTIDO CONSERVADOR COLOMBIANO" = "Gobierno",
+  "PARTIDO DE LA U"                = "Gobierno",
+  "PARTIDO ALIANZA VERDE"          = "Gobierno",
+  "PARTIDO COMUNES"                = "Gobierno",
+  "PARTIDO ASI"                    = "Gobierno",
+  "MAIS"                           = "Gobierno",
+  "AICO"                           = "Gobierno",
+  "COLOMBIA RENACIENTE"            = "Gobierno",
+  "FUERZA CIUDADANA"               = "Gobierno",
+  "GENTE EN MOVIMIENTO"            = "Gobierno",
+  "PARTIDO DEMÓCRATA COLOMBIANO"   = "Gobierno",
+  "CENTRO DEMOCRÁTICO"             = "Oposición",
+  "LIGA ANTICORRUPCIÓN"            = "Oposición",
+  "VERDE OXÍGENO"                  = "Oposición",
+  "PARTIDO CAMBIO RADICAL"         = "Independencia",
+  "PARTIDO MIRA"                   = "Independencia",
+  "COLOMBIA JUSTA LIBRES"          = "Independencia",
+  "NUEVO LIBERALISMO"              = "Independencia",
+  "DIGNIDAD Y COMPROMISO"          = "Independencia",
+  "SALVACIÓN NACIONAL"             = "Sin declaración",
+  "EN MARCHA"                      = "Sin declaración",
+  "CITREP"                         = "Sin declaración",
+  "FERNANDO RÍOS HIDALGO"          = "Gobierno"
+)
+
 electos_ind <- bind_rows(e26, e22) %>%
   filter(!is.na(corp), !is.na(tipo)) %>%
   mutate(
@@ -4019,10 +4244,13 @@ electos_ind <- bind_rows(e26, e22) %>%
     color = unname(color_map[partido_color]),
     color = if_else(is.na(color), "#B0B0B0", color)   # gris para no mapeados
   ) %>%
+  mutate(bancada = coalesce(
+    if_else(annoh == 2026, unname(bancada_26[partido_color]), unname(bancada_22[partido_color])),
+    "Sin declaración")) %>%
   mutate(sexo = case_when(genero == "F" ~ "Mujeres", genero == "M" ~ "Hombres",
                           TRUE ~ NA_character_)) %>%
   select(annoh, corp, tipo, partido_color, color, partido, coalicion, congresista,
-         circ, depto, en_barras, sexo)
+         circ, depto, en_barras, sexo, bancada)
 
 comp_tipo <- electos_ind %>%
   filter(en_barras) %>%
@@ -4035,3 +4263,441 @@ comp_tipo <- electos_ind %>%
 saveRDS(list(seats = electos_ind, comp = comp_tipo), "datos_electos.rds")
 message("Listo: datos_electos.rds (", nrow(electos_ind), " curules; ",
         sum(electos_ind$en_barras), " en barras)")
+
+
+# =====================================================================3
+#  SECCION APARTE · EXTERIOR POR PAIS 2018-2022-2026 (Excel externo) ----
+# =====================================================================3
+# Tabla para un uso fuera de este informe: no alimenta el .qmd ni genera .rds.
+# Se escribe en ../divipole/exterior_por_pais_2018_2022_2026.xlsx, una hoja por
+# eleccion (Congreso, Presidencia 1ra y 2da vuelta).
+#
+# Pais = pais REAL donde queda cada puesto. La RNEC organiza el exterior en
+# "municipios" del DIVIPOL con COD_DPTO 88 (code_RNEC 88xxx), pero son
+# jurisdicciones consulares y una misma jurisdiccion atiende a varios paises:
+# Riad (Arabia Saudita) esta dentro de EGIPTO, Dakar (Senegal) dentro de GHANA,
+# Atenas, Limassol y La Valeta dentro de ITALIA, etc. Por eso el pais se asigna
+# puesto por puesto, con el nombre del puesto en el DIVIPOL de cada eleccion:
+#   - por defecto, el pais de su jurisdiccion (ext_pais_jurisdiccion);
+#   - salvo los puestos de ext_otro_pais, que quedan en otro pais.
+# Las reglas van atadas al codigo de la jurisdiccion para no confundir ciudades
+# homonimas (Merida y Valencia existen en Venezuela, Mexico y Espana).
+# codigo_pais = code_RNEC de la jurisdiccion - primera zona - primer puesto del
+# pais ese anio (ej. 88335-05-04 es Riad). No basta con jurisdiccion y zona:
+# varios paises comparten ambas (Riad y El Cairo estan en 88335 zona 05). Puede
+# cambiar entre anios (Grecia fue 88405 en 2018 y 88495 despues).
+# - Israel en Congreso 2026 queda con su censo y 0 votos: los puestos se
+#   cerraron pocos dias antes de la eleccion, pero su censo si contaba.
+#
+# - Censo y mesas: DIVIPOL de cada eleccion, sin los puestos 81-86 (dias de
+#   votacion anticipada con el censo repetido; corregir_censo_exterior() ya los
+#   deja en NA). Es el mismo criterio del resumen div_resumen.
+# - Votacion: escrutinio, todos los votos depositados (incluye blancos, nulos y
+#   no marcados) y tambien los dias anticipados, que son votos reales.
+# - Congreso: un elector vota Senado y Camara en la misma mesa, asi que se toma
+#   el maximo por mesa entre las dos, como en el KPI nacional de participacion.
+
+ext_carpeta_salida <- "../divipole"
+ext_esc_pres <- c(
+  "2026_1ra" = "../Presidencia 2026/escrutinio primera vuelta/mmv/escrutinio_completo_1era.rds",
+  "2026_2da" = "../Presidencia 2026/escrutinio segunda vuelta/mmv/escrutinio_completo_2da.rds")
+ext_arm_pres <- "../Presidencia 2026/datos_elecciones_pasadas/presidencia_preconteo_escrutinio_armonizado.rds"
+
+# ---- 1. Pais de cada puesto ---------------------------------------------------3
+ext_pais_jurisdiccion <- tribble(
+  ~code_RNEC, ~jurisdiccion,
+  88115, "Ghana",           88120, "Alemania",        88130, "Argelia",
+  88135, "Azerbaiyán",      88140, "Curazao",         88155, "Argentina",
+  88160, "Aruba",           88165, "Australia",       88170, "Austria",
+  88190, "Bélgica",         88215, "Bolivia",         88220, "Brasil",
+  88250, "Canadá",          88275, "Corea del Sur",   88285, "Costa Rica",
+  88290, "Cuba",            88305, "Chile",           88315, "China",
+  88320, "Chipre",          88325, "Dinamarca",       88330, "Ecuador",
+  88335, "Egipto",          88340, "El Salvador",     88350, "Emiratos Árabes Unidos",
+  88355, "España",          88360, "Estados Unidos",  88370, "Filipinas",
+  88375, "Finlandia",       88380, "Francia",         88405, "Grecia",
+  88410, "Guatemala",       88415, "Belice",          88430, "Haití",
+  88435, "Países Bajos",    88440, "Honduras",        88445, "Hungría",
+  88455, "India",           88460, "Indonesia",       88465, "Reino Unido",
+  88470, "Irlanda",         88490, "Israel",          88495, "Italia",
+  88500, "Jamaica",         88505, "Japón",           88515, "Kenia",
+  88535, "Líbano",          88540, "Luxemburgo",      88560, "Malasia",
+  88580, "Marruecos",       88590, "México",          88620, "Nicaragua",
+  88625, "Nueva Zelanda",   88635, "Noruega",         88655, "Panamá",
+  88665, "Paraguay",        88670, "Perú",            88675, "Polonia",
+  88680, "Portugal",        88683, "Puerto Rico",     88685, "República Dominicana",
+  88688, "Singapur",        88690, "Vietnam",         88700, "Rusia",
+  88745, "Sudáfrica",       88755, "Suecia",          88760, "Suiza",
+  88765, "Tailandia",       88770, "Turquía",         88785, "Trinidad y Tobago",
+  88805, "Uruguay",         88815, "Venezuela"
+)
+
+# Puestos que quedan en un pais distinto al de su jurisdiccion. El patron se
+# busca en el nombre del puesto en mayusculas y sin tildes. Los puestos de
+# Ramallah quedan en Israel, con su jurisdiccion.
+ext_otro_pais <- tribble(
+  ~code_RNEC, ~patron,             ~pais,
+  88115,      "DAKAR",             "Senegal",
+  88115,      "ABUJA|LAGOS",       "Nigeria",
+  88170,      "PRAGA",             "Chequia",
+  88190,      "LUXEMBURGO",        "Luxemburgo",
+  88315,      "HONG KONG",         "Hong Kong",
+  88335,      "RIAD",              "Arabia Saudita",
+  88340,      "BELMOPAN",          "Belice",
+  88350,      "DOHA",              "Catar",
+  88495,      "ATENAS",            "Grecia",
+  88495,      "LIMASSOL",          "Chipre",
+  88495,      "MALTA",             "Malta",
+  88500,      "CAIMAN",            "Islas Caimán",
+  88675,      "BUCAREST",          "Rumania",
+  88685,      "PUERTO PRINCIPE",   "Haití",
+  88785,      "BRIDGETOWN",        "Barbados",
+  88785,      "GEORGETOWN|GUYANA", "Guyana"
+)
+
+ext_norm <- function(x) {
+  y <- toupper(iconv(x, to = "ASCII//TRANSLIT"))
+  str_squish(str_replace(y, "^(LUNES|MARTES|MIERCOLES|JUEVES|VIERNES|SABADO|DOMINGO)\\s+", ""))
+}
+
+# Nombre de todos los puestos del exterior (incluidos los dias anticipados, que
+# tambien reciben votos), por eleccion y anio
+ext_puestos <- bind_rows(
+  read_fwf(rp("DIVIPOL_20180223_111842_01_UNIFICADO.txt"),
+           fwf_widths(c(2, 3, 2, 2, 12, 30, 40), c("dd", "mm", "zz", "pp", "dep", "mun", "pto")),
+           locale = locale(encoding = "Latin1"), col_types = cols(.default = col_character())) %>%
+    filter(dd == "88") %>%
+    transmute(eleccion = "Congreso", anno = 2018, nompuesto = pto, codmun = as.numeric(mm),
+              zona = as.numeric(zz), puesto = str_pad(str_trim(pp), 2, pad = "0")),
+  read_excel(rp("Divipol Presidente 2018.xlsx"), sheet = "Consulados ", col_types = "text") %>%
+    filter(suppressWarnings(as.numeric(dd)) == 88) %>%
+    transmute(eleccion = "Presidencia", anno = 2018, nompuesto = puesto, codmun = as.numeric(mm),
+              zona = as.numeric(zz), puesto = str_pad(str_trim(pp), 2, pad = "0")),
+  read_excel(rp("Divipole_Elecciones_Congreso_13-03-2022.xlsx"), sheet = "divipol_20220207_161440",
+             skip = 4, col_types = "text") %>% rename_with(tolower) %>%
+    filter(suppressWarnings(as.numeric(dd)) == 88) %>%
+    transmute(eleccion = "Congreso", anno = 2022, nompuesto = puesto, codmun = as.numeric(mm),
+              zona = as.numeric(zz), puesto = str_pad(str_trim(pp), 2, pad = "0")),
+  read_excel(rp("Divipole_Elección_Presidente_2022.xlsx"), sheet = "divipol_20220422_222259",
+             skip = 4, col_types = "text") %>% rename_with(tolower) %>%
+    filter(suppressWarnings(as.numeric(dd)) == 88) %>%
+    transmute(eleccion = "Presidencia", anno = 2022, nompuesto = puesto, codmun = as.numeric(mm),
+              zona = as.numeric(zz), puesto = str_pad(str_trim(pp), 2, pad = "0")),
+  divipol_cong_26 %>% filter(COD_DPTO == 88) %>%
+    transmute(eleccion = "Congreso", anno = 2026, nompuesto, codmun, zona = as.numeric(zona), puesto),
+  divipol_pres_26 %>% filter(COD_DPTO == 88) %>%
+    transmute(eleccion = "Presidencia", anno = 2026, nompuesto, codmun, zona = as.numeric(zona), puesto)
+) %>%
+  mutate(code_RNEC = 88000 + codmun, clave = ext_norm(nompuesto)) %>%
+  left_join(ext_pais_jurisdiccion, by = "code_RNEC") %>%
+  mutate(pais = jurisdiccion)
+
+for (i in seq_len(nrow(ext_otro_pais))) {
+  r <- ext_otro_pais[i, ]
+  hit <- ext_puestos$code_RNEC == r$code_RNEC & str_detect(ext_puestos$clave, r$patron)
+  if (!any(hit)) stop("La regla de pais '", r$patron, "' no encontro ningun puesto")
+  ext_puestos$pais[hit] <- r$pais
+}
+
+if (any(is.na(ext_puestos$pais))) {
+  print(ext_puestos %>% filter(is.na(pais)) %>% distinct(eleccion, anno, code_RNEC, nompuesto) %>% as.data.frame())
+  stop("Hay puestos del exterior de una jurisdiccion sin pais definido en ext_pais_jurisdiccion")
+}
+if (anyDuplicated(ext_puestos[c("eleccion", "anno", "codmun", "zona", "puesto")]))
+  stop("Hay puestos del exterior repetidos en la tabla de nombres")
+if (nrow(ext_puestos %>% distinct(eleccion, anno, pais, code_RNEC) %>%
+         count(eleccion, anno, pais) %>% filter(n > 1)))
+  stop("Un pais quedo repartido en dos jurisdicciones el mismo anio")
+
+message("Exterior por pais: ", paste(ext_puestos %>% count(eleccion, anno, name = "x") %>%
+  left_join(ext_puestos %>% distinct(eleccion, anno, pais) %>% count(eleccion, anno), by = c("eleccion", "anno")) %>%
+  transmute(t = sprintf("%s %d = %d puestos, %d paises", eleccion, anno, x, n)) %>% pull(t), collapse = " | "))
+
+# Los puestos 81-86 (votacion anticipada) funcionan en la sede consular de su
+# zona, asi que su pais es el del puesto "Consulado"/"Embajada" de esa zona.
+# No basta con el pais de la zona: Riad, por ejemplo, esta en la misma zona que
+# El Cairo; y Hong Kong es una zona propia dentro de CHINA. Se comprueba en los
+# DIVIPOL que si traen el nombre de los dias anticipados. Si la zona no tiene
+# un puesto con ese nombre (Manila 2018), se usa el pais de la zona si es unico.
+ext_anticipados <- sprintf("%02d", 81:86)
+ext_pais_unico <- function(df) df %>%
+  group_by(eleccion, anno, codmun, zona) %>%
+  summarise(p = if (n_distinct(pais) == 1) first(pais) else NA_character_, .groups = "drop")
+ext_pais_zona <- ext_puestos %>% filter(!puesto %in% ext_anticipados) %>% ext_pais_unico() %>%
+  left_join(ext_puestos %>% filter(!puesto %in% ext_anticipados, str_detect(clave, "CONSUL|EMBAJADA")) %>%
+              ext_pais_unico() %>% rename(p_sede = p),
+            by = c("eleccion", "anno", "codmun", "zona")) %>%
+  transmute(eleccion, anno, codmun, zona, pais_zona = coalesce(p_sede, p))
+ext_chk_ant <- ext_puestos %>% filter(puesto %in% ext_anticipados) %>%
+  left_join(ext_pais_zona, by = c("eleccion", "anno", "codmun", "zona"))
+if (any(is.na(ext_chk_ant$pais_zona) | ext_chk_ant$pais != ext_chk_ant$pais_zona)) {
+  print(ext_chk_ant %>% filter(is.na(pais_zona) | pais != pais_zona) %>% as.data.frame())
+  stop("Hay puestos de votacion anticipada en una zona sin pais unico")
+}
+
+# Pega el pais a una tabla con codmun, zona y puesto. Los DIVIPOL de
+# Presidencia 2018 y 2022 no listan los puestos 81-86, pero el escrutinio si
+# trae sus votos: esos toman el pais de su zona. Si la zona tampoco esta en el
+# DIVIPOL (en Presidencia 2022 el escrutinio pone las embajadas de Santiago,
+# Madrid y Paris en la zona 15), se usa el pais de la jurisdiccion cuando esta
+# tiene un solo pais. Cualquier otro caso detiene el script.
+ext_con_pais <- function(df, el, an) {
+  out <- df %>%
+    mutate(zona = as.numeric(zona), puesto = str_pad(str_trim(as.character(puesto)), 2, pad = "0")) %>%
+    left_join(ext_puestos %>% filter(eleccion == el, anno == an) %>% select(codmun, zona, puesto, pais),
+              by = c("codmun", "zona", "puesto")) %>%
+    left_join(ext_pais_zona %>% filter(eleccion == el, anno == an) %>% select(codmun, zona, pais_zona),
+              by = c("codmun", "zona")) %>%
+    left_join(ext_puestos %>% filter(eleccion == el, anno == an) %>% group_by(codmun) %>%
+                summarise(pais_jur = if (n_distinct(pais) == 1) first(pais) else NA_character_),
+              by = "codmun") %>%
+    mutate(respaldo = is.na(pais),
+           pais = case_when(!is.na(pais) ~ pais,
+                            puesto %in% ext_anticipados ~ coalesce(pais_zona, pais_jur),
+                            TRUE ~ pais_jur)) %>%
+    select(-pais_zona, -pais_jur)
+  if (any(out$respaldo)) {
+    resp <- out %>% filter(respaldo) %>% distinct(codmun, zona, puesto, pais)
+    otros <- resp %>% filter(!puesto %in% ext_anticipados)
+    message("  ", el, " ", an, " | fuera del DIVIPOL: ", sum(resp$puesto %in% ext_anticipados),
+            " puestos anticipados (pais de su zona)",
+            if (nrow(otros)) paste0(" y ", paste(sprintf("%d-%02d-%s %s", as.integer(otros$codmun),
+                                    as.integer(otros$zona), otros$puesto, otros$pais), collapse = ", ")) else "")
+  }
+  out <- out %>% select(-respaldo)
+  if (any(is.na(out$pais))) {
+    print(out %>% filter(is.na(pais)) %>% distinct(codmun, zona, puesto) %>% as.data.frame())
+    stop("Puestos sin pais en ", el, " ", an)
+  }
+  out
+}
+
+# ---- 2. Censo, puestos y mesas por pais (DIVIPOL) ---------------------------3
+# Puestos: no se cuentan los 81-86. Son los dias de votacion anticipada del
+# consulado o embajada principal, que ya esta contado como puesto del domingo.
+ext_censo_pais <- function(df, eleccion, anno) {
+  df %>%
+    filter(COD_DPTO == 88) %>%
+    select(codmun, zona, puesto, censo, n_mesas_puesto) %>%
+    ext_con_pais(eleccion, anno) %>%
+    group_by(pais) %>%
+    summarise(censo = sum(censo, na.rm = TRUE),
+              puestos = n_distinct(paste(codmun, zona, puesto)[!puesto %in% ext_anticipados]),
+              mesas = sum(n_mesas_puesto, na.rm = TRUE), .groups = "drop") %>%
+    mutate(eleccion = eleccion, anno = anno)
+}
+
+ext_censo <- bind_rows(
+  ext_censo_pais(cong_2018,       "Congreso",    2018),
+  ext_censo_pais(cong_2022,       "Congreso",    2022),
+  ext_censo_pais(divipol_cong_26, "Congreso",    2026),
+  ext_censo_pais(pres_2018,       "Presidencia", 2018),
+  ext_censo_pais(pres_2022,       "Presidencia", 2022),
+  ext_censo_pais(divipol_pres_26, "Presidencia", 2026)
+)
+
+# ---- 3. Votacion presidencial por pais --------------------------------------3
+ext_votos_pres_df <- function(df, anno, vuelta) {
+  x <- df %>%
+    filter(as.numeric(COD_DPTO) == 88, !is.na(votos)) %>%
+    mutate(codmun = as.numeric(codmun), zona = as.numeric(zona),
+           puesto = str_pad(str_trim(as.character(puesto)), 2, pad = "0")) %>%
+    group_by(codmun, zona, puesto) %>%
+    summarise(votos = sum(as.numeric(votos), na.rm = TRUE), .groups = "drop")
+  out <- x %>% ext_con_pais("Presidencia", anno) %>%
+    group_by(pais) %>%
+    summarise(votacion = sum(votos), .groups = "drop") %>%
+    mutate(anno = anno, vuelta = vuelta)
+  if (sum(out$votacion) != sum(x$votos)) stop("Se perdieron votos al asignar pais: ", anno, " ", vuelta)
+  out
+}
+
+ext_arm <- readRDS(ext_arm_pres)$presidencia_mesa_candidato %>%
+  filter(anno %in% c(2018, 2022), vuelta %in% c("1ra", "2da"), fuente == "escrutinio")
+
+ext_votos_pres <- bind_rows(
+  ext_votos_pres_df(ext_arm %>% filter(anno == 2018, vuelta == "1ra"), 2018, "1ra"),
+  ext_votos_pres_df(ext_arm %>% filter(anno == 2018, vuelta == "2da"), 2018, "2da"),
+  ext_votos_pres_df(ext_arm %>% filter(anno == 2022, vuelta == "1ra"), 2022, "1ra"),
+  ext_votos_pres_df(ext_arm %>% filter(anno == 2022, vuelta == "2da"), 2022, "2da"),
+  ext_votos_pres_df(readRDS(ext_esc_pres[["2026_1ra"]]), 2026, "1ra"),
+  ext_votos_pres_df(readRDS(ext_esc_pres[["2026_2da"]]), 2026, "2da")
+)
+rm(ext_arm); invisible(gc())
+
+# ---- 4. Votacion de Congreso por pais (maximo por mesa) ---------------------3
+# 'puesto' se trata como texto (los ceros a la izquierda importan y algunos no
+# son numericos): convertirlo a numero juntaba puestos distintos en la llave.
+ext_votos_cong_df <- function(anno) {
+  if (anno == 2026) {
+    df <- readRDS("../Congreso 2026/datos/ESCRUTINIO/escrutinio_definitivo/escrutinio_definitivo.rds") %>%
+      filter((corp == "SENADO" & codcirc %in% c(0, 4)) | (corp == "CAMARA" & codcirc %in% c(1, 4, 5, 9))) %>%
+      transmute(grupo = if_else(corp == "SENADO", "Senado", "Camara"),
+                dep = as.numeric(COD_DPTO), codmun = as.numeric(codmun),
+                zona = as.numeric(zona), puesto = str_pad(str_trim(as.character(puesto)), 2, pad = "0"),
+                mesa = as.numeric(nummesa), votos = as.numeric(votos))
+  } else if (anno == 2022) {
+    # En Camara 2022 las circunscripciones especiales traen coddepto 0 y el
+    # departamento real en coddepto2; codmpio si es el codigo del municipio.
+    lee <- function(ruta, grupo) {
+      x <- readRDS(ruta)
+      if (!"coddepto2" %in% names(x)) x$coddepto2 <- NA_real_
+      x %>% transmute(grupo = grupo,
+                      dep = as.numeric(if_else(coddepto == 0 & !is.na(coddepto2), coddepto2, coddepto)),
+                      codmun = as.numeric(codmpio), zona = as.numeric(zona),
+                      puesto = str_pad(str_trim(as.character(puesto)), 2, pad = "0"), mesa = as.numeric(nummesa),
+                      votos = as.numeric(votos))
+    }
+    df <- bind_rows(lee("../Congreso 2026/datos/2022/esc_sen_2022.rds", "Senado"),
+                    lee("../Congreso 2026/datos/2022/esc_cam_2022.rds", "Camara"))
+  } else {
+    lee <- function(ruta, grupo) {
+      readRDS(ruta) %>% transmute(grupo = grupo, dep = as.numeric(COD_DPTO),
+                                  codmun = as.numeric(codmun), zona = as.numeric(zona),
+                                  puesto = str_pad(str_trim(as.character(puesto)), 2, pad = "0"), mesa = as.numeric(nummesa),
+                                  votos = as.numeric(votos))
+    }
+    df <- bind_rows(lee("../Congreso 2026/datos/2018/ESCRUTINIO/escrutinio_2018_sen_partido.rds", "Senado"),
+                    lee("../Congreso 2026/datos/2018/ESCRUTINIO/escrutinio_2018_cam_partido.rds", "Camara"))
+  }
+
+  x <- df %>%
+    filter(dep == 88) %>%
+    group_by(codmun, zona, puesto, mesa, grupo) %>%
+    summarise(votos = sum(votos, na.rm = TRUE), .groups = "drop") %>%
+    pivot_wider(names_from = grupo, values_from = votos, values_fill = 0) %>%
+    mutate(max_mesa = pmax(if ("Senado" %in% names(.)) Senado else 0,
+                           if ("Camara" %in% names(.)) Camara else 0))
+  out <- x %>% ext_con_pais("Congreso", anno) %>%
+    group_by(pais) %>%
+    summarise(votacion = sum(max_mesa), .groups = "drop") %>%
+    mutate(anno = anno)
+  if (sum(out$votacion) != sum(x$max_mesa)) stop("Se perdieron votos al asignar pais: Congreso ", anno)
+  out
+}
+
+ext_votos_cong <- bind_rows(ext_votos_cong_df(2018), ext_votos_cong_df(2022), ext_votos_cong_df(2026))
+
+# ---- 5. Armar las tres hojas -------------------------------------------------3
+# Codigo de cada pais: jurisdiccion-zona-puesto del primer puesto (sin los dias
+# anticipados) en orden de zona y puesto
+ext_codigos <- ext_puestos %>%
+  filter(!puesto %in% ext_anticipados) %>%
+  arrange(eleccion, anno, pais, zona, puesto) %>%
+  distinct(eleccion, anno, pais, .keep_all = TRUE) %>%
+  transmute(eleccion, anno, pais,
+            codigo_pais = sprintf("%d-%02d-%s", as.integer(code_RNEC), as.integer(zona), puesto))
+if (anyDuplicated(ext_codigos[c("eleccion", "anno", "codigo_pais")]))
+  stop("Hay codigos de pais repetidos")
+
+ext_hoja <- function(el, censo, votos) {
+  full_join(censo, votos, by = c("pais", "anno")) %>%
+    left_join(ext_codigos %>% filter(eleccion == el) %>% select(-eleccion), by = c("pais", "anno")) %>%
+    transmute(codigo_pais, pais, anno = as.integer(anno),
+              censo = coalesce(censo, 0), puestos = coalesce(puestos, 0L), mesas = coalesce(mesas, 0),
+              votacion = coalesce(votacion, 0),
+              participacion = if_else(censo > 0, round(100 * votacion / censo, 2), NA_real_)) %>%
+    arrange(pais, anno)
+}
+
+ext_excel <- list(
+  "Congreso" = ext_hoja("Congreso", ext_censo %>% filter(eleccion == "Congreso") %>% select(-eleccion),
+                        ext_votos_cong),
+  "Presidencia 1ra vuelta" = ext_hoja("Presidencia", ext_censo %>% filter(eleccion == "Presidencia") %>% select(-eleccion),
+                                      ext_votos_pres %>% filter(vuelta == "1ra") %>% select(-vuelta)),
+  "Presidencia 2da vuelta" = ext_hoja("Presidencia", ext_censo %>% filter(eleccion == "Presidencia") %>% select(-eleccion),
+                                      ext_votos_pres %>% filter(vuelta == "2da") %>% select(-vuelta))
+)
+
+# ---- 6. Verificacion: el censo y las mesas deben cuadrar con div_resumen -----3
+ext_ref <- div_resumen %>% filter(ambito == "Exterior") %>%
+  transmute(eleccion, anno = as.integer(annoh), censo_ref = censo, puestos_ref = n_puestos, mesas_ref = n_mesas)
+ext_chequeo <- bind_rows(lapply(names(ext_excel), function(h)
+  ext_excel[[h]] %>% group_by(anno) %>%
+    summarise(censo = sum(censo), puestos = sum(puestos), mesas = sum(mesas), votacion = sum(votacion),
+              paises = n_distinct(pais), filas = n(),
+              sin_codigo = sum(is.na(codigo_pais)),
+              sin_votos = sum(censo > 0 & votacion == 0), .groups = "drop") %>%
+    mutate(hoja = h, eleccion = if_else(h == "Congreso", "Congreso", "Presidencia")))) %>%
+  left_join(ext_ref, by = c("eleccion", "anno")) %>%
+  left_join(ext_puestos %>% distinct(eleccion, anno, pais) %>% count(eleccion, anno, name = "paises_divipol"),
+            by = c("eleccion", "anno"))
+
+print(as.data.frame(ext_chequeo %>% select(hoja, anno, censo, censo_ref, puestos, puestos_ref, mesas, mesas_ref, votacion,
+                                           paises, paises_divipol, filas, sin_codigo, sin_votos)),
+      row.names = FALSE)
+if (any(ext_chequeo$censo != ext_chequeo$censo_ref))
+  stop("El censo del exterior por pais no cuadra con div_resumen")
+if (any(ext_chequeo$mesas != ext_chequeo$mesas_ref))
+  stop("Las mesas del exterior por pais no cuadran con div_resumen")
+if (any(ext_chequeo$puestos != ext_chequeo$puestos_ref))
+  stop("Los puestos del exterior por pais no cuadran con div_resumen")
+if (any(ext_chequeo$paises != ext_chequeo$paises_divipol | ext_chequeo$filas != ext_chequeo$paises))
+  stop("La hoja no tiene exactamente un registro por cada pais del DIVIPOL")
+if (any(ext_chequeo$sin_codigo > 0))
+  stop("Hay paises con votos que no aparecen en el DIVIPOL")
+# Paises con censo y sin ningun voto: se dejan con 0 votos porque su censo
+# cuenta (Israel en Congreso 2026, puestos cerrados antes de la eleccion). Si
+# aparece uno distinto, se detiene para revisarlo.
+ext_sin_votos <- bind_rows(ext_excel, .id = "hoja") %>% filter(censo > 0, votacion == 0)
+if (any(!(ext_sin_votos$pais == "Israel" & ext_sin_votos$anno == 2026 & ext_sin_votos$hoja == "Congreso"))) {
+  print(as.data.frame(ext_sin_votos))
+  stop("Hay paises con censo y sin votos distintos de Israel en Congreso 2026: revisar")
+}
+
+if (!dir.exists(ext_carpeta_salida)) dir.create(ext_carpeta_salida, recursive = TRUE)
+writexl::write_xlsx(ext_excel, file.path(ext_carpeta_salida, "exterior_por_pais_2018_2022_2026.xlsx"))
+message("Listo: ../divipole/exterior_por_pais_2018_2022_2026.xlsx | ",
+        paste(sprintf("%s: %d filas", names(ext_excel), sapply(ext_excel, nrow)), collapse = " | "))
+
+
+# =====================================================================3
+#  SECCION APARTE · DIVIPOL CONGRESO 2026 EN XLSX (archivo externo) ----
+# =====================================================================3
+# Base de censo por puesto de Congreso 2026, para uso fuera de este informe: no
+# alimenta el .qmd ni genera .rds. Sale del TXT del DIVIPOL de los archivos
+# basicos y se escribe en ../divipole con las mismas columnas de los xlsx de la
+# RNEC de 2018 y 2022 (el TXT no trae la direccion).
+#
+# - En el TXT las posiciones 93-100 son MUJERES y 101-108 HOMBRES (comprobado
+#   contra el censo por puesto de enero de 2026 y el DIVIPOL de 2022).
+# - Se omiten los puestos 81-86 del exterior: son los dias de votacion
+#   anticipada, con un censo ficticio que repite el del consulado. Asi el total
+#   coincide con el censo electoral (41.287.084), como en el xlsx de 2022.
+
+div26_txt <- list.files(ruta_basicos_cong, pattern = "^DIVIPOL.*\\.TXT$", full.names = TRUE, ignore.case = TRUE)[1]
+div26_lin <- readLines(div26_txt, encoding = "latin1", warn = FALSE)
+div26_lin <- div26_lin[nchar(div26_lin) >= 146]
+
+divipol_cong_26_xlsx <- tibble(
+  dd           = str_sub(div26_lin, 1, 2),
+  mm           = str_sub(div26_lin, 3, 5),
+  zz           = str_sub(div26_lin, 6, 7),
+  pp           = str_sub(div26_lin, 8, 9),
+  departamento = str_squish(str_sub(div26_lin, 10, 21)),
+  municipio    = str_squish(str_sub(div26_lin, 22, 51)),
+  puesto       = str_squish(str_sub(div26_lin, 52, 91)),
+  mujeres      = as.integer(str_sub(div26_lin, 93, 100)),
+  hombres      = as.integer(str_sub(div26_lin, 101, 108)),
+  mesas        = as.integer(str_sub(div26_lin, 109, 114)),
+  comuna       = str_squish(str_sub(div26_lin, 115, 146))
+) %>%
+  filter(!(dd == "88" & pp %in% sprintf("%02d", 81:86))) %>%
+  mutate(total = mujeres + hombres, comuna = na_if(comuna, "")) %>%
+  select(dd, mm, zz, pp, departamento, municipio, puesto, mujeres, hombres, total, mesas, comuna)
+
+# Verificacion contra el resumen del DIVIPOL que usa el informe
+div26_ref <- div_resumen %>% filter(eleccion == "Congreso", annoh == 2026, ambito == "Total")
+div26_chk <- c(puestos = nrow(divipol_cong_26_xlsx), mesas = sum(divipol_cong_26_xlsx$mesas),
+               censo = sum(divipol_cong_26_xlsx$total))
+print(rbind(xlsx = div26_chk, resumen = c(div26_ref$n_puestos, div26_ref$n_mesas, div26_ref$censo)))
+if (anyDuplicated(divipol_cong_26_xlsx[c("dd", "mm", "zz", "pp")])) stop("Puestos repetidos en el DIVIPOL 2026")
+if (anyNA(divipol_cong_26_xlsx[c("mujeres", "hombres", "mesas")])) stop("Valores no numericos en el DIVIPOL 2026")
+if (any(div26_chk != c(div26_ref$n_puestos, div26_ref$n_mesas, div26_ref$censo)))
+  stop("El xlsx del DIVIPOL de Congreso 2026 no cuadra con div_resumen")
+
+writexl::write_xlsx(list("Divipol Congreso 2026" = divipol_cong_26_xlsx),
+                    "../divipole/26-Divipole_Elecciones_Congreso_08-03-2026.xlsx")
+message("Listo: ../divipole/26-Divipole_Elecciones_Congreso_08-03-2026.xlsx | ",
+        nrow(divipol_cong_26_xlsx), " puestos | mujeres ", sum(divipol_cong_26_xlsx$mujeres),
+        " | hombres ", sum(divipol_cong_26_xlsx$hombres))

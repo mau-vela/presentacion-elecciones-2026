@@ -765,7 +765,7 @@ html`<div>${graficaAnio(2026, "Inscripciones 2026", "Del 8 de noviembre al 8 de 
 
 ## Organizaciones con personería jurídica
 
-La personería jurídica cambió de manos dos veces durante el proceso: primero por decisiones del Consejo de Estado, antes de la votación, y después por efecto del umbral en la elección de Congreso. El esquema muestra cuáles organizaciones la mantienen y cuáles no.
+El número de organizaciones con personería jurídica se movió en dos momentos: por decisiones del Consejo de Estado antes de la votación y por los reconocimientos derivados de las elecciones de 2026.
 
 ```{=html}
 <style>
@@ -775,6 +775,7 @@ La personería jurídica cambió de manos dos veces durante el proceso: primero 
   border-top:4px solid #0B2E63; border-radius:8px; padding:1.05rem 1.15rem;
   box-shadow:0 2px 10px rgba(11,46,99,.05);
 }
+.pj-paso.suma { border-top-color:#1B5E33; }
 .pj-paso.final { border-top-color:#E8A33D; }
 .pj-momento {
   font-family:"Archivo",sans-serif; font-size:.78rem; font-weight:700;
@@ -785,6 +786,7 @@ La personería jurídica cambió de manos dos veces durante el proceso: primero 
   font-family:"Archivo",sans-serif; font-size:2.6rem; font-weight:800;
   color:#0B2E63; line-height:1; margin:.55rem 0 .2rem; font-variant-numeric:tabular-nums;
 }
+.pj-paso.suma .pj-valor { color:#1B5E33; }
 .pj-paso.final .pj-valor { color:#8A5A12; }
 .pj-pie { font-size:.79rem; color:#5A6B80; line-height:1.35; }
 .pj-salto {
@@ -796,17 +798,44 @@ La personería jurídica cambió de manos dos veces durante el proceso: primero 
   background:#FCEDED; border:1px solid #F3D2D2; border-radius:999px;
   padding:.1rem .62rem; font-variant-numeric:tabular-nums;
 }
+.pj-delta.mas { color:#1B5E33; background:#EAF4EE; border-color:#CBE3D5; }
+/* El dato del umbral va separado de la secuencia y sin flecha de resta: es un
+   hecho de la eleccion, no un paso que modifique el conteo de personerias. */
+.pj-paso.aparte { margin-left:1.6rem; }
 .pj-motivo { font-size:.72rem; color:#6B7C90; line-height:1.3; margin-top:.38rem; }
 .pj-resumen {
-  font-size:.85rem; color:#5A6B80; border-left:3px solid #DCE6F2;
-  padding-left:.75rem; margin:.3rem 0 1.6rem;
+  font-size:.72rem; color:#8494A8; padding-left:.1rem; margin:.5rem 0 1.6rem;
 }
+/* Serie historica 2018-2026: una sola franja para no agrandar la seccion. */
+.pj-serie {
+  display:flex; flex-wrap:wrap; align-items:center; gap:.5rem 1.1rem;
+  margin:1.1rem 0 0; padding:.7rem 1rem; background:#F8FAFC;
+  border:1px solid #E6EAF0; border-radius:8px;
+}
+.pj-serie-tit { font-size:.8rem; color:#5A6B80; line-height:1.3; max-width:250px; }
+.pj-serie-tit b { color:#0B2E63; }
+.pj-serie-anio { display:flex; align-items:baseline; gap:.4rem; }
+.pj-serie-anio span { font-size:.78rem; font-weight:700; color:#8494A8; }
+.pj-serie-anio strong {
+  font-family:"Archivo",sans-serif; font-size:1.7rem; font-weight:800; color:#0B2E63;
+  line-height:1; font-variant-numeric:tabular-nums;
+}
+.pj-serie .pj-delta { font-size:.85rem; }
 @media (max-width:760px) {
   .pj-flujo { flex-direction:column; }
   .pj-salto { flex:0 0 auto; flex-direction:row; gap:.55rem; padding:.55rem 0; }
   .pj-motivo { margin-top:0; text-align:left; }
+  .pj-paso.aparte { margin-left:0; margin-top:1rem; }
 }
 </style>
+<div class="pj-serie">
+  <div class="pj-serie-tit"><b>Partidos con personería jurídica</b> que podían dar avales a candidaturas</div>
+  <div class="pj-serie-anio"><span>2018</span><strong>16</strong></div>
+  <div class="pj-delta mas">+6</div>
+  <div class="pj-serie-anio"><span>2022</span><strong>22</strong></div>
+  <div class="pj-delta mas">+5</div>
+  <div class="pj-serie-anio"><span>2026</span><strong>27</strong></div>
+</div>
 <div class="pj-flujo">
   <div class="pj-paso">
     <div class="pj-momento">Al inscribir candidaturas</div>
@@ -825,32 +854,29 @@ La personería jurídica cambió de manos dos veces durante el proceso: primero 
     <div class="pj-pie">organizaciones con personería jurídica</div>
   </div>
   <div class="pj-salto">
-    <div class="pj-delta">−5</div>
-    <div class="pj-motivo">No superaron<br>el umbral</div>
+    <div class="pj-delta mas">+3</div>
+    <div class="pj-motivo">Reconocimientos<br>tras las elecciones</div>
   </div>
-  <div class="pj-paso final">
-    <div class="pj-momento">Tras la elección de Congreso</div>
-    <div class="pj-fecha">Resultado del umbral</div>
-    <div class="pj-valor">20</div>
-    <div class="pj-pie">conservan la personería jurídica</div>
+  <div class="pj-paso suma">
+    <div class="pj-momento">A hoy</div>
+    <div class="pj-valor">28</div>
+    <div class="pj-pie">organizaciones con personería jurídica</div>
+  </div>
+  <div class="pj-paso final aparte">
+    <div class="pj-momento">Umbral de Congreso</div>
+    <div class="pj-valor">5</div>
+    <div class="pj-pie">partidos no superaron el umbral de 3 % en Congreso</div>
   </div>
 </div>
 <div class="pj-resumen">
-  En total, <strong>7 de las 27</strong> organizaciones perdieron la personería jurídica
-  durante el proceso: una reducción del <strong>26 %</strong>.
+  A la fecha, el CNE mantiene la personería jurídica de las 5 organizaciones que no superaron el umbral.
 </div>
 ```
 
 ::: {.img-full}
-![](assets/partidos_personeria_juridica_2026.png)
-:::
-
-::: {.nota-cne style="display: flex; align-items: center; background: #F4F7FA; border: 1px solid #DCE6F2; border-left: 4px solid #0B2E63; border-radius: 6px; padding: 16px; margin-top: 24px; gap: 16px;"}
-<img src="assets/defensores_patria.jpg" alt="Logo Defensores de la Patria" style="width: 55px; height: auto; border-radius: 4px; flex-shrink: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-<div style="font-size: 14px; line-height: 1.5; color: #334155;">
-  <span style="font-weight: 600; color: #0B2E63; display: block; margin-bottom: 4px;">Novedad CNE · 3 de agosto de 2026</span>
-  El Consejo Nacional Electoral aprobó la personería jurídica al Grupo Significativo de Ciudadanos <strong>Defensores de la Patria</strong>, movimiento que avaló al presidente electo Abelardo de la Espriella.
-</div>
+<!-- El nombre del archivo lleva un espacio y parentesis, que rompen la sintaxis
+     de markdown para imagenes; por eso va como HTML con el espacio codificado. -->
+<img src="assets/partidos_personeria_juridica_2026%20(2).png" alt="Organizaciones con personería jurídica 2026">
 :::
 
 
@@ -926,7 +952,7 @@ ojs_define(citreptipo_ojs = datos_cand$citrep_tipo)
 
 ```{ojs}
 viewof tema = {
-  const temas = [["GSC","gsc"],["Sin coalición","sincoal"],["Coaliciones","coaliciones"],["CITREP","citrep"]];
+  const temas = [["GSC","gsc"],["Partidos con personería jurídica","sincoal"],["Coaliciones","coaliciones"],["CITREP","citrep"]];
   const el = html`<div class="seg-control">${temas.map(([lab,key],i) =>
     html`<button type="button" class="seg-btn${i===0?' active':''}" data-k="${key}">${lab}</button>`)}</div>`;
   el.value = temas[0][1];
@@ -946,14 +972,16 @@ titulo = (txt, plot) => { const d = document.createElement("div");
   d.innerHTML = `<div style="font-family:Archivo,sans-serif;font-weight:700;font-size:1.2rem;color:#0B2E63;margin:1.6rem 0 .3rem;">${txt}</div>`;
   d.appendChild(plot); return d; }
 
-plotHM = (tema, anio, width = 940) => {
+plotHM = (tema, anio, width = 940, alto = 60) => {
   const d = transpose(hm_ojs).filter(x => x.tema===tema && x.annoh===anio)
   const porcc = d3.rollup(d, v => d3.sum(v, x=>x.n), x=>x.corpcirc)
   const orden = [...porcc.entries()].sort((a,b)=>b[1]-a[1]).map(e=>e[0])
   const totales = [...porcc.entries()].map(([corpcirc,n])=>({corpcirc,n}))
   const tot = d3.sum(d, x=>x.n), muj = d3.sum(d.filter(x=>x.genero==="Mujeres"), x=>x.n)
+  const nomTema = {GSC: "Movimientos sociales y GSC", Coaliciones: "Coaliciones",
+                   Partidos: "Partidos con personería jurídica"}[tema]
   const plot = Plot.plot({
-    marginLeft: 210, marginRight: 70, width: width, height: 70 + orden.length*60, style:{fontSize:"13px"},
+    marginLeft: 210, marginRight: 70, width: width, height: 70 + orden.length*alto, style:{fontSize:"13px"},
     color: {domain:["Hombres","Mujeres"], range:["#355C7D","#E8A33D"], legend:true},
     x:{label:"Candidaturas", grid:true}, y:{domain:orden, label:null},
     marks:[
@@ -962,7 +990,7 @@ plotHM = (tema, anio, width = 940) => {
       Plot.ruleX([0])
     ]
   })
-  return titulo(`${tema==="GSC"?"Movimientos sociales y GSC":"Coaliciones"} ${anio}: ${fp(tot)} candidaturas · ${pc(muj/tot)}% mujeres`, plot)
+  return titulo(`${nomTema} ${anio}: ${fp(tot)} candidaturas · ${pc(muj/tot)}% mujeres`, plot)
 }
 
 plotEmbudo = (anio) => {
@@ -1043,20 +1071,35 @@ panelCoal = () => {
   cont.appendChild(titulo("Listas de coalición por partido", plot));
   return cont;
 }
-plotSC = (anio, npart) => {
-  const d = transpose(sincoal_ojs).filter(x => x.annoh===anio)
-  const orden = d.slice().sort((a,b)=>b.n-a.n).map(x=>x.partido)
-  const maxN = d3.max(d, x=>x.n) || 1
+// Panel secundario de la pestana de partidos: 2026 y 2022 en una sola grafica
+// (dos barras por partido), para no repetir la lista de nombres dos veces.
+plotSC = (np) => {
+  const d = transpose(sincoal_ojs).map(x => ({...x, anno: String(x.annoh)}))
+  const n26 = new Map(d.filter(x => x.annoh === 2026).map(x => [x.partido, x.n]))
+  const n22 = new Map(d.filter(x => x.annoh === 2022).map(x => [x.partido, x.n]))
+  // Primero los partidos de 2026 por candidaturas; al final los que solo existían en 2022.
+  const orden = [...new Set(d.map(x => x.partido))]
+    .sort((a, b) => (n26.get(b) ?? -1) - (n26.get(a) ?? -1) || (n22.get(b) ?? -1) - (n22.get(a) ?? -1))
+  const maxN = d3.max(d, x => x.n) || 1
   const plot = Plot.plot({
-    marginLeft: 165, marginRight: 42, width: 480, height: 40 + orden.length*19, style:{fontSize:"12px"},
-    x:{label:null, grid:true, domain:[0, maxN*1.12]}, y:{domain:orden, label:null},
-    marks:[
-      Plot.barX(d, {y:"partido", x:"n", fill:"#1F4E79", tip:true, insetTop:1.5, insetBottom:1.5}),
-      Plot.text(d, {y:"partido", x:"n", text:d=>fp(d.n), textAnchor:"start", dx:4, fontSize:12, fontWeight:600}),
+    marginLeft: 168, marginRight: 34, width: 430, height: 46 + orden.length*21, style:{fontSize:"11.5px"},
+    color: {domain: ["2022","2026"], range: ["#8BBCE0","#1F4E79"], legend: true},
+    x: {label: null, grid: true, domain: [0, maxN*1.14]},
+    fy: {domain: orden, label: null, axis: "left", padding: 0.12},
+    y: {domain: ["2026","2022"], axis: null},
+    marks: [
+      Plot.barX(d, {fy: "partido", y: "anno", x: "n", fill: "anno", tip: true,
+        title: x => `${x.partido} · ${x.anno}: ${fp(x.n)} candidaturas`}),
+      Plot.text(d, {fy: "partido", y: "anno", x: "n", text: x => fp(x.n), textAnchor: "start",
+        dx: 3, fontSize: 9, fill: "#334155"}),
       Plot.ruleX([0])
     ]
   })
-  return titulo(`Congreso ${anio} — ${npart} partidos con personería`, plot)
+  const cont = document.createElement("div")
+  cont.innerHTML = `<div style="font-family:Archivo,sans-serif;font-weight:700;font-size:1.05rem;color:#0B2E63;margin:1.6rem 0 .1rem;">Candidaturas por partido</div>
+    <div style="font-size:.74rem;color:#8494A8;line-height:1.35;margin-bottom:.3rem;">${np.b} partidos con personería en 2026 y ${np.a} en 2022. Sin barra: el partido no tenía personería ese año.</div>`
+  cont.appendChild(plot)
+  return cont
 }
 
 
@@ -1125,7 +1168,10 @@ tema === "gsc" ? html`<div style="display:grid; grid-template-columns: minmax(38
   <div>${panelCoal()}</div>
   <div>${plotHM("Coaliciones",2026,600)}${plotHM("Coaliciones",2022,600)}</div>
 </div>`
-: tema === "sincoal" ? html`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(440px,1fr));gap:28px;align-items:start;">${plotSC(2026,np.b)}${plotSC(2022,np.a)}</div>`
+: tema === "sincoal" ? html`<div style="display:grid; grid-template-columns: minmax(520px,1fr) minmax(400px,440px); gap:28px; align-items:start;">
+  <div>${plotHM("Partidos",2026,600,44)}${plotHM("Partidos",2022,600,44)}</div>
+  <div>${plotSC(np)}</div>
+</div>`
 : html`<div style="display:grid; grid-template-columns: minmax(300px,340px) minmax(620px,1fr); gap:20px; align-items:start;">
   <div>${plotCitrepOrg(2026)}${plotCitrepOrg(2022)}</div>
   <div>${plotCITREP(780)}</div>
@@ -1134,7 +1180,7 @@ tema === "gsc" ? html`<div style="display:grid; grid-template-columns: minmax(38
 
 ## Cambio territorial en las candidaturas a Cámara
 
-Diferencia en el número de candidaturas territoriales a Cámara entre 2026 y 2022. Bogotá, Valle del Cauca y Antioquia tuvieron los mayores incrementos de candidaturas en Cámara mientras que Amazonas y Sucre tuvieron las mayores caídas.
+Diferencia en el número de candidaturas territoriales a Cámara entre 2026 y 2022, en candidaturas (absoluto) o frente a las de 2022 (porcentual).
 
 ::: {.mapa-full}
 
@@ -1160,6 +1206,33 @@ geo_deptos_cm = FileAttachment("geo_deptos.geojson").json()
 cm_depto_data = transpose(cm_depto_ojs)
 ```
 
+```{ojs}
+viewof cm_medida = filtroSegmentado(["Absoluto", "Porcentual"], {value: "Absoluto", label: "Cambio"})
+html`<div class="filtro-caja">${viewof cm_medida}</div>`
+```
+
+```{ojs}
+// Cambio porcentual frente a 2022; sin candidaturas en 2022 no hay base de comparación.
+cm_pct = d => (d?.n_2022 > 0 && d?.n_2026 != null) ? 100 * (d.n_2026 - d.n_2022) / d.n_2022 : null
+cm_val = d => cm_medida === "Porcentual" ? cm_pct(d) : (d?.cambio ?? null)
+cm_fmtAbs = v => v == null || isNaN(v) ? "—" : (v > 0 ? "+" : "") + Math.round(v).toLocaleString("es-CO")
+cm_fmtPct = v => v == null || isNaN(v) ? "—" : (v > 0 ? "+" : "") + v.toFixed(1).replace(".", ",") + "%"
+cm_fmtv = v => cm_medida === "Porcentual" ? cm_fmtPct(v) : cm_fmtAbs(v)
+
+cm_texto = {
+  const d = cm_depto_data.filter(x => cm_val(x) != null).slice().sort((a, b) => cm_val(b) - cm_val(a));
+  const lista = xs => xs.map(x => `<b>${x.Depto}</b> (${cm_fmtv(cm_val(x))})`)
+    .reduce((s, t, i, a) => s + (i === 0 ? "" : i === a.length - 1 ? " y " : ", ") + t, "");
+  const suben = d.filter(x => cm_val(x) > 0).slice(0, 3);
+  const bajan = d.filter(x => cm_val(x) < 0).slice(-2).reverse();
+  const modo = cm_medida === "Porcentual" ? "En porcentaje frente a 2022" : "En número de candidaturas";
+  return html`<div style="font-size:13.5px; color:#475569; line-height:1.55; margin:2px 0 14px;">
+    ${modo}, ${suben.length ? `${lista(suben)} ${suben.length === 1 ? "tuvo el mayor incremento" : "tuvieron los mayores incrementos"}` : "ningún departamento aumentó sus candidaturas"}${bajan.length
+      ? `, mientras que ${lista(bajan)} ${bajan.length === 1 ? "tuvo la mayor caída" : "tuvieron las mayores caídas"}.`
+      : "; ningún departamento redujo sus candidaturas."}</div>`;
+}
+```
+
 :::: {style="display: flex; gap: 24px; align-items: flex-start;"}
 
 ::: {style="flex: 0 0 54%; width: 54%;"}
@@ -1183,21 +1256,20 @@ cm_layer = {
   if (map._legend) map._legend.remove();
 
   const lookup = new Map(cm_depto_data.map(d => [+d.coddepto, d]));
-  const maxabs = d3.max(cm_depto_data, d => Math.abs(d.cambio ?? 0)) || 1;
+  const maxabs = d3.max(cm_depto_data, d => Math.abs(cm_val(d) ?? 0)) || 1;
   const color = d3.scaleLinear().domain([-maxabs, 0, maxabs]).range(["#2171b5", "#f7f7f7", "#cb181d"]).clamp(true);
   const colorOf = v => (v == null || isNaN(v)) ? "#eeeeee" : color(v);
   const fmt = n => (n == null || isNaN(n)) ? "s. d." : n.toLocaleString("es-CO");
-  const sgn = n => (n == null || isNaN(n)) ? "—" : (n > 0 ? "+" : "") + n.toLocaleString("es-CO");
 
   const layer = L_cm.geoJSON(geo_deptos_cm, {
     style: f => {
       const d = lookup.get(+f.properties.coddepto);
-      return { weight: 0.8, color: "#54637a", fillColor: colorOf(d ? d.cambio : null), fillOpacity: 0.9 };
+      return { weight: 0.8, color: "#54637a", fillColor: colorOf(d ? cm_val(d) : null), fillOpacity: 0.9 };
     },
     onEachFeature: (f, lyr) => {
       const d = lookup.get(+f.properties.coddepto);
       const nom = d ? d.Depto : "Sin datos";
-      let t = `<b>${nom}</b><br>2022: ${fmt(d?.n_2022)} &middot; 2026: ${fmt(d?.n_2026)}<br>Cambio: <b>${sgn(d?.cambio)}</b>`;
+      let t = `<b>${nom}</b><br>2022: ${fmt(d?.n_2022)} &middot; 2026: ${fmt(d?.n_2026)}<br>Cambio: <b>${cm_fmtAbs(d?.cambio)}</b> (${cm_fmtPct(cm_pct(d))})`;
       lyr.bindTooltip(t, { sticky: true });
       lyr.on("mouseover", () => lyr.setStyle({ weight: 2.4, color: "#0B2E63" }));
       lyr.on("mouseout", () => lyr.setStyle({ weight: 0.8, color: "#54637a" }));
@@ -1213,10 +1285,10 @@ cm_layer = {
   legend.onAdd = () => {
     const dv = L_cm.DomUtil.create("div");
     dv.style = "background:#fff; padding:10px 12px; border-radius:6px; box-shadow:0 1px 4px rgba(0,0,0,.2); font-size:11px; width: 180px;";
-    let inner = `<div style="font-weight:700; color:#0B2E63; margin-bottom:6px; font-size:12px;">Cambio 2026 − 2022</div>`;
+    let inner = `<div style="font-weight:700; color:#0B2E63; margin-bottom:6px; font-size:12px;">Cambio 2026 − 2022${cm_medida === "Porcentual" ? " (%)" : ""}</div>`;
     inner += `<div style="height:10px; width:100%; border-radius:4px; border:1px solid #CBD5E1; background:linear-gradient(to right, ${color(-maxabs)}, ${color(0)}, ${color(maxabs)});"></div>`;
     inner += `<div style="display:flex; justify-content:space-between; font-size:10.5px; color:#475569; margin-top:4px; font-weight:600;">
-                <span>−${maxabs}</span><span>0</span><span>+${maxabs}</span>
+                <span>${cm_fmtv(-maxabs).replace("-", "−")}</span><span>0</span><span>${cm_fmtv(maxabs)}</span>
               </div>`;
     inner += `<div style="display:flex; justify-content:space-between; font-size:9.5px; color:#94A3B8; margin-top:2px;">
                 <span>menos candidaturas</span><span>más</span>
@@ -1235,10 +1307,14 @@ cm_layer = {
 ::: {style="flex: 0 0 46%; width: 46%;"}
 ```{ojs}
 tabla_cm_render = {
-  const data = cm_depto_data.slice().filter(d => d.cambio != null).sort((a,b) => b.cambio - a.cambio);
+  // Orden de mayor a menor según la medida elegida; sin base en 2022 va al final.
+  const data = cm_depto_data.slice().filter(d => d.cambio != null)
+    .sort((a,b) => (cm_val(b) ?? -Infinity) - (cm_val(a) ?? -Infinity));
   const fmt = d => (d == null || isNaN(d)) ? "—" : d.toLocaleString("es-CO");
-  const colr = v => v > 0 ? "#cb181d" : (v < 0 ? "#2171b5" : "#5a6a80");
-  const sgn = d => (d == null || isNaN(d)) ? "—" : (d > 0 ? "+" : "") + d.toLocaleString("es-CO");
+  const colr = v => v == null ? "#94A3B8" : v > 0 ? "#cb181d" : (v < 0 ? "#2171b5" : "#5a6a80");
+  const esPct = cm_medida === "Porcentual";
+  // La columna de la medida elegida va en negrita; la otra, en gris y más liviana.
+  const celda = (v, txt, activa) => `<td style='padding:10px 6px; text-align:right; color:${activa ? colr(v) : "#94A3B8"}; font-weight:${activa ? 700 : 500}; font-variant-numeric:tabular-nums; font-size:12.5px;'>${txt}</td>`;
   const th = "padding:12px 8px; background:#5E7C99; color:#ffffff; font-weight:600; font-size:12px; position:sticky; top:0; z-index:2; border-bottom:2px solid #4A637A;";
 
   let tbody = data.map((d,i) => `
@@ -1246,7 +1322,8 @@ tabla_cm_render = {
       <td style='padding:10px 8px; text-align:left;'><strong style='color:#1F2937; font-size:12.5px;'>${d.Depto}</strong></td>
       <td style='padding:10px 6px; text-align:right; color:#334155; font-variant-numeric:tabular-nums; font-size:12.5px;'>${fmt(d.n_2022)}</td>
       <td style='padding:10px 6px; text-align:right; color:#334155; font-variant-numeric:tabular-nums; font-size:12.5px;'>${fmt(d.n_2026)}</td>
-      <td style='padding:10px 6px; text-align:right; color:${colr(d.cambio)}; font-weight:700; font-variant-numeric:tabular-nums; font-size:12.5px;'>${sgn(d.cambio)}</td>
+      ${celda(d.cambio, cm_fmtAbs(d.cambio), !esPct)}
+      ${celda(cm_pct(d), cm_fmtPct(cm_pct(d)), esPct)}
     </tr>
   `).join('');
 
@@ -1264,6 +1341,7 @@ tabla_cm_render = {
             <th style="${th} text-align:right;">2022</th>
             <th style="${th} text-align:right;">2026</th>
             <th style="${th} text-align:right;">Cambio</th>
+            <th style="${th} text-align:right;">Cambio %</th>
           </tr>
         </thead>
         <tbody>${tbody}</tbody>
@@ -1496,6 +1574,11 @@ Plot.plot({
 })
 ```
 
+<!-- SECCIÓN OCULTA (Congreso): "Comparación territorial — Senado" de la velocidad
+     del preconteo. Para volver a mostrarla, borrar estas cuatro líneas y la
+     línea de cierre "FIN SECCIÓN OCULTA (Congreso)", que está antes de
+     "Comparación de preconteo y escrutinio".
+
 ## Comparación territorial — Senado
 
 Hora en que cada departamento llega al 99% de votos en Senado. Los cierres más tardíos (12 a.m o más tarde) son los Consulados, Chocó y Vichada; también cierran tarde Amazonas y Guaviare. La mayor parte del país llega antes de las 10 p.m. El rezago se concentra en zonas periféricas, no en los grandes centros. 
@@ -1648,6 +1731,8 @@ html`${tabla_sn_render}`
 
 :::
 
+FIN SECCIÓN OCULTA (Congreso) -->
+
 
 <!-- ============ SECCIÓN 04 — ESCRUTINIO VS PRECONTEO ============ -->
 ::: {.subseccion}
@@ -1667,7 +1752,7 @@ fmtN = d => d == null ? "—" : d.toLocaleString("es-CO")
 fmtP = d => d == null ? "—" : (d > 0 ? "+" : "") + d.toFixed(2).replace(".", ",") + "%"
 
 // Cambio neto del Congreso por año, para el resumen de cambios generales
-esc_congreso = [2026, 2022, 2018]
+esc_congreso = [2018, 2022, 2026]
   .map(a => transpose(esc_gral_ojs).find(d => d.anno === a && d.circ_tabla === "Subtotal Congreso"))
   .filter(d => d != null && d.Cambio_neto_pct != null)
 ```
@@ -1960,103 +2045,187 @@ html`
 ## Participación departamental
 
 ```{ojs}
-viewof part_corp_dep = filtroSegmentado(["Senado", "Cámara"], {label:"Corporación", value:"Senado"})
-html`<div class="filtro-caja">${viewof part_corp_dep}</div>`
-part_dep_data = transpose(part_dep_ojs).filter(d => d.corp_tabla === part_corp_dep)
+// Nombre completo de la opción de comparación; lo usan la sección
+// departamental y la municipal.
+DIF_SC = "Diferencia Senado − Cámara"
+viewof part_corp_dep = filtroSegmentado(["Senado", "Cámara", DIF_SC], {label:"Corporación", value:"Senado"})
+viewof part_crit_dep = filtroSegmentado(["Nivel 2026", "Cambio vs 2022", "Cambio vs 2018"], {label:"Criterio", value:"Nivel 2026"})
 ```
-El aumento se concentra en el Caribe, destacandose también Chocó y Caquetá. Las caídas fuertes se dieron especialmente en Guainía, Arauca, Huila y Putumayo.
 
 ```{ojs}
-{
-  const d = part_dep_data.filter(x => x.part_2026 != null);
-  const top = d.slice().sort((a,b) => b.part_2026 - a.part_2026)[0];
-  const sube = d.filter(x => x.cambio_22 != null).sort((a,b) => b.cambio_22 - a.cambio_22)[0];
-  return md`En **${part_corp_dep}**, la participación departamental más alta en 2026 fue la de **${top.Depto}** con **${fmtPct(top.part_2026)}**. Frente a 2022, el mayor aumento se dio en **${sube.Depto}** (**${fmtCambio(sube.cambio_22)}**).`;
+html`<div class="filtro-caja">
+  ${viewof part_corp_dep}
+  <div style="display:${part_corp_dep === DIF_SC ? 'none' : 'contents'};">${viewof part_crit_dep}</div>
+</div>`
+```
+
+```{ojs}
+cdp_all = transpose(part_dep_ojs)
+cdp_esDif = part_corp_dep === DIF_SC
+cdp_var = part_crit_dep === "Nivel 2026" ? "part_2026" : (part_crit_dep === "Cambio vs 2022" ? "cambio_22" : "cambio_18")
+
+// Filas del filtro activo. En la diferencia se cruzan Senado y Cámara por
+// departamento: dif = participación Senado − participación Cámara (pp).
+cdp_rows = {
+  if (!cdp_esDif) return cdp_all.filter(d => d.corp_tabla === part_corp_dep && d[cdp_var] != null);
+  const cam = new Map(cdp_all.filter(d => d.corp_tabla === "Cámara").map(d => [+d.coddepto, d]));
+  return cdp_all.filter(d => d.corp_tabla === "Senado")
+    .map(s => { const c = cam.get(+s.coddepto);
+      return {coddepto: s.coddepto, Depto: s.Depto, part_sen: s.part_2026, part_cam: c?.part_2026,
+              dif: (s.part_2026 != null && c?.part_2026 != null) ? s.part_2026 - c.part_2026 : null}; })
+    .filter(d => d.dif != null);
 }
+cdp_vk = cdp_esDif ? "dif" : cdp_var
+
+// Frase fija que explica el signo de la diferencia (también la usa la sección municipal).
+signo_sc = `La diferencia es la participación en Senado menos la de Cámara, en puntos porcentuales:
+  un valor <b style="color:#cb181d;">negativo (rojo)</b> indica mayor participación en Cámara y uno
+  <b style="color:#2171b5;">positivo (azul)</b>, mayor participación en Senado.`
+
+cdp_texto = {
+  const d = cdp_rows.slice().sort((a, b) => b[cdp_vk] - a[cdp_vk]);
+  if (!d.length) return html``;
+  const lista = (xs, f) => xs.map(x => `<b>${x.Depto}</b> (${f(x[cdp_vk])})`)
+    .reduce((s, t, i, a) => s + (i === 0 ? "" : i === a.length - 1 ? " y " : ", ") + t, "");
+  let t;
+  if (cdp_esDif) {
+    const cerca = d.filter(x => Math.abs(x.dif) <= 1).length;
+    const cam = d.filter(x => x.dif < -1).slice().sort((a, b) => a.dif - b.dif).slice(0, 3);
+    const sen = d.filter(x => x.dif > 1).slice(0, 3);
+    t = `${signo_sc} En <b>${cerca} de ${d.length}</b> departamentos la diferencia está entre −1 y +1 pp, es decir,
+      la participación es prácticamente igual en las dos corporaciones.
+      ${cam.length ? ` La participación es claramente mayor en Cámara en ${lista(cam, fmtCambio)}.` : ""}
+      ${sen.length ? ` Es mayor en Senado en ${lista(sen, fmtCambio)}.` : " Ningún departamento tiene una participación en Senado más de 1 pp por encima de la de Cámara."}`;
+  } else if (cdp_var === "part_2026") {
+    t = `En <b>${part_corp_dep}</b>, la participación departamental más alta en 2026 fue la de ${lista(d.slice(0, 2), fmtPct)};
+      la más baja, la de ${lista(d.slice(-2).reverse(), fmtPct)}.`;
+  } else {
+    const anno = cdp_var === "cambio_22" ? 2022 : 2018;
+    const suben = d.filter(x => x[cdp_vk] > 0).length;
+    t = `En <b>${part_corp_dep}</b>, frente a ${anno} la participación aumentó en <b>${suben} de ${d.length}</b> departamentos.
+      Los mayores aumentos se dieron en ${lista(d.slice(0, 2), fmtCambio)}; las mayores caídas, en ${lista(d.slice(-2).reverse(), fmtCambio)}.`;
+  }
+  return html`<p style="font-size:15.5px; color:#334155; line-height:1.55; margin-bottom:20px;">${t}</p>`;
+}
+```
+
+```{ojs}
+//| label: leaflet-setup-cdp
+L_cdp = require("leaflet@1.9.4")
+```
+
+```{ojs}
+html`<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">`
+```
+
+```{ojs}
+geo_deptos_cdp = FileAttachment("geo_deptos.geojson").json()
 ```
 
 :::: {.columns}
 
 ::: {.column width="55%"}
-```{r}
-#| label: mapa-part-dep
-sf_dep <- datos_part$sf_deptos %>% mutate(coddepto = as.integer(coddepto))
-part_dep <- datos_part$departamental %>% filter(corp_tabla == "Senado") %>%
-  mutate(coddepto = as.integer(coddepto))
-mp <- sf_dep %>% left_join(part_dep, by = "coddepto")
-
-mapa_dep <- function(var, titulo, es_cambio) {
-  vals <- mp[[var]]
-  if (es_cambio) {
-    m <- max(abs(vals), na.rm = TRUE)
-    pal <- colorNumeric(c("#cb181d", "#f7f7f7", "#2171b5"), domain = c(-m, m), na.color = "#eeeeee")
-  } else {
-    pal <- colorBin("Blues", domain = vals, bins = 5, na.color = "#eeeeee")
-  }
-  lab <- sprintf("<b>%s</b><br>2026: %s%%<br>vs 2022: %s pp &nbsp;·&nbsp; vs 2018: %s pp",
-    mp$Depto, formatC(mp$part_2026, 1, format = "f", decimal.mark = ","),
-    formatC(mp$cambio_22, 1, format = "f", decimal.mark = ","), formatC(mp$cambio_18, 1, format = "f", decimal.mark = ",")) %>%
-    lapply(htmltools::HTML)
-  leaflet(mp, height = 540) %>% 
-    add_basemap() %>%
-    addPolygons(weight = 0.6, color = "#ffffff", fillColor = pal(vals), fillOpacity = 0.88,
-                label = lab,
-                highlightOptions = highlightOptions(weight = 2, color = "#0B2E63", bringToFront = TRUE)) %>%
-    add_nombres_dep() %>%
-    { if (es_cambio) {
-        addLegend(., pal = pal, values = vals, title = titulo, position = "bottomright",
-                  bins = 5, opacity = 0.9, labFormat = labelFormat(suffix = " pp"))
-      } else {
-        addLegend(., pal = pal, values = vals, title = titulo, position = "bottomright",
-                  labFormat = labelFormat(suffix = "%"))
-      } }
+```{ojs}
+mapa_cdp = {
+  const div = html`<div style="height:540px; border:1px solid #EAF0F6; border-radius:8px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.03);"></div>`;
+  const map = L_cdp.map(div, { scrollWheelZoom: true }).setView([4.4, -73.5], 5);
+  L_cdp.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}", { attribution: "Tiles © Esri — Esri, DeLorme, NAVTEQ" }).addTo(map);
+  nombresDep(L_cdp).addTo(map);
+  invalidation.then(() => map.remove());
+  setTimeout(() => map.invalidateSize(), 200);
+  div.value = map;
+  return div;
 }
 ```
 
-::: {.panel-tabset}
-### Nivel 2026
-```{r}
-mapa_dep("part_2026", "Participación 2026 (%)", FALSE)
+```{ojs}
+cdp_pintar = {
+  const map = mapa_cdp.value;
+  if (!map) return;
+  if (map._dl) { map.removeLayer(map._dl); map._dl = null; }
+  if (map._legend) { map._legend.remove(); map._legend = null; }
+
+  const vk = cdp_vk, esNivel = vk === "part_2026";
+  const lookup = new Map(cdp_rows.map(x => [+x.coddepto, x]));
+  const vals = cdp_rows.map(x => x[vk]);
+  const vMin = d3.min(vals), vMax = d3.max(vals);
+  const m = Math.max(Math.abs(vMin), Math.abs(vMax)) || 1;
+  // Cambios y diferencia: rojo = negativo, blanco = 0, azul = positivo.
+  const escala = esNivel
+    ? d3.scaleSequential([vMin, vMax], d3.interpolateBlues)
+    : d3.scaleLinear().domain([-m, 0, m]).range(["#cb181d", "#f7f7f7", "#2171b5"]).clamp(true);
+  const colorOf = v => v == null ? "#eeeeee" : escala(v);
+
+  map._dl = L_cdp.geoJSON(geo_deptos_cdp, {
+    style: f => {
+      const x = lookup.get(+f.properties.coddepto);
+      return { weight: 0.6, color: "#ffffff", fillColor: colorOf(x ? x[vk] : null), fillOpacity: 0.88 };
+    },
+    onEachFeature: (f, lyr) => {
+      const x = lookup.get(+f.properties.coddepto);
+      lyr.bindTooltip(!x ? "<b>Sin datos</b>"
+        : cdp_esDif
+          ? `<b>${x.Depto}</b><br>Senado: ${fmtPct(x.part_sen)} &nbsp;·&nbsp; Cámara: ${fmtPct(x.part_cam)}<br>Diferencia: <b>${fmtCambio(x.dif)}</b> ${x.dif < 0 ? "(mayor en Cámara)" : x.dif > 0 ? "(mayor en Senado)" : ""}`
+          : `<b>${x.Depto}</b><br>2026: ${fmtPct(x.part_2026)}<br>vs 2022: ${fmtCambio(x.cambio_22)} &nbsp;·&nbsp; vs 2018: ${fmtCambio(x.cambio_18)}`,
+        { sticky: true });
+      lyr.on("mouseover", () => lyr.setStyle({ weight: 2, color: "#0B2E63" }));
+      lyr.on("mouseout",  () => lyr.setStyle({ weight: 0.6, color: "#ffffff" }));
+    }
+  }).addTo(map);
+
+  const legend = L_cdp.control({ position: "bottomright" });
+  legend.onAdd = () => {
+    const dv = L_cdp.DomUtil.create("div");
+    dv.style = "background:#fff; padding:10px 12px; border-radius:6px; box-shadow:0 1px 4px rgba(0,0,0,.2); font-size:11px; width:170px;";
+    const a = esNivel ? vMin : -m, b = esNivel ? vMax : m;
+    const f = v => esNivel ? fmtPct(v) : fmtCambio(v).replace("-", "−");
+    const titulo = cdp_esDif ? "Senado − Cámara (pp)" : part_crit_dep + (esNivel ? " (%)" : " (pp)");
+    dv.innerHTML = `<div style="font-weight:700; color:#0B2E63; margin-bottom:6px; font-size:12px;">${titulo}</div>
+      <div style="display:flex; justify-content:space-between; font-size:10.5px; color:#475569; margin-bottom:4px; font-weight:600;">
+        <span>${f(a)}</span>${esNivel ? "" : "<span>0</span>"}<span>${f(b)}</span></div>
+      <div style="height:10px; width:100%; border-radius:4px; border:1px solid #CBD5E1;
+                  background:linear-gradient(to right, ${colorOf(a)}, ${colorOf((a + b) / 2)}, ${colorOf(b)});"></div>
+      ${cdp_esDif ? `<div style="display:flex; justify-content:space-between; font-size:9.5px; color:#64748B; margin-top:3px;">
+        <span>Mayor en Cámara</span><span>Mayor en Senado</span></div>` : ""}`;
+    return dv;
+  };
+  legend.addTo(map);
+  map._legend = legend;
+  return md``;
+}
 ```
-### Cambio vs 2022
-```{r}
-mapa_dep("cambio_22", "Cambio 2026 − 2022 (pp)", TRUE)
-```
-### Cambio vs 2018
-```{r}
-mapa_dep("cambio_18", "Cambio 2026 − 2018 (pp)", TRUE)
-```
-:::
 :::
 
 ::: {.column width="45%"}
 ```{ojs}
 tabla_render = {
-  const data = part_dep_data.slice().sort((a,b)=> (b.part_2026 ?? -1) - (a.part_2026 ?? -1));
+  const vk = cdp_vk;
+  const data = cdp_rows.slice().sort((a, b) => (b[vk] ?? -Infinity) - (a[vk] ?? -Infinity));
   const th = "padding:9px 8px; background:#0B2E63; color:#ffffff; font-weight:600; font-size:11.5px; position:sticky; top:0;";
-  const rows = data.map((d,i) => {
-    const c22 = d.cambio_22>0?"#1B7A3A":(d.cambio_22<0?"#C00000":"#94A3B8");
-    const c18 = d.cambio_18>0?"#1B7A3A":(d.cambio_18<0?"#C00000":"#94A3B8");
-    return html`<tr style="border-bottom:1px solid #EEF2F6; ${filaRango(i, data.length, true)}">
+  const col = v => v > 0 ? "#1B7A3A" : (v < 0 ? "#C00000" : "#94A3B8");
+  const colDif = v => v > 0 ? "#2171b5" : (v < 0 ? "#cb181d" : "#94A3B8");
+  const td = "padding:7px 8px; text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums;";
+  const rows = data.map((d, i) => `<tr style="border-bottom:1px solid #EEF2F6; ${filaRango(i, data.length, true)}">
       <td style="padding:7px 10px; text-align:left; color:#1F2937;">${d.Depto}</td>
-      <td style="padding:7px 8px; text-align:right; font-weight:700; color:#0B2E63; font-variant-numeric:tabular-nums;">${fmtPct(d.part_2026)}</td>
-      <td style="padding:7px 8px; text-align:right; color:${c22}; font-weight:600; white-space:nowrap; font-variant-numeric:tabular-nums;">${fmtCambio(d.cambio_22)}</td>
-      <td style="padding:7px 8px; text-align:right; color:${c18}; font-weight:600; white-space:nowrap; font-variant-numeric:tabular-nums;">${fmtCambio(d.cambio_18)}</td>
-    </tr>`;
-  });
-  const cont = document.createElement("div");
-  cont.style = "max-height:600px; overflow-y:auto; border:1px solid #E2E8F0; border-radius:8px; box-shadow:0 1px 4px rgba(11,46,99,.06);";
-  cont.appendChild(html`<div style="padding:7px 10px; border-bottom:1px solid #E2E8F0; background:#F8FAFC;">${leyendaRango(true)}</div>`);
-  cont.appendChild(html`<table style="width:100%; border-collapse:collapse; font-size:12.5px;">
-    <thead><tr>
-      <th style="${th} text-align:left;">Departamento</th>
-      <th style="${th} text-align:right;">2026</th>
-      <th style="${th} text-align:right;">vs 2022</th>
-      <th style="${th} text-align:right;">vs 2018</th>
-    </tr></thead><tbody>${rows}</tbody></table>`);
-  return cont;
+      ${cdp_esDif
+        ? `<td style="${td} color:#334155;">${fmtPct(d.part_sen)}</td>
+           <td style="${td} color:#334155;">${fmtPct(d.part_cam)}</td>
+           <td style="${td} color:${colDif(d.dif)}; font-weight:700;">${fmtCambio(d.dif)}</td>`
+        : `<td style="${td} font-weight:700; color:#0B2E63;">${fmtPct(d.part_2026)}</td>
+           <td style="${td} color:${col(d.cambio_22)}; font-weight:600;">${fmtCambio(d.cambio_22)}</td>
+           <td style="${td} color:${col(d.cambio_18)}; font-weight:600;">${fmtCambio(d.cambio_18)}</td>`}
+    </tr>`).join("");
+  const head = cdp_esDif
+    ? `<th style="${th} text-align:right;">Senado</th><th style="${th} text-align:right;">Cámara</th><th style="${th} text-align:right;">Sen − Cám</th>`
+    : `<th style="${th} text-align:right;">2026</th><th style="${th} text-align:right;">vs 2022</th><th style="${th} text-align:right;">vs 2018</th>`;
+  return html`<div style="max-height:600px; overflow-y:auto; border:1px solid #E2E8F0; border-radius:8px; box-shadow:0 1px 4px rgba(11,46,99,.06);">
+    <div style="padding:7px 10px; border-bottom:1px solid #E2E8F0; background:#F8FAFC;">${cdp_esDif
+      ? `<span style="font-size:11px; color:#64748B;">Negativo = mayor participación en Cámara · positivo = mayor en Senado</span>`
+      : leyendaRango(true)}</div>
+    <table style="width:100%; border-collapse:collapse; font-size:12.5px;">
+      <thead><tr><th style="${th} text-align:left;">Departamento</th>${head}</tr></thead>
+      <tbody>${rows}</tbody></table></div>`;
 }
-html`${tabla_render}`
 ```
 :::
 
@@ -2085,7 +2254,9 @@ mapa_muni <- function(corp_sel, tipo) {
     lab <- sprintf("<b>%s</b> <span style='color:#888'>(%s)</span><br>Senado: %s%% &nbsp; Cámara: %s%%<br>Sen − Cám: <b>%s pp</b>",
       mp$Municipio, mp$Depto, formatC(mp$part_sen, 1, format = "f", decimal.mark=","),
       formatC(mp$part_cam, 1, format = "f", decimal.mark=","), formatC(mp$dif_sc, 1, format = "f", decimal.mark=",")) %>% lapply(htmltools::HTML)
-    titulo <- "Sen − Cám (pp)"; suf <- " pp"; usebins <- TRUE
+    titulo <- paste0("Senado − Cámara (pp)<br><span style='font-weight:400; font-size:10px; color:#64748B;'>",
+                     "Negativo: mayor en Cámara<br>Positivo: mayor en Senado</span>")
+    suf <- " pp"; usebins <- TRUE
   } else {
     d <- muni_all %>% filter(corp_tabla == corp_sel)
     mp <- sf_mpi %>% left_join(d, by = "codmpio") %>%
@@ -2122,7 +2293,7 @@ mapa_muni <- function(corp_sel, tipo) {
 ```
 
 ```{ojs}
-viewof muni_corp = filtroSegmentado(["Senado", "Cámara", "Comparación S-C"], {value:"Senado", label:"Corporación"})
+viewof muni_corp = filtroSegmentado(["Senado", "Cámara", DIF_SC], {value:"Senado", label:"Corporación"})
 viewof muni_modo = filtroSegmentado(["Nivel 2026", "Cambio vs 2022", "Cambio vs 2018"], {value:"Nivel 2026", label:"Criterio"})
 ```
 
@@ -2130,7 +2301,7 @@ viewof muni_modo = filtroSegmentado(["Nivel 2026", "Cambio vs 2022", "Cambio vs 
 html`
 <div class="filtro-caja">
   ${viewof muni_corp}
-  <div style="display: ${muni_corp === 'Comparación S-C' ? 'none' : 'contents'};">${viewof muni_modo}</div>
+  <div style="display: ${muni_corp === DIF_SC ? 'none' : 'contents'};">${viewof muni_modo}</div>
 </div>
 `
 ```
@@ -2138,8 +2309,22 @@ html`
 ```{ojs}
 {
   let texto = "";
-  if (muni_corp === "Comparación S-C") {
-    texto = "Se observa una alta coincidencia territorial, aunque existen focos específicos donde una corporación supera claramente a la otra (valores positivos indican mayor fuerza del Senado, y negativos, de la Cámara). Ciertas regiones periféricas muestran las brechas más pronunciadas a favor del Senado.";
+  if (muni_corp === DIF_SC) {
+    // Se calcula con los datos: casi todo el mapa queda cerca de 0 y las
+    // diferencias grandes son negativas (mayor participación en Cámara).
+    const d = transpose(muni_dif_ojs).filter(x => x.dif_sc != null);
+    const cerca = d.filter(x => Math.abs(x.dif_sc) <= 2).length;
+    const cam10 = d.filter(x => x.dif_sc < -10);
+    const deptos = [...new Set(cam10.map(x => x.Depto))];
+    const top = d.slice().sort((a, b) => a.dif_sc - b.dif_sc).slice(0, 3);
+    const maxSen = d.slice().sort((a, b) => b.dif_sc - a.dif_sc)[0];
+    const y = xs => xs.reduce((s, t, i, a) => s + (i === 0 ? "" : i === a.length - 1 ? " y " : ", ") + t, "");
+    texto = `${signo_sc} En <b>${cerca.toLocaleString("es-CO")} de ${d.length.toLocaleString("es-CO")}</b> municipios la
+      diferencia está entre −2 y +2 pp, por eso la mayor parte del mapa se ve casi blanca: la participación es prácticamente
+      igual en las dos corporaciones. Las diferencias grandes son todas negativas, es decir, de mayor participación en Cámara:
+      ${cam10.length} municipios superan los −10 pp, ubicados en ${y(deptos)}, con los casos más marcados en
+      ${y(top.map(x => `<b>${x.Municipio}</b> (${fmtCambio(x.dif_sc)})`))}. La mayor ventaja del Senado es de apenas
+      ${fmtCambio(maxSen.dif_sc)}, en ${maxSen.Municipio} (${maxSen.Depto}).`;
   } else if (muni_modo === "Nivel 2026") {
     texto = "El patrón municipal confirma que la región Caribe no solo sobresale en promedios departamentales, sino también por una extensión amplia de municipios con niveles altos de participación. Se observan focos de participación alta en áreas como el Chocó, mientras que en la Amazonía el comportamiento es más heterogéneo. La más baja participación se evidencia en el norte de Antioquia y el Bajo Cauca antioqueño.";
   } else if (muni_modo === "Cambio vs 2022") {
@@ -2203,7 +2388,7 @@ update_map = {
   });
   
   let targetId = "";
-  if (muni_corp === "Comparación S-C") {
+  if (muni_corp === DIF_SC) {
     targetId = "mapa-dif";
   } else {
     const c = muni_corp === "Senado" ? "senado" : "camara";
@@ -2229,7 +2414,7 @@ viewof muni_top = filtroSelect(["Top 20 más alto", "Top 20 más bajo"], {value:
 
 ```{ojs}
 tabla_muni = {
-  const esDif = muni_corp === "Comparación S-C";
+  const esDif = muni_corp === DIF_SC;
   const th = "padding:10px 8px; background:#5E7C99; color:#ffffff; font-weight:600; font-size:11.5px; position:sticky; top:0; z-index:2;";
   const colr = v => v>0?"#1B7A3A":(v<0?"#C00000":"#5a6a80");
   let data, vk, head, rowFn;
@@ -2543,7 +2728,7 @@ geo_citrep_esp = FileAttachment("geo_citrep.geojson").json()
 ```{ojs}
 mapa_esp_L = {
   const div = html`<div style="height:540px; border:1px solid #EAF0F6; border-radius:8px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.03);"></div>`;
-  const map = L_esp.map(div, { scrollWheelZoom: false }).setView([4.4, -73.5], 5);
+  const map = L_esp.map(div, { scrollWheelZoom: true }).setView([4.4, -73.5], 5);
   L_esp.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}", { attribution: "Tiles © Esri — Esri, DeLorme, NAVTEQ" }).addTo(map);
   invalidation.then(() => map.remove());
   setTimeout(() => map.invalidateSize(), 200);
@@ -2576,6 +2761,17 @@ esp_layer_update = {
   }
   const lookup = new Map(dataArr.map(d => [+d[dataKey], d]));
   const vals = dataArr.map(d => d[varKey]).filter(v => v != null);
+
+  // Las CITREP no cubren todo el país: en los huecos se veían los límites que
+  // dibuja el basemap, que es lo que se leía como rayas sueltas. Se tapa con el
+  // contorno del país en gris muy claro, por debajo de la capa de datos.
+  if (map._fondo) { map.removeLayer(map._fondo); map._fondo = null; }
+  if (esp_elec === "CITREP" && esp_nivel === "Regional") {
+    map._fondo = L_esp.geoJSON(geo_deptos_esp, {
+      interactive: false,
+      style: () => ({ fillColor: "#F1F3F5", fillOpacity: 1, color: "#E2E5E9", weight: 0.5 })
+    }).addTo(map);
+  }
 
   let color;
   if (esDif) {
@@ -2614,9 +2810,27 @@ esp_layer_update = {
     }).addTo(map);
   }
 
-  // Nombres de los departamentos, siempre visibles (el hover sigue dando el detalle)
+  // Nombres siempre visibles (el hover sigue dando el detalle). En CITREP se
+  // rotula cada circunscripción sobre su propio polígono: el centro se toma de
+  // los bounds que calcula Leaflet, que no depende de la orientación de los
+  // anillos del geojson.
   if (map._nom) { map.removeLayer(map._nom); map._nom = null; }
-  if (esp_nivel === "Regional" && esp_elec !== "CITREP") map._nom = nombresDep(L_esp).addTo(map);
+  if (esp_nivel === "Regional" && esp_elec !== "CITREP") {
+    map._nom = nombresDep(L_esp).addTo(map);
+  } else if (esp_nivel === "Regional" && esp_elec === "CITREP") {
+    const etiquetas = [];
+    layer.eachLayer(l => {
+      const d = lookup.get(+l.feature.properties[codeProp]);
+      if (!d || !d.nombre_region) return;
+      const c = l.getBounds().getCenter();
+      etiquetas.push(L_esp.marker(c, {
+        interactive: false, keyboard: false,
+        icon: L_esp.divIcon({ className: "", iconSize: [0, 0],
+          html: `<div style="${estiloDep}font-size:9.5px;transform:translate(-50%,-50%);">${d.nombre_region}</div>` })
+      }));
+    });
+    map._nom = L_esp.layerGroup(etiquetas).addTo(map);
+  }
 
   const legend = L_esp.control({ position: "bottomleft" });
   legend.onAdd = () => {
@@ -2784,7 +2998,9 @@ html`
 ```
 
 ```{ojs}
-viewof brecha_top = filtroSelect(["Municipios con mayor brecha (Cámara > CITREP)", "Municipios con menor brecha"], {value:"Municipios con mayor brecha (Cámara > CITREP)"})
+viewof brecha_top = filtroSelect(
+  ["Donde más se votó por Cámara", "Donde menos se votó por Cámara"],
+  {value: "Donde más se votó por Cámara"})
 ```
 
 :::: {style="display: flex; gap: 24px; align-items: flex-start; margin-bottom: 48px;"}
@@ -2798,18 +3014,30 @@ sf_mpios_brecha <- datos_part$sf_mpios %>% mutate(codmpio = as.integer(codmpio))
 m_abs <- max(abs(sf_mpios_brecha$diff_pp), na.rm=TRUE)
 pal_brecha <- colorNumeric(c("#9F2F2F", "#F0E2D3", "#355C7D"), domain = c(-m_abs, m_abs), na.color = "#eeeeee")
 
-lab_brecha <- sprintf("<b>%s</b><br>Cámara Rural: %s%%<br>CITREP: %s%%<br><b>Diferencia: %+s pp</b>",
-  sf_mpios_brecha$Municipio, 
+# El signo se explica en el propio tooltip: sin eso, un "+12 pp" no dice por si
+# solo cual de las dos votaciones fue la mas alta.
+lab_brecha <- sprintf(
+  "<b>%s</b><br>Cámara Rural: %s%%<br>CITREP: %s%%<br><b>Diferencia: %s pp</b><br><span style='color:#475569'>%s</span>",
+  sf_mpios_brecha$Municipio,
   formatC(sf_mpios_brecha$part_cam, 1, format="f", decimal.mark=","),
   formatC(sf_mpios_brecha$part_citrep, 1, format="f", decimal.mark=","),
-  formatC(sf_mpios_brecha$diff_pp, 1, format="f", decimal.mark=",")) %>% lapply(htmltools::HTML)
+  formatC(sf_mpios_brecha$diff_pp, 1, format="f", decimal.mark=",", flag="+"),
+  ifelse(sf_mpios_brecha$diff_pp > 0, "Se votó más por Cámara que por CITREP",
+    ifelse(sf_mpios_brecha$diff_pp < 0, "Se votó más por CITREP que por Cámara",
+           "Misma participación en las dos"))) %>% lapply(htmltools::HTML)
 
 leaflet(sf_mpios_brecha, height = 540) %>%
   add_basemap() %>%
   addPolygons(weight = 0.5, color = "#ffffff", fillColor = ~pal_brecha(diff_pp), fillOpacity = 0.88,
               label = lab_brecha, highlightOptions = highlightOptions(weight = 2, color = "#0B2E63", bringToFront = TRUE)) %>%
   add_borde_dep() %>%
-  addLegend(pal = pal_brecha, values = ~diff_pp, title = "Cámara − CITREP (pp)", position = "bottomleft")
+  addLegend(pal = pal_brecha, values = ~diff_pp, position = "bottomleft",
+            title = htmltools::HTML(paste0(
+              "Cámara &minus; CITREP (pp)",
+              "<div style='font-weight:400;font-size:10px;color:#1F4E79;margin-top:3px;'>",
+              "&#9632; Azul: más participación en <b>Cámara</b></div>",
+              "<div style='font-weight:400;font-size:10px;color:#9F2F2F;'>",
+              "&#9632; Rojo: más participación en <b>CITREP</b></div>")))
 ```
 :::
 
@@ -2817,14 +3045,20 @@ leaflet(sf_mpios_brecha, height = 540) %>%
 ```{ojs}
 tabla_brecha_render = {
   const data = transpose(diff_mun_ojs);
-  const rows_to_show = brecha_top === "Municipios con mayor brecha (Cámara > CITREP)" ? data.slice(0, 20) : data.slice(-20).reverse();
+  const rows_to_show = brecha_top === "Donde más se votó por Cámara"
+    ? data.slice(0, 20) : data.slice(-20).reverse();
   
   const th = "padding:12px 10px; background:#5E7C99; color:#ffffff; font-weight:600; font-size:12px; position:sticky; top:0; z-index:2; border-bottom:2px solid #4A637A;";
   
+  // Se muestran las dos participaciones y no solo la diferencia: asi se ve de
+  // donde sale el signo sin tener que recordar cual va primero en la resta.
+  const fpp = v => (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(1).replace(".", ",");
   let tbody = rows_to_show.map((d,i) => `
     <tr style='border-bottom:1px solid #E2E8F0; background:${i%2?'#F8FAFC':'#ffffff'};'>
       <td style='padding:10px 10px; text-align:left;'><strong style='color:#1F2937; font-size:12.5px;'>${d.Municipio}</strong><div style='font-size:10px; color:#94A3B8;'>${d.Depto}</div></td>
-      <td style='padding:10px 6px; text-align:right; font-weight:700; color:#355C7D; font-variant-numeric:tabular-nums; font-size:12.5px;'>${(d.diff_pp>0?"+":"")+d.diff_pp.toFixed(1).replace(".", ",")} pp</td>
+      <td style='padding:10px 5px; text-align:right; color:#334155; font-variant-numeric:tabular-nums; font-size:12px;'>${d.part_cam.toFixed(1).replace(".", ",")}%</td>
+      <td style='padding:10px 5px; text-align:right; color:#334155; font-variant-numeric:tabular-nums; font-size:12px;'>${d.part_citrep.toFixed(1).replace(".", ",")}%</td>
+      <td style='padding:10px 8px; text-align:right;'><span style='display:inline-block; padding:3px 8px; border-radius:10px; white-space:nowrap; font-size:11.5px; font-weight:700; font-variant-numeric:tabular-nums; background:${d.diff_pp>=0?"#E8F1FA":"#F7EAEA"}; color:${d.diff_pp>=0?"#355C7D":"#9F2F2F"};'>${fpp(d.diff_pp)} pp</span></td>
     </tr>
   `).join('');
 
@@ -2842,8 +3076,10 @@ tabla_brecha_render = {
   header.style = "padding: 10px 16px; border-bottom: 1px solid #CBD5E1; display:flex; justify-content:space-between; align-items:center; background:#F1F5F9;";
 
   const title = document.createElement("div");
-  title.style = "font-weight: 800; color: #0B2E63; font-size: 13.5px; text-transform: uppercase;";
-  title.innerText = "Diferencia por municipio";
+  title.innerHTML = `<div style="font-weight:800; color:#0B2E63; font-size:13.5px; text-transform:uppercase;">Diferencia por municipio</div>
+    <div style="font-size:10.5px; color:#64748B; margin-top:2px;">
+      Positivo <span style="color:#355C7D; font-weight:700;">(azul)</span>: se votó más por Cámara ·
+      Negativo <span style="color:#9F2F2F; font-weight:700;">(rojo)</span>: más por CITREP</div>`;
 
   const filterCont = document.createElement("div");
   filterCont.style.fontSize = "12px";
@@ -2856,7 +3092,12 @@ tabla_brecha_render = {
   tableCont.style = "overflow-y: auto; flex: 1;";
   tableCont.innerHTML = `
     <table style="width:100%; border-collapse:collapse; font-family:sans-serif;">
-      <thead><tr><th style="${th} text-align:left;">Municipio</th><th style="${th} text-align:right;">Diferencia (Cám - CITREP)</th></tr></thead>
+      <thead><tr>
+        <th style="${th} text-align:left;">Municipio</th>
+        <th style="${th} text-align:right;">Cámara</th>
+        <th style="${th} text-align:right;">CITREP</th>
+        <th style="${th} text-align:right;">Cámara − CITREP</th>
+      </tr></thead>
       <tbody>${tbody}</tbody>
     </table>
   `;
@@ -3568,6 +3809,12 @@ html`<div style="font-weight:800; color:#0B2E63; margin-bottom:8px; font-size:13
 <h3 style="font-weight:800; color:#0B2E63; font-size:16px; text-transform:uppercase; margin-top:32px; margin-bottom:16px; border-bottom: 2px solid #0B2E63; padding-bottom: 8px;">Distribución territorial del riesgo y la participación</h3>
 
 ```{ojs}
+viewof moe_grupo = filtroSegmentado(["Todos", ...moe_grupos],
+  {value: "Todos", label: "Resaltar", format: x => x.replace("Part. ", "part. ")})
+html`<div class="filtro-caja">${viewof moe_grupo}</div>`
+```
+
+```{ojs}
 md`El cruce entre riesgo y participación no es homogéneo en el territorio. Los
 municipios que combinan riesgo de violencia y participación baja se concentran en
 **${transpose(moe_tabla_ojs)[0]?.Depto}** (${transpose(moe_tabla_ojs)[0]?.n_mun} municipios),
@@ -3612,14 +3859,28 @@ moe_colores = ({
   "Part. media o sin datos": "#FFFFFF"
 })
 
+// "Part. media o sin datos" no es una categoría del cruce, así que no se ofrece.
+moe_grupos = ["Con riesgo - Part. baja", "Con riesgo - Part. alta",
+              "Sin riesgo - Part. baja", "Sin riesgo - Part. alta"]
+moe_apagado = "#F1F3F5"
+```
+
+```{ojs}
 moe_layer_update = {
   const map = mapa_moe_L.value;
   if (!map) return;
   if (map._dl) map.removeLayer(map._dl);
   if (map._legend) map._legend.remove();
 
+  // Con una categoría seleccionada el resto del país queda en gris, para que la
+  // que interesa se lea sola.
+  const soloUno = moe_grupo !== "Todos";
+  const relleno = g => soloUno
+    ? (g === moe_grupo ? moe_colores[g] : moe_apagado)
+    : (moe_colores[g] || "#FFFFFF");
+
   const layer = L_moe.geoJSON(moe_geo, {
-    style: f => ({ fillColor: moe_colores[f.properties.grupo_mapa] || "#FFFFFF",
+    style: f => ({ fillColor: relleno(f.properties.grupo_mapa),
                    weight: 0.4, color: "#94A3B8", fillOpacity: 0.9 }),
     onEachFeature: (f, lyr) => {
       const p = f.properties;
@@ -3648,7 +3909,10 @@ moe_layer_update = {
     dv.style = "background:white; padding:12px; border-radius:6px; box-shadow:0 1px 4px rgba(0,0,0,0.2); font-family:sans-serif; font-size:11.5px; line-height:18px; color:#334155;";
     dv.innerHTML = `<div style="font-weight:bold; color:#0B2E63; margin-bottom:8px;">Riesgo de violencia y participación</div>`;
     Object.keys(moe_colores).forEach(k => {
-      dv.innerHTML += `<div style="display:flex; align-items:center; margin-bottom:4px;"><i style="background:${moe_colores[k]}; width:16px; height:16px; border:1px solid #CBD5E1; border-radius:3px; display:inline-block; margin-right:8px;"></i> ${k}</div>`;
+      const activo = !soloUno || k === moe_grupo;
+      dv.innerHTML += `<div style="display:flex; align-items:center; margin-bottom:4px; opacity:${activo ? 1 : .38};">
+        <i style="background:${activo ? moe_colores[k] : moe_apagado}; width:16px; height:16px; border:1px solid #CBD5E1; border-radius:3px; display:inline-block; margin-right:8px;"></i>
+        <span style="${activo && soloUno ? "font-weight:700;" : ""}">${k}</span></div>`;
     });
     dv.innerHTML += `<div style="margin-top:8px; font-size:10px; color:#94A3B8;">Fuente: MOE · Mapa de Riesgo Electoral 2026</div>`;
     return dv;
@@ -3662,24 +3926,48 @@ moe_layer_update = {
 
 :::: {style="flex: 1;"}
 ```{ojs}
+// Con "Todos" se muestra la tabla precalculada de departamentos críticos; al
+// elegir una categoría se arma sobre la marcha desde el propio geojson, que ya
+// trae el grupo, el municipio y la participación de cada uno.
+moe_tabla_datos = {
+  if (moe_grupo === "Todos") return transpose(moe_tabla_ojs);
+  const filas = moe_geo.features
+    .map(f => f.properties)
+    .filter(p => p.grupo_mapa === moe_grupo && p.Depto != null);
+  return d3.rollups(filas, v => ({
+      n_mun: v.length,
+      part_prom: d3.mean(v, x => x.part_senado),
+      municipios_lista: v.slice().sort((a, b) => (a.part_senado ?? 0) - (b.part_senado ?? 0))
+        .slice(0, 30).map(x => x.Municipio).join(", ")
+    }), p => p.Depto)
+    .map(([Depto, o]) => ({Depto, ...o}))
+    .sort((a, b) => b.n_mun - a.n_mun || a.part_prom - b.part_prom);
+}
+
 tabla_moe_render = {
-  const data = transpose(moe_tabla_ojs);
+  const data = moe_tabla_datos;
   const th = "padding:12px 8px; background:#5E7C99; color:#ffffff; font-weight:600; font-size:12px; position:sticky; top:0; z-index:2; border-bottom:2px solid #4A637A;";
-  const tbody = data.map((d, i) => `
+  const color = moe_grupo === "Todos" ? "#9A4633" : moe_colores[moe_grupo];
+  const tbody = data.length ? data.map((d, i) => `
     <tr style='border-bottom:1px solid #E2E8F0; ${filaRango(i, data.length, false)}'>
       <td style='padding:10px 8px; text-align:left;'>
         <strong style='color:#1F2937; font-size:12.5px;'>${d.Depto}</strong>
         <div style='font-size:10px; color:#94A3B8; line-height:1.35; margin-top:2px;'>${d.municipios_lista}</div>
       </td>
-      <td style='padding:10px 6px; text-align:right; font-weight:700; color:#9A4633; font-variant-numeric:tabular-nums; font-size:12.5px;'>${d.n_mun}</td>
+      <td style='padding:10px 6px; text-align:right; font-weight:700; color:${color}; font-variant-numeric:tabular-nums; font-size:12.5px;'>${d.n_mun}</td>
       <td style='padding:10px 6px; text-align:right; color:#334155; font-variant-numeric:tabular-nums; font-size:12.5px;'>${d.part_prom.toFixed(1).replace(".", ",")}%</td>
-    </tr>`).join('');
+    </tr>`).join('')
+    : `<tr><td colspan="3" style="padding:24px 12px; text-align:center; color:#94A3B8; font-size:12px;">
+         Ningún municipio en esta categoría.</td></tr>`;
 
+  const total = d3.sum(data, d => d.n_mun);
   return html`
   <div style="background:#fff; border:1px solid #EAF0F6; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.02); display:flex; flex-direction:column; height:550px; overflow:hidden;">
     <div style="padding:10px 16px; border-bottom:1px solid #CBD5E1; background:#F1F5F9;">
-      <div style="font-weight:800; color:#0B2E63; font-size:13.5px; text-transform:uppercase;">Departamentos críticos</div>
-      <div style="font-size:10.5px; color:#64748B; margin-top:2px;">Municipios con riesgo de violencia y participación baja</div>
+      <div style="font-weight:800; color:#0B2E63; font-size:13.5px; text-transform:uppercase;">${moe_grupo === "Todos" ? "Departamentos críticos" : moe_grupo}</div>
+      <div style="font-size:10.5px; color:#64748B; margin-top:2px;">${moe_grupo === "Todos"
+        ? "Municipios con riesgo de violencia y participación baja"
+        : `${total} municipios en ${data.length} departamentos · de más a menos municipios`}</div>
     </div>
     <div style="overflow-y:auto; flex:1;">
       <table style="width:100%; border-collapse:collapse; font-family:sans-serif;">
@@ -4288,7 +4576,7 @@ ojs_define(el_comp_ojs = datos_el$comp)
 ```
 
 ```{ojs}
-viewof el_corp = filtroSegmentado(["Senado", "Cámara"], {value:"Senado", label:"Corporación"})
+viewof el_corp = filtroSegmentado(["Senado", "Cámara", "Todos"], {value:"Senado", label:"Corporación"})
 viewof el_anno = filtroSegmentado([2026, 2022], {value:2026, format:x=>`${x}`, label:"Año"})
 html`<div class="filtro-caja">${viewof el_corp}${viewof el_anno}</div>`
 ```
@@ -4299,26 +4587,53 @@ el_seats_data = transpose(el_seats_ojs).map(d => ({...d, tipo: d.tipo === "Parti
 el_comp_data = transpose(el_comp_ojs).map(d => ({...d, tipo: d.tipo === "Partido" ? "Partido con personería jurídica" : d.tipo}));
 
 // Variables locales
-ord_tipo_el = ["Coaliciones", "Partido con personería jurídica", "GSC", "Organización indígena", "Organización afro", "Organización social"]
-col_tipo_el = ({"Coaliciones":"#355C7D","Partido con personería jurídica":"#6F8FB8","GSC":"#E8A33D","Organización indígena":"#1B7A3A","Organización afro":"#9A4633","Organización social":"#7F60A8"})
+ord_tipo_el = ["Coaliciones", "Partido con personería jurídica", "GSC", "Organización indígena", "Organización afro", "Organización CITREP"]
+col_tipo_el = ({"Coaliciones":"#355C7D","Partido con personería jurídica":"#6F8FB8","GSC":"#E8A33D","Organización indígena":"#1B7A3A","Organización afro":"#9A4633","Organización CITREP":"#7F60A8"})
 esEspecial_el = c => c && /CITREP|IND[IÍ]GENA|AFRO|ESTATUTO/i.test(c)
+
+// "Todos" suma Senado y Cámara.
+el_esCorp = d => el_corp === "Todos" || d.corp === el_corp
+el_rotuloCorp = el_corp === "Todos" ? "el Congreso" : el_corp
+
+// Declaración política ante el CNE: el color agrupa por bancada en lugar de
+// por partido. Mismas cuatro categorías en 2022 y en 2026.
+el_ord_banc = ["Gobierno", "Independencia", "Oposición", "Sin declaración"]
+el_col_banc = ({"Gobierno": "#1F4E79", "Oposición": "#9A4633",
+                "Independencia": "#E8A33D", "Sin declaración": "#94A3B8"})
 ```
 
 ```{ojs}
 {
-  const d = el_comp_data.filter(x => +x.annoh === +el_anno && x.corp === el_corp)
-    .filter(x => x.n_electos > 0 || x.n_cand > 0);
-  
-  const tot = d3.sum(d, x => x.n_electos);
-  const dom = d.slice().sort((a,b) => b.n_electos - a.n_electos)[0];
+  // Se agrega sobre las curules mismas y no sobre 'comp', porque comp excluye
+  // las del estatuto de oposición y el total salía una curul corto.
+  const filas = el_seats_data.filter(x => +x.annoh === +el_anno && el_esCorp(x));
+  const enBarras = filas.filter(x => x.en_barras);
+  const estatuto = filas.length - enBarras.length;
+
+  const porTipo = d3.rollups(enBarras, v => v.length, x => x.tipo)
+    .map(([tipo, n]) => ({tipo, n, pct: 100 * n / enBarras.length}))
+    .sort((a, b) => b.n - a.n);
+  const dom = porTipo[0];
+  const cand = el_comp_data.filter(x => +x.annoh === +el_anno && el_esCorp(x) && x.tipo === dom.tipo);
+  const pctCand = d3.sum(cand, x => x.n_cand) /
+                  d3.sum(el_comp_data.filter(x => +x.annoh === +el_anno && el_esCorp(x)), x => x.n_cand) * 100;
   const f = n => n.toFixed(1).replace(".", ",");
-  
+
   return html`
   <div style="font-size:15px; color:#334155; line-height:1.65; margin-bottom:24px; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; padding:16px 24px;">
-    <p style="margin:0 0 8px;">En <b>${el_corp} ${el_anno}</b> la composición incluye <b>${tot} curules</b> en total.</p>
-    <p style="margin:0;">El tipo de organización con mayor porcentaje de curules fue <b>${dom.tipo}</b>, logrando el <b>${f(dom.pct_electos)}%</b> de los escaños (${dom.n_electos}). Este resultado contrasta con su participación en las candidaturas, donde representaba el <b>${f(dom.pct_cand)}%</b> del total.</p>
+    <p style="margin:0 0 8px;">En <b>${el_rotuloCorp} ${el_anno}</b> la composición incluye
+      <b>${filas.length} curules</b> en total${estatuto
+        ? `, de las cuales ${estatuto === 1 ? "una corresponde" : estatuto + " corresponden"} al estatuto de la oposición`
+        : ""}.</p>
+    <p style="margin:0;">El tipo de organización con mayor porcentaje de curules fue <b>${dom.tipo}</b>, logrando el <b>${f(dom.pct)}%</b> de los escaños (${dom.n}). Este resultado contrasta con su participación en las candidaturas, donde representaba el <b>${f(pctCand)}%</b> del total.</p>
   </div>`;
 }
+```
+
+```{ojs}
+viewof el_modo = filtroSegmentado(["Por partido", "Por estatuto de oposición"],
+  {value: "Por partido", label: "Agrupar"})
+html`<div class="filtro-caja">${viewof el_modo}</div>`
 ```
 
 :::: {style="display:flex; gap:24px; align-items:stretch;"}
@@ -4327,19 +4642,30 @@ esEspecial_el = c => c && /CITREP|IND[IÍ]GENA|AFRO|ESTATUTO/i.test(c)
 <div style="font-weight:800; color:#0B2E63; text-align:center; font-size:14px; text-transform:uppercase; margin-bottom:8px;">Curules por partido</div>
 
 ```{ojs}
+// Con "Por estatuto de oposición" el escaño se agrupa y colorea por bancada;
+// con "Por partido" se mantiene el partido, que es el comportamiento original.
+el_grupo = d => el_modo === "Por partido" ? d.partido_color : d.bancada
+el_color = d => el_modo === "Por partido" ? d.color : (el_col_banc[d.bancada] ?? "#B0B0B0")
+
 hemiciclo = {
-  let rows = el_seats_data.filter(d => +d.annoh === +el_anno && d.corp === el_corp);
+  let rows = el_seats_data.filter(d => +d.annoh === +el_anno && el_esCorp(d));
   if (rows.length === 0) return html`<div style="color:#94A3B8; text-align:center; padding:40px;">Sin datos</div>`;
-  
-  // 1. Calcular el total de curules por partido para ordenar de mayor a menor
-  const partyCounts = d3.rollups(rows, v => v.length, d => d.partido_color);
-  const countMap = new Map(partyCounts);
-  
-  // 2. Ordenar de izquierda a derecha (mayor tamaño primero, luego alfabético)
+
+  // 1. Calcular el total de curules por grupo para ordenar de mayor a menor
+  const countMap = new Map(d3.rollups(rows, v => v.length, el_grupo));
+
+  // 2. Ordenar de izquierda a derecha. Por bancada se usa un orden político
+  //    fijo (gobierno, independencia, oposición, sin declaración) en vez del
+  //    tamaño, para que el hemiciclo se lea siempre igual.
   rows.sort((a, b) => {
-    const diff = countMap.get(b.partido_color) - countMap.get(a.partido_color);
+    if (el_modo !== "Por partido") {
+      const ia = el_ord_banc.indexOf(a.bancada), ib = el_ord_banc.indexOf(b.bancada);
+      if (ia !== ib) return ia - ib;
+      return (a.partido_color ?? "").localeCompare(b.partido_color ?? "");
+    }
+    const diff = countMap.get(el_grupo(b)) - countMap.get(el_grupo(a));
     if (diff !== 0) return diff;
-    return a.partido_color.localeCompare(b.partido_color);
+    return el_grupo(a).localeCompare(el_grupo(b));
   });
   
   const n = rows.length;
@@ -4374,13 +4700,17 @@ hemiciclo = {
     color: {type: "identity"},
     marks: [
       Plot.dot(seatData, {
-        x: "x", y: "y", fill: "color", r: 5.5, stroke: "white", strokeWidth: 0.6,
-        tip: true, 
+        x: "x", y: "y", fill: el_color, r: 5.5, stroke: "white", strokeWidth: 0.6,
+        tip: true,
         channels: {
           Congresista: "congresista", Partido: "partido", Tipo: "tipo",
+          Bancada: "bancada",
           Coalición: d => d.coalicion ?? "—", Circunscripción: d => esEspecial_el(d.circ) ? d.circ : "—"
         },
-        title: d => `${d.congresista ?? ""}\n${d.partido}${d.coalicion ? "\nCoalición: " + d.coalicion : ""}\nTipo: ${d.tipo}${esEspecial_el(d.circ) ? "\nCircunscripción: " + d.circ : ""}`
+        title: d => `${d.congresista ?? ""}\n${d.partido}${d.coalicion ? "\nCoalición: " + d.coalicion : ""}` +
+          `\nTipo: ${d.tipo}\nDeclaración: ${d.bancada}` +
+          `${esEspecial_el(d.circ) ? "\nCircunscripción: " + d.circ : ""}` +
+          `${/LA FUERZA/i.test(d.partido ?? "") ? "\nPartido con personería, no superó el umbral" : ""}`
       })
     ]
   });
@@ -4390,18 +4720,20 @@ hemiciclo = {
 ```{ojs}
 // Leyenda organizada con Grid CSS en columnas perfectas y porcentajes
 {
-  const rows = el_seats_data.filter(d => +d.annoh === +el_anno && d.corp === el_corp);
+  const rows = el_seats_data.filter(d => +d.annoh === +el_anno && el_esCorp(d));
   const total_curules = rows.length; // Calculamos el total para sacar los porcentajes
-  
-  const g = d3.rollups(rows, v => ({n: v.length, color: v[0].color}), d => d.partido_color)
+
+  const g = d3.rollups(rows, v => ({n: v.length, color: el_color(v[0])}), el_grupo)
     .map(([partido, o]) => ({
-      partido, 
-      n: o.n, 
+      partido,
+      n: o.n,
       color: o.color,
       pct: ((o.n / total_curules) * 100).toFixed(1).replace(".", ",") // Cálculo del porcentaje
     }))
-    .sort((a, b) => b.n - a.n);
-    
+    .sort((a, b) => el_modo === "Por partido"
+      ? b.n - a.n
+      : el_ord_banc.indexOf(a.partido) - el_ord_banc.indexOf(b.partido));
+
   return html`
   <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px 12px; margin-top: 16px; padding-top: 16px; border-top: 1px solid #EAF0F6; font-size: 11px; color: #334155;">
     ${g.map(x => html`
@@ -4430,9 +4762,18 @@ hemiciclo = {
 
 ```{ojs}
 comparativo_barras = {
-  const d_raw = el_comp_data.filter(x => +x.annoh === +el_anno && x.corp === el_corp)
+  // Con "Todos" hay que reagregar: los porcentajes de 'comp' están calculados
+  // dentro de cada corporación y no se pueden promediar.
+  const base = el_comp_data.filter(x => +x.annoh === +el_anno && el_esCorp(x));
+  const totE = d3.sum(base, x => x.n_electos), totC = d3.sum(base, x => x.n_cand);
+  const d_raw = d3.rollups(base, v => ({
+      n_electos: d3.sum(v, x => x.n_electos), n_cand: d3.sum(v, x => x.n_cand)
+    }), x => x.tipo)
+    .map(([tipo, o]) => ({tipo, ...o,
+      pct_electos: totE ? 100 * o.n_electos / totE : 0,
+      pct_cand: totC ? 100 * o.n_cand / totC : 0}))
     .filter(x => x.n_electos > 0 || x.n_cand > 0)
-    .sort((a, b) => b.pct_electos - a.pct_electos); 
+    .sort((a, b) => b.pct_electos - a.pct_electos);
     
   const d_long = d_raw.flatMap(x => [
     {tipo: x.tipo, categoria: "Candidaturas", valor: x.pct_cand, n: x.n_cand},
@@ -4448,9 +4789,9 @@ comparativo_barras = {
     width: 540,
     style: {fontSize: "12.5px", fontFamily: "sans-serif"},
     x: {
-      label: "% del total de la corporación →", 
-      domain: [0, maxv], 
-      grid: true, 
+      label: el_corp === "Todos" ? "% del total del Congreso →" : "% del total de la corporación →",
+      domain: [0, maxv],
+      grid: true,
       tickFormat: d => d + "%"
     },
     y: {
@@ -4491,13 +4832,43 @@ comparativo_barras = {
   });
 }
 ```
+```{ojs}
+el_nota_gsc = {
+  // Se calcula en vez de escribirse: si cambia la clasificación, la nota cambia.
+  const g = el_seats_data.filter(d => +d.annoh === +el_anno && el_esCorp(d) && d.tipo === "GSC");
+  const citrep = g.filter(d => esEspecial_el(d.circ));
+  if (!g.length) return md``;
+  return html`<div style="font-size:11px; color:#64748B; line-height:1.5; margin-top:10px;">
+    <b>Nota:</b> de las ${g.length} curules por grupos significativos de ciudadanos${citrep.length
+      ? `, ${citrep.length === 1 ? "una es" : citrep.length + " son"} de circunscripción CITREP
+         (${citrep.map(d => `${d.partido}, ${d.congresista}`).join("; ")}), que se cuenta aquí como
+         grupo significativo y no dentro de organizaciones CITREP` : ""}.</div>`;
+}
+```
 :::
 
 ::::
 
-<div style="font-size:11.5px; color:#64748B; margin-top:16px;">
-  <b>Nota:</b> La composición incluye para 2026 las curules del Estatuto de Oposición, y para 2022 las curules del Partido Comunes y del Estatuto de Oposición.
-</div>
+```{ojs}
+el_notas = {
+  const comun = `La composición incluye para 2026 las curules del Estatuto de Oposición, y para 2022
+    las del Partido Comunes y del Estatuto de Oposición. La segunda curul afro está en disputa judicial: se posesionó Winsner Sandoval, del Partido Demócrata y de Gobierno, pero el Consejo de Estado suspendió provisionalmente su elección; si la decisión se
+    confirma, podría asumirla Ányela Viviana Guanga, del Consejo Comunitario El Naranjo. Se incluye a Wadith Manzur, del Partido Conservador, y Karen Manrique, CITREP por Arauca, que están privados de la libertad y a la fecha no se han posesionado. `;
+
+  const oposicion = `Las categorías <b>Gobierno</b>, <b>Oposición</b> e <b>Independencia</b> corresponden a
+    las declaraciones políticas formales ante el CNE. Las <b>CITREP</b> figuran sin declaración: 11 de sus
+    16 representantes firmaron en julio un respaldo a la agenda del Gobierno de Abelardo de la Espriella,
+    aunque una de las firmantes, Tatiana Gaona, aclaró después que no constituye una adhesión política y que
+    mantendrá su independencia; otros tres no han definido públicamente su posición y han sido identificados
+    como posibles opositores.
+    <b>CREEMOS</b>, que es un grupo significativo de ciudadanos, no tiene declaración formal, pero se cuenta
+    en Gobierno porque sus dos representantes anunciaron que integrarán esa bancada.
+    <b>Minga por Colombia</b> y el <b>Consejo Comunitario El Naranjo</b> aparecen sin declaración a pesar de ya tener personería jurídica.`;
+
+  return html`<div style="font-size:11px; color:#64748B; line-height:1.55; margin-top:16px;">
+    <b>Nota:</b> ${comun}${el_modo === "Por partido" ? "" : " " + oposicion}</div>`;
+}
+```
 
 ## Participación de las mujeres en política
 
@@ -4691,7 +5062,7 @@ md`Las mujeres pasan del **${muj_f1(muj_c.pct)}%** de las candidaturas al
 ::::
 
 <div style="font-size:11.5px; color:#64748B; margin-top:16px;">
-  <b>Nota:</b> El conteo de electas y electos incluye para 2026 las curules del Estatuto de Oposición, y para 2022 las curules del Partido Comunes y del Estatuto de Oposición. El porcentaje de candidaturas proviene de la inscripción de candidatos al Congreso.
+  <b>Nota:</b> El conteo de electas y electos incluye para 2026 las curules del Estatuto de Oposición, y para 2022 las curules del Partido Comunes y del Estatuto de Oposición. El porcentaje de candidaturas proviene de la inscripción de candidatos al Congreso. La segunda curul afro está en disputa judicial: se posesionó Winsner Sandoval, del Partido Demócrata, pero el Consejo de Estado suspendió provisionalmente su elección; si la decisión se confirma, podría asumirla Ányela Viviana Guanga, del Consejo Comunitario El Naranjo`
 </div>
 
 ## Concentración territorial del voto
@@ -4708,6 +5079,15 @@ ojs_define(conc_part_ojs = datos_conc$participacion)
 html`<style>
   .conc-controles{display:flex;flex-wrap:wrap;gap:18px 28px;align-items:center;margin:10px 0 14px;padding:12px 16px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px}.conc-grupo{display:flex;align-items:center;gap:10px}.conc-etiqueta{font-size:12px;font-weight:700;letter-spacing:.01em;color:#475569}.conc-segmento{display:inline-flex;gap:3px;padding:3px;background:#E2E8F0;border:1px solid #CBD5E1;border-radius:8px}.conc-segmento button{border:0;border-radius:5px;background:transparent;color:#475569;padding:7px 13px;font:700 12px Archivo,Arial,sans-serif;cursor:pointer}.conc-segmento button.activo{background:#fff;color:#0B2E63;box-shadow:0 1px 2px rgba(15,23,42,.14)}.conc-kpis{display:flex;flex-wrap:wrap;gap:14px 44px;align-items:baseline;margin:0 0 8px;padding:6px 0 9px;border-bottom:1px solid #E2E8F0}.conc-kpi-label{font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#64748B}.conc-kpi-valor{display:inline-block;margin:1px 8px 0 0;color:#0B2E63;font:800 23px/1 Archivo,Arial,sans-serif;letter-spacing:-.03em}.conc-kpi-detalle{display:inline;font-size:11.5px;color:#64748B}.conc-badge{display:inline-block;margin-left:8px;padding:2px 7px;border-radius:999px;font-size:10.5px;font-weight:700}.conc-sube{background:#E8F5ED;color:#166534}.conc-baja{background:#FDECEC;color:#B42318}.conc-neutro{background:#EAF0F6;color:#355C7D}@media(max-width:760px){.conc-kpis{grid-template-columns:1fr}.conc-layout{display:block!important}.conc-lateral{margin-top:18px}}
 </style>`
+```
+
+```{ojs}
+html`<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:10px 28px; margin:2px 0 8px; font-size:12.5px; color:#475569; line-height:1.5;">
+  <div><div style="font-size:10.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:#0B2E63; margin-bottom:3px;">Qué mide</div>
+    Qué tan repartidos están los votos entre <b>partidos</b>. Va de 0 (el voto se divide igual entre todos los partidos) a 100 (un solo partido concentra todos los votos).</div>
+  <div><div style="font-size:10.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:#0B2E63; margin-bottom:3px;">Cómo se calcula</div>
+    Senado: circunscripción nacional. Cámara: circunscripción territorial de cada departamento; el índice nacional de Cámara es el promedio de los departamentos, ponderado por votos.</div>
+</div>`
 ```
 
 ```{ojs}
@@ -4738,7 +5118,7 @@ conc_kpis = {
   const clase = dif == null ? "conc-neutro" : dif > 0 ? "conc-sube" : dif < 0 ? "conc-baja" : "conc-neutro";
   const anterior = +conc_anno === 2018 ? "Sin elección previa comparable" : `Frente a ${+conc_anno - 4}`;
   return html`<div class="conc-kpis">
-    <div><div class="conc-kpi-label">Índice nacional de concentración</div><div class="conc-kpi-valor">${conc_fmt(d?.concentracion)}</div><div class="conc-kpi-detalle">Escala de 0 a 100 · concentración por partido</div></div>
+    <div><div class="conc-kpi-label">Índice nacional de concentración por partido</div><div class="conc-kpi-valor">${conc_fmt(d?.concentracion)}</div><div class="conc-kpi-detalle">0 = voto repartido entre muchos partidos · 100 = un solo partido</div></div>
     <div><div class="conc-kpi-label">Cambio frente a la última elección</div><div class="conc-kpi-valor">${dif == null ? "—" : conc_delta(dif)}</div><div class="conc-kpi-detalle">${anterior}</div>${dif == null ? "" : `<span class="conc-badge ${clase}">${dif > 0 ? "Aumenta" : dif < 0 ? "Disminuye" : "Sin cambio"}</span>`}</div>
   </div>`;
 }
@@ -4754,15 +5134,13 @@ conc_texto_u = {
   const q1 = d[0], qN = d[d.length - 1];
   const min = d.slice().sort((a, b) => a.concentracion_mediana - b.concentracion_mediana)[0];
   const max = d.slice().sort((a, b) => b.concentracion_mediana - a.concentracion_mediana)[0];
+  const lectura = `<b>Cómo leerla:</b> un valor más alto indica que en esos municipios pocos partidos se quedan con la mayor parte de los votos; un valor más bajo, que los votos se reparten entre más partidos.`;
   if (min.quintil > q1.quintil && min.quintil < qN.quintil)
-    return `La relación tiene forma de U: el voto se concentra más en los municipios de <b>menor</b> participación (Q${q1.quintil}, ${f(q1)}) y en los de <b>mayor</b> (Q${qN.quintil}, ${f(qN)}), y se dispersa al máximo en la franja intermedia (Q${min.quintil}, ${f(min)}). La competencia es más abierta donde la participación es media.`;
-  return `La concentración crece de forma sostenida con la participación: pasa de ${f(min)} en Q${min.quintil} a ${f(max)} en Q${max.quintil}.`;
+    return `${lectura}<br><b>Qué muestra:</b> la línea tiene forma de U. En los municipios con <b>menor</b> participación (Q${q1.quintil}) el índice es ${f(q1)} y en los de <b>mayor</b> participación (Q${qN.quintil}) llega a ${f(qN)}: en ambos extremos los votos quedan en menos partidos. En los municipios de participación <b>media</b> (Q${min.quintil}) baja a ${f(min)}, el valor más bajo: allí los votos se reparten entre más partidos.`;
+  return max.quintil > min.quintil
+    ? `${lectura}<br><b>Qué muestra:</b> a mayor participación, más concentrado el voto. El índice pasa de ${f(min)} en los municipios de Q${min.quintil} a ${f(max)} en los de Q${max.quintil}.`
+    : `${lectura}<br><b>Qué muestra:</b> a mayor participación, más repartido el voto. El índice pasa de ${f(max)} en los municipios de Q${max.quintil} a ${f(min)} en los de Q${min.quintil}.`;
 }
-
-html`<div style="display:flex; flex-wrap:wrap; gap:14px 32px; margin:4px 0 14px; font-size:13.5px; color:#475569; line-height:1.55;">
-  <div style="flex:1 1 320px;">El índice resume qué tanto se concentran los votos entre partidos: valores más altos indican una distribución menos dispersa.</div>
-  <div style="flex:1 1 320px;">${conc_texto_u}</div>
-</div>`
 ```
 
 ```{ojs}
@@ -4813,7 +5191,7 @@ conc_mapa_actualiza = {
     onEachFeature: (f, lyr) => {
       const d = lookup.get(+f.properties.coddepto);
       lyr.bindTooltip(
-        `<b>${d?.Depto ?? "Sin datos"}</b><br>Concentración: ${conc_fmt(d?.concentracion)}<br>Vs. elección previa: ${conc_delta(d?.comparacion_previa)}`,
+        `<b>${d?.Depto ?? "Sin datos"}</b><br>Concentración por partido: ${conc_fmt(d?.concentracion)}<br>Vs. elección previa: ${conc_delta(d?.comparacion_previa)}`,
         {sticky: true});
       lyr.on("mouseover", () => lyr.setStyle({weight: 2, color: "#0B2E63"}));
       lyr.on("mouseout",  () => lyr.setStyle({weight: 0.4, color: "#ffffff"}));
@@ -4829,7 +5207,7 @@ conc_mapa_actualiza = {
   legend.onAdd = () => {
     const dv = L_conc.DomUtil.create("div");
     dv.style = "background:#fff; padding:10px 12px; border-radius:6px; box-shadow:0 1px 4px rgba(0,0,0,.2); font-size:11px; width:180px;";
-    dv.innerHTML = `<div style="font-weight:700; color:#0B2E63; margin-bottom:6px; font-size:12px;">Índice de concentración</div>` +
+    dv.innerHTML = `<div style="font-weight:700; color:#0B2E63; margin-bottom:6px; font-size:12px;">Concentración por partido</div>` +
       `<div style="height:10px; width:100%; border-radius:4px; border:1px solid #CBD5E1; background:linear-gradient(to right, ${escala(dominio[0])}, ${escala(dominio[1])});"></div>` +
       `<div style="display:flex; justify-content:space-between; font-size:10.5px; color:#475569; margin-top:4px; font-weight:600;"><span>${conc_fmt(dominio[0])}</span><span>${conc_fmt(dominio[1])}</span></div>`;
     return dv;
@@ -4857,9 +5235,12 @@ conc_tabla = {
     </tr>`).join('');
 
   return html`
-  <div style="background:#fff; border:1px solid #EAF0F6; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.02); display:flex; flex-direction:column; height:248px; overflow:hidden;">
+  <div style="background:#fff; border:1px solid #EAF0F6; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.02); display:flex; flex-direction:column; height:540px; overflow:hidden;">
     <div style="padding:10px 16px; border-bottom:1px solid #CBD5E1; display:flex; justify-content:space-between; align-items:center; background:#F1F5F9;">
-      <div style="font-weight:800; color:#0B2E63; font-size:13.5px; text-transform:uppercase;">Todos los departamentos</div>
+      <div>
+        <div style="font-weight:800; color:#0B2E63; font-size:13.5px; text-transform:uppercase;">Todos los departamentos</div>
+        <div style="font-size:11px; color:#64748B; margin-top:1px;">Índice de concentración del voto por partido</div>
+      </div>
       ${leyendaRango(true)}
     </div>
     <div style="overflow-y:auto; flex:1;">
@@ -4876,32 +5257,46 @@ conc_tabla = {
 }
 html`${conc_tabla}`
 ```
+:::
+
+::::
 
 ```{ojs}
 conc_relacion = {
   const d = conc_part.filter(x => +x.annoh === +conc_anno && x.corporacion === conc_corp)
     .slice().sort((a, b) => a.quintil - b.quintil);
   if (!d.length) return html`<div style="color:#94A3B8;padding:30px;text-align:center;">Sin datos</div>`;
+  // El eje Y no arranca en 0: las diferencias entre quintiles son de pocos
+  // puntos y con el 0 la línea se ve plana.
+  const [ymin, ymax] = d3.extent(d, x => x.concentracion_mediana);
+  const pad = Math.max(0.6, (ymax - ymin) * 0.25);
   return Plot.plot({
-    width: 470, height: 268, marginLeft: 44, marginRight: 18, marginTop: 28, marginBottom: 46,
-    style: {fontSize: "11.5px"},
-    x: {label: "Quintiles de participación municipal →", domain: [1, 5], ticks: 5, tickFormat: q => `Q${q}`},
-    y: {label: "Concentración mediana", grid: true, insetTop: 12, insetBottom: 4},
+    width: Math.min(width - 40, 860), height: 320, marginLeft: 50, marginRight: 24, marginTop: 26, marginBottom: 58,
+    style: {fontSize: "12px"},
+    x: {label: null, domain: [1, 5], ticks: 5, insetLeft: 70, insetRight: 70,
+        tickFormat: q => q === 1 ? "Q1 · menor participación" : q === 5 ? "Q5 · mayor participación" : `Q${q}`},
+    y: {label: "Concentración (mediana)", grid: true, domain: [ymin - pad, ymax + pad], nice: true,
+        tickFormat: v => conc_fmt(v), insetTop: 14, insetBottom: 8},
     marks: [
       Plot.lineY(d, {x: "quintil", y: "concentracion_mediana", stroke: "#355C7D", strokeWidth: 2.5, curve: "monotone-x"}),
       Plot.dot(d, {x: "quintil", y: "concentracion_mediana", fill: "#0B2E63", r: 4.5, tip: true,
-        title: x => `Q${x.quintil}\nParticipación mediana: ${conc_fmt(x.participacion_mediana)}%\nConcentración mediana: ${conc_fmt(x.concentracion_mediana)}`}),
+        title: x => `Q${x.quintil}\nParticipación mediana: ${conc_fmt(x.participacion_mediana)}%\nConcentración por partido (mediana): ${conc_fmt(x.concentracion_mediana)}`}),
       Plot.text(d, {x: "quintil", y: "concentracion_mediana", text: x => conc_fmt(x.concentracion_mediana),
-        dy: -13, fontSize: 11, fontWeight: 600, fill: "#334155", stroke: "white", strokeWidth: 4, paintOrder: "stroke"}),
-      Plot.ruleY([0])
+        dy: -13, fontSize: 11.5, fontWeight: 600, fill: "#334155", stroke: "white", strokeWidth: 4, paintOrder: "stroke"}),
+      Plot.text(d, {x: "quintil", frameAnchor: "bottom", text: x => `participación ${conc_fmt(x.participacion_mediana)}%`,
+        dy: 38, fontSize: 10.5, fill: "#64748B"})
     ]
   });
 }
-html`<div style="flex:1;padding:12px 16px 6px;border:1px solid #EAF0F6;border-radius:8px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.02);"><div style="font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#64748B;margin-bottom:2px;">Concentración y participación municipal</div>${conc_relacion}</div>`
-```
-:::
 
-::::
+html`<div style="margin-top:22px; padding:14px 18px 16px; border:1px solid #EAF0F6; border-radius:8px; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,0.02);">
+  <div style="font-weight:800; color:#0B2E63; font-size:13.5px; text-transform:uppercase;">Concentración del voto por partido según la participación municipal</div>
+  <div style="font-size:12px; color:#64748B; line-height:1.5; margin:3px 0 6px; max-width:880px;">
+    Los municipios se ordenan por participación y se dividen en cinco grupos del mismo tamaño (quintiles): Q1 reúne el 20% con menor participación y Q5 el 20% con mayor. Cada punto es la concentración mediana del voto por partido en ese grupo.</div>
+  ${conc_relacion}
+  <div style="margin-top:6px; padding:10px 14px; background:#F8FAFC; border-radius:6px; font-size:13px; color:#334155; line-height:1.55; max-width:880px;">${conc_texto_u}</div>
+</div>`
+```
 
 
 <!-- ============ SECCIÓN 04 — PRESIDENCIA 2026 ============ -->
@@ -4920,6 +5315,182 @@ Preconteo, resultados y participación electoral.
 
 
 ::: {.contenido-seccion}
+
+::: {.subseccion}
+### Candidaturas
+:::
+
+## Candidaturas según tipo de organización política
+
+```{r}
+#| label: datos-candidaturas-presidencia-ojs
+datos_cand_pres <- readRDS("datos_candidaturas_presidencia.rds")
+ojs_define(qc_lista_ojs = datos_cand_pres$candidaturas)
+ojs_define(qc_res_ojs   = datos_cand_pres$resumen)
+ojs_define(qc_gsc_ojs   = datos_cand_pres$gsc)
+```
+
+```{ojs}
+qc_lista = transpose(qc_lista_ojs)
+qc_res   = transpose(qc_res_ojs)
+qc_gsc   = transpose(qc_gsc_ojs)
+
+qc_n = v => v == null ? "—" : Math.round(v).toLocaleString("es-CO")
+qc_p = v => v == null ? "—" : (Math.round(v * 10) / 10).toFixed(1).replace(".", ",") + "%"
+qc_col = ({"Partido con personería jurídica": "#1F4E79",
+           "Movimientos sociales o GSC": "#5E8FB1",
+           "Coalición": "#D9A37C"})
+qc_orden = ["Partido con personería jurídica", "Movimientos sociales o GSC", "Coalición"]
+
+qc_filtra = (anno, vuelta) => qc_lista
+  .filter(d => +d.anno === +anno && d.vuelta === vuelta)
+  .slice().sort((a, b) => qc_orden.indexOf(a.tipo) - qc_orden.indexOf(b.tipo)
+                       || a.candidato.localeCompare(b.candidato, "es"))
+```
+
+```{ojs}
+viewof qc_vuelta = filtroSegmentado(["Primera vuelta", "Segunda vuelta"], {value: "Primera vuelta", label: "Vuelta"})
+viewof qc_anno = filtroSegmentado([2026, 2022], {value: 2026, format: x => `${x}`, label: "Año"})
+html`<div class="filtro-caja">${viewof qc_vuelta}${viewof qc_anno}</div>`
+```
+
+:::: {style="display: flex; gap: 22px; align-items: flex-start;"}
+
+::: {style="flex: 0 0 54%; width: 54%; display:flex; flex-direction:column; gap:14px;"}
+```{ojs}
+qc_kpi = {
+  const d = qc_filtra(qc_anno, qc_vuelta);
+  const porTipo = qc_orden.map(t => ({t, n: d.filter(x => x.tipo === t).length}))
+    .filter(x => x.n > 0);
+  const ren = d.filter(x => x.renuncio).length;
+  const bloque = (rot, val, pie, color) => `
+    <div>
+      <div style="font-size:.68rem; letter-spacing:.06em; text-transform:uppercase; color:#8494A8; font-weight:700;">${rot}</div>
+      <div style="font-family:Archivo,sans-serif; font-size:2.5rem; font-weight:800; color:${color}; line-height:1.05; margin:.1rem 0 .1rem;">${val}</div>
+      <div style="font-size:.76rem; color:#5A6B80;">${pie}</div>
+    </div>`;
+  const mayor = porTipo.slice().sort((a, b) => b.n - a.n)[0];
+  return html`<div style="display:flex; flex-wrap:wrap; gap:.6rem 2.6rem; align-items:flex-start;">
+    ${bloque("Candidaturas inscritas", qc_n(d.length),
+             `${qc_vuelta.toLowerCase()} de ${qc_anno}`, "#0B2E63")}
+    ${bloque(mayor.t === "Movimientos sociales o GSC" ? "Por firmas (GSC)" : mayor.t,
+             qc_n(mayor.n), `${qc_p(100 * mayor.n / d.length)} del total`, "#0B2E63")}
+    ${ren ? bloque("Renunciaron", qc_n(ren), "ya estaban en el tarjetón", "#9B2C2C") : ""}
+  </div>`;
+}
+```
+
+```{ojs}
+qc_barras = {
+  const d = qc_res.filter(x => +x.anno === +qc_anno && x.vuelta === qc_vuelta)
+    .slice().sort((a, b) => qc_orden.indexOf(a.tipo) - qc_orden.indexOf(b.tipo));
+  const ord = qc_orden.filter(t => d.some(x => x.tipo === t));
+  const plot = Plot.plot({
+    width: 470, height: 40 + ord.length * 52, marginLeft: 178, marginRight: 78,
+    style: {fontSize: "12px"},
+    x: {label: null, grid: true, tickFormat: v => Number.isInteger(v) ? v : ""},
+    y: {domain: ord, label: null},
+    marks: [
+      Plot.barX(d, {y: "tipo", x: "n", fill: x => qc_col[x.tipo], rx: 2, tip: true,
+        title: x => `${x.tipo}\n${qc_n(x.n)} candidaturas (${qc_p(x.pct)})`}),
+      Plot.text(d, {y: "tipo", x: "n", text: x => `${qc_n(x.n)} (${qc_p(x.pct)})`,
+        textAnchor: "start", dx: 6, fontSize: 12, fontWeight: 600, fill: "#334155"}),
+      Plot.ruleX([0], {stroke: "#94A3B8"})
+    ]
+  });
+  return html`<div style="background:#fff; border:1px solid #EAF0F6; border-radius:8px; padding:10px 12px 2px; box-shadow:0 1px 3px rgba(0,0,0,0.02);">
+    <div style="font-weight:800; color:#0B2E63; font-size:12.5px; text-transform:uppercase;">Por tipo de organización</div>
+    ${plot}</div>`;
+}
+```
+
+```{ojs}
+qc_embudo = {
+  const g = qc_gsc.find(x => +x.anno === +qc_anno);
+  if (!g) return md``;
+  // Un embudo de dos pasos: al ser una sola circunscripción no hace falta la
+  // gráfica por corporación que se usa en Congreso.
+  const caja = (rot, val, pie, fondo, color) => `
+    <div style="flex:1; background:${fondo}; border-radius:8px; padding:10px 14px;">
+      <div style="font-size:.66rem; letter-spacing:.05em; text-transform:uppercase; color:#64748B; font-weight:700;">${rot}</div>
+      <div style="font-family:Archivo,sans-serif; font-size:2rem; font-weight:800; color:${color}; line-height:1.1;">${val}</div>
+      <div style="font-size:.72rem; color:#5A6B80;">${pie}</div>
+    </div>`;
+  return html`<div style="background:#fff; border:1px solid #EAF0F6; border-radius:8px; padding:10px 12px 12px; box-shadow:0 1px 3px rgba(0,0,0,0.02);">
+    <div style="font-weight:800; color:#0B2E63; font-size:12.5px; text-transform:uppercase; margin-bottom:8px;">Grupos significativos de ciudadanos ${qc_anno}</div>
+    <div style="display:flex; align-items:center; gap:10px;">
+      ${caja("Solicitan formulario", qc_n(g.solicitan), "listas inscritas ante la RNEC", "#F1F5F9", "#0B2E63")}
+      <div style="font-size:1.5rem; color:#94A3B8; font-weight:700;">→</div>
+      ${caja("Llegan al tarjetón", qc_n(g.inscriben),
+             `${g.individuales} por su cuenta · ${g.en_coalicion} dentro de coaliciones`, "#EDF3FA", "#0B2E63")}
+      <div style="text-align:center; padding-left:6px;">
+        <div style="font-family:Archivo,sans-serif; font-size:1.5rem; font-weight:800; color:#1F4E79;">${qc_p(g.pct)}</div>
+        <div style="font-size:.66rem; color:#64748B; text-transform:uppercase; letter-spacing:.05em; font-weight:700;">llegan</div>
+      </div>
+    </div>
+  </div>`;
+}
+```
+:::
+
+::: {style="flex: 0 0 46%; width: 46%;"}
+```{ojs}
+qc_tabla = {
+  const d = qc_filtra(qc_anno, qc_vuelta);
+  const th = "padding:9px 8px; background:#5E7C99; color:#ffffff; font-weight:600; font-size:11px; position:sticky; top:0; z-index:2;";
+  const filas = d.map((x, i) => `
+    <tr style="border-bottom:1px solid #E2E8F0; background:${i % 2 ? "#F8FAFC" : "#ffffff"};">
+      <td style="padding:8px 10px; text-align:left;">
+        <strong style="color:#1F2937; font-size:12px;">${x.candidato}</strong>
+        ${x.renuncio ? `<span style="margin-left:6px; display:inline-block; padding:1px 7px; border-radius:9px; background:#FBEAEA; color:#9B2C2C; font-size:9.5px; font-weight:700;">Renunció</span>` : ""}
+        <div style="font-size:10.5px; color:#94A3B8;">${x.agrupacion}</div></td>
+      <td style="padding:8px 8px; text-align:right; white-space:nowrap;">
+        <span style="display:inline-flex; align-items:center; gap:6px;">
+          <span style="width:9px; height:9px; border-radius:50%; flex:none; background:${qc_col[x.tipo]}; display:inline-block;"></span>
+          <span style="font-size:11px; color:#334155;">${x.tipo.replace("Partido con personería jurídica", "Partido").replace("Movimientos sociales o GSC", "GSC")}</span></span></td>
+    </tr>`).join("");
+  return html`
+  <div style="background:#fff; border:1px solid #EAF0F6; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.02); display:flex; flex-direction:column; max-height:420px; overflow:hidden;">
+    <div style="padding:9px 13px; border-bottom:1px solid #CBD5E1; background:#F1F5F9;">
+      <div style="font-weight:800; color:#0B2E63; font-size:12.5px; text-transform:uppercase;">Candidaturas en el tarjetón</div>
+      <div style="font-size:10px; color:#94A3B8; margin-top:1px;">${qc_vuelta} de ${qc_anno} · agrupadas por tipo de organización</div>
+    </div>
+    <div style="overflow-y:auto; flex:1;">
+      <table style="width:100%; border-collapse:collapse; font-family:sans-serif;">
+        <thead><tr>
+          <th style="${th} text-align:left;">Candidatura y agrupación</th>
+          <th style="${th} text-align:right;">Tipo</th>
+        </tr></thead><tbody>${filas}</tbody></table>
+    </div>
+  </div>`;
+}
+```
+:::
+
+::::
+
+```{ojs}
+qc_notas = {
+  const comun = ``;
+  const n26 = `<b>Claudia López</b> se inscribió con dos grupos significativos de ciudadanos en coalición
+    (Con Claudia Imparables y Colombia una Nueva Historia), que aquí se cuentan como una sola candidatura por firmas.
+    <b>Luis Gilberto Murillo</b> y <b>Carlos Caicedo</b> renunciaron, pero se incluyen porque alcanzaron a aparecer en el tarjetón.
+    De los 13 GSC que llegaron al tarjetón, 6 lo hicieron dentro de coaliciones: el de <b>Óscar Mauricio Lizcano</b>
+    (Firme con Lizcano Colombianísmo, en coalición con ASI) y los cinco de la coalición de <b>Paloma Valencia</b>
+    (Con Toda por Colombia; Firme Luna Presidente – Sí Hay un Camino; Avanza Colombia; Movimiento Valientes;
+    y Unidos – La Fuerza de las Regiones). Esa coalición incluía además Centro Democrático, ADA, Nuevo Liberalismo
+    y Verde Oxígeno, que son partidos con personería y por eso no entran en el conteo de grupos.
+    También se aprobaron los GSC Volvamos a Confiar con Pipe Córdoba (Carlos Felipe Córdoba) y
+    Rescatemos a Colombia (Daniel Palacios), que no se cuentan porque desistieron y no llegaron al tarjetón
+    ni a una coalición.`;
+  const n22 = `De los 6 GSC que llegaron al tarjetón, 4 lo hicieron dentro de coaliciones:
+    <b>Federico Gutiérrez</b>, <b>Alejandro Char</b> y <b>Juan Carlos Echeverry</b> en Equipo por Colombia,
+    y <b>Alejandro Gaviria</b> en Centro Esperanza. Un GSC más, el de <b>Roy Barreras</b>, habría alcanzado
+    a inscribirse pero desistió; a diferencia de Murillo y Caicedo en 2026, no se cuenta porque no llegó al tarjetón.`;
+  return html`<div style="font-size:11px; color:#64748B; line-height:1.55; margin-top:12px;">
+    <b>Nota:</b> ${comun} ${+qc_anno === 2026 ? n26 : n22}</div>`;
+}
+```
 
 ::: {.subseccion}
 ### Preconteo
@@ -5088,6 +5659,11 @@ pv_resumen(pv_vuelta)
 html`<div style="display:grid;grid-template-columns:minmax(0,2.5fr) minmax(0,1fr);gap:20px;align-items:start;">${pv_grafico(pv_vuelta)}${pv_tabla(pv_vuelta)}</div>`
 ```
 
+<!-- SECCIÓN OCULTA (Presidencia): "Comparación territorial" de la velocidad del
+     preconteo. Para volver a mostrarla, borrar estas cuatro líneas y la línea de
+     cierre "FIN SECCIÓN OCULTA (Presidencia)", que está antes de "Comparación de
+     preconteo y escrutinio".
+
 ## Comparación territorial
 
 ::: {.mapa-full}
@@ -5240,6 +5816,8 @@ html`${pd_tabla(pd_vuelta)}`
 
 :::
 
+FIN SECCIÓN OCULTA (Presidencia) -->
+
 
 ::: {.subseccion}
 ### Comparación de preconteo y escrutinio
@@ -5266,7 +5844,7 @@ pe_col = v => v > 0 ? "#1F4E79" : (v < 0 ? "#C00000" : "#64748B")
 // Cifras grandes: una por año, con la barra divergente en escala compartida
 // dentro de cada vuelta, igual que en la sección de Congreso.
 pe_kpis = (vuelta) => {
-  const f = pe_gral.filter(x => x.vuelta === vuelta).slice().sort((a, b) => b.anno - a.anno);
+  const f = pe_gral.filter(x => x.vuelta === vuelta).slice().sort((a, b) => a.anno - b.anno);
   const maxAbs = (d3.max(f, d => Math.abs(d.cambio_neto_pct)) || 1) * 1.08;
 
   const ficha = d => {
@@ -6406,7 +6984,30 @@ mv_colores = ({
   "Part. media o sin datos": "#FFFFFF"
 })
 
+// "Part. media o sin datos" no es una categoría del cruce, así que no se ofrece.
+mv_grupos = ["Con riesgo - Part. baja", "Con riesgo - Part. alta",
+             "Sin riesgo - Part. baja", "Sin riesgo - Part. alta"]
+mv_apagado = "#F1F3F5"
+
 mv_filas = (vuelta) => mv_tabla_d.filter(d => d.vuelta === vuelta)
+
+// Con "Todos" se usa la tabla precalculada de departamentos críticos; al elegir
+// una categoría se arma desde el geojson, que ya trae grupo y participación.
+mv_tabla_datos = (vuelta, grupo) => {
+  if (grupo === "Todos") return mv_filas(vuelta);
+  const s = mv_sufijo(vuelta);
+  const filas = mv_geo.features.map(f => f.properties)
+    .filter(p => p["grupo_mapa_" + s] === grupo && p.Depto != null);
+  return d3.rollups(filas, v => ({
+      n_mun: v.length,
+      part_prom: d3.mean(v, x => x["part_pres_" + s]),
+      municipios_lista: v.slice()
+        .sort((a, b) => (a["part_pres_" + s] ?? 0) - (b["part_pres_" + s] ?? 0))
+        .slice(0, 30).map(x => x.Municipio).join(", ")
+    }), p => p.Depto)
+    .map(([Depto, o]) => ({Depto, ...o}))
+    .sort((a, b) => b.n_mun - a.n_mun || a.part_prom - b.part_prom);
+}
 
 mv_texto_mapa = (vuelta) => {
   const t = mv_filas(vuelta);
@@ -6418,14 +7019,21 @@ concentran en **${t[0].Depto}** (${t[0].n_mun} municipios), **${t[1].Depto}** ($
 }
 
 // El geojson trae las dos vueltas en columnas para no duplicar la geometría.
-mv_pinta = (map, vuelta) => {
+mv_pinta = (map, vuelta, grupo) => {
   if (map._dl) { map.removeLayer(map._dl); map._dl = null; }
   if (map._dep) { map.removeLayer(map._dep); map._dep = null; }
   if (map._legend) { map._legend.remove(); map._legend = null; }
   const s = mv_sufijo(vuelta);
 
+  // Con una categoría seleccionada el resto del país queda en gris, para que la
+  // que interesa se lea sola.
+  const soloUno = grupo !== "Todos";
+  const relleno = g => soloUno
+    ? (g === grupo ? mv_colores[g] : mv_apagado)
+    : (mv_colores[g] || "#FFFFFF");
+
   map._dl = L_mv.geoJSON(mv_geo, {
-    style: f => ({ fillColor: mv_colores[f.properties["grupo_mapa_" + s]] || "#FFFFFF",
+    style: f => ({ fillColor: relleno(f.properties["grupo_mapa_" + s]),
                    weight: 0.4, color: "#94A3B8", fillOpacity: 0.9 }),
     onEachFeature: (f, lyr) => {
       const p = f.properties;
@@ -6451,7 +7059,10 @@ mv_pinta = (map, vuelta) => {
     dv.style = "background:white; padding:12px; border-radius:6px; box-shadow:0 1px 4px rgba(0,0,0,0.2); font-family:sans-serif; font-size:11.5px; line-height:18px; color:#334155;";
     dv.innerHTML = `<div style="font-weight:bold; color:#0B2E63; margin-bottom:8px;">Riesgo de violencia y participación</div>`;
     Object.keys(mv_colores).forEach(k => {
-      dv.innerHTML += `<div style="display:flex; align-items:center; margin-bottom:4px;"><i style="background:${mv_colores[k]}; width:16px; height:16px; border:1px solid #CBD5E1; border-radius:3px; display:inline-block; margin-right:8px;"></i> ${k}</div>`;
+      const activo = !soloUno || k === grupo;
+      dv.innerHTML += `<div style="display:flex; align-items:center; margin-bottom:4px; opacity:${activo ? 1 : .38};">
+        <i style="background:${activo ? mv_colores[k] : mv_apagado}; width:16px; height:16px; border:1px solid #CBD5E1; border-radius:3px; display:inline-block; margin-right:8px;"></i>
+        <span style="${activo && soloUno ? "font-weight:700;" : ""}">${k}</span></div>`;
     });
     dv.innerHTML += `<div style="margin-top:8px; font-size:10px; color:#94A3B8;">Fuente: MOE · Mapa de Riesgo Electoral 2026</div>`;
     return dv;
@@ -6460,24 +7071,30 @@ mv_pinta = (map, vuelta) => {
   map._legend = legend;
 }
 
-mv_tabla = (vuelta) => {
-  const data = mv_filas(vuelta);
+mv_tabla = (vuelta, grupo) => {
+  const data = mv_tabla_datos(vuelta, grupo);
   const th = "padding:12px 8px; background:#5E7C99; color:#ffffff; font-weight:600; font-size:12px; position:sticky; top:0; z-index:2; border-bottom:2px solid #4A637A;";
-  const tbody = data.map((d, i) => `
+  const color = grupo === "Todos" ? "#9A4633" : mv_colores[grupo];
+  const tbody = data.length ? data.map((d, i) => `
     <tr style='border-bottom:1px solid #E2E8F0; ${filaRango(i, data.length, false)}'>
       <td style='padding:10px 8px; text-align:left;'>
         <strong style='color:#1F2937; font-size:12.5px;'>${d.Depto}</strong>
         <div style='font-size:10px; color:#94A3B8; line-height:1.35; margin-top:2px;'>${d.municipios_lista}</div>
       </td>
-      <td style='padding:10px 6px; text-align:right; font-weight:700; color:#9A4633; font-variant-numeric:tabular-nums; font-size:12.5px;'>${d.n_mun}</td>
+      <td style='padding:10px 6px; text-align:right; font-weight:700; color:${color}; font-variant-numeric:tabular-nums; font-size:12.5px;'>${d.n_mun}</td>
       <td style='padding:10px 6px; text-align:right; color:#334155; font-variant-numeric:tabular-nums; font-size:12.5px;'>${mv_fmt(d.part_prom)}%</td>
-    </tr>`).join('');
+    </tr>`).join('')
+    : `<tr><td colspan="3" style="padding:24px 12px; text-align:center; color:#94A3B8; font-size:12px;">
+         Ningún municipio en esta categoría.</td></tr>`;
 
+  const total = d3.sum(data, d => d.n_mun);
   return html`
   <div style="background:#fff; border:1px solid #EAF0F6; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.02); display:flex; flex-direction:column; height:550px; overflow:hidden;">
     <div style="padding:10px 16px; border-bottom:1px solid #CBD5E1; background:#F1F5F9;">
-      <div style="font-weight:800; color:#0B2E63; font-size:13.5px; text-transform:uppercase;">Departamentos críticos</div>
-      <div style="font-size:10.5px; color:#64748B; margin-top:2px;">Municipios con riesgo de violencia y participación baja · ${vuelta.toLowerCase()}</div>
+      <div style="font-weight:800; color:#0B2E63; font-size:13.5px; text-transform:uppercase;">${grupo === "Todos" ? "Departamentos críticos" : grupo}</div>
+      <div style="font-size:10.5px; color:#64748B; margin-top:2px;">${grupo === "Todos"
+        ? `Municipios con riesgo de violencia y participación baja · ${vuelta.toLowerCase()}`
+        : `${total} municipios en ${data.length} departamentos · ${vuelta.toLowerCase()}`}</div>
     </div>
     <div style="overflow-y:auto; flex:1;">
       <table style="width:100%; border-collapse:collapse; font-family:sans-serif;">
@@ -6526,6 +7143,12 @@ html`<div style="font-weight:800; color:#0B2E63; margin-bottom:8px; font-size:13
 <h3 style="font-weight:800; color:#0B2E63; font-size:16px; text-transform:uppercase; margin-top:32px; margin-bottom:16px; border-bottom: 2px solid #0B2E63; padding-bottom: 8px;">Distribución territorial del riesgo y la participación</h3>
 
 ```{ojs}
+viewof mv_grupo = filtroSegmentado(["Todos", ...mv_grupos],
+  {value: "Todos", label: "Resaltar", format: x => x.replace("Part. ", "part. ")})
+html`<div class="filtro-caja">${viewof mv_grupo}</div>`
+```
+
+```{ojs}
 mv_texto_mapa(mv_vuelta)
 ```
 
@@ -6545,13 +7168,13 @@ viewof mv_map = {
 ```
 
 ```{ojs}
-mv_pintar = mv_pinta(mv_map, mv_vuelta)
+mv_pintar = mv_pinta(mv_map, mv_vuelta, mv_grupo)
 ```
 ::::
 
 :::: {style="flex: 1;"}
 ```{ojs}
-mv_tabla(mv_vuelta)
+mv_tabla(mv_vuelta, mv_grupo)
 ```
 ::::
 
@@ -7246,6 +7869,11 @@ cc_n = v => v == null ? "—" : Math.round(v).toLocaleString("es-CO")
 cc_p = v => v == null ? "—" : (Math.round(v * 10) / 10).toFixed(1).replace(".", ",") + "%"
 // Los cortes caen en múltiplos de 2,5, así que solo se muestra el decimal cuando existe.
 cc_lim = v => (Number.isInteger(v) ? String(v) : v.toFixed(1).replace(".", ",")) + "%"
+// Votos en formato corto para la gráfica (la cifra exacta va en el tooltip y la tabla).
+cc_corto = v => v == null ? "—"
+  : v >= 1e6 ? (v / 1e6).toFixed(2).replace(".", ",") + " M"
+  : v >= 1e4 ? (v / 1e3).toFixed(1).replace(".", ",") + " mil"
+  : cc_n(v)
 
 // Candidaturas disponibles para la elección seleccionada, en orden de votación.
 cc_lista = (anno, vuelta) => cc_cands_t
@@ -7462,18 +8090,22 @@ cc_pintar = {
 cc_barras = {
   const s = cc_sel;
   const d = s.barras.map(b => ({
-    etq: b.etq, n: b.n,
+    etq: b.etq, n: b.n, votos: b.votos,
     share: s.meta.votos_totales > 0 ? 100 * b.votos / s.meta.votos_totales : 0
   }));
   const plot = Plot.plot({
-    width: 470, height: 232, marginLeft: 56, marginBottom: 34, marginTop: 30,
+    width: 470, height: 244, marginLeft: 56, marginBottom: 48, marginTop: 30,
     style: {fontSize: "11.5px"},
     x: {label: null, type: "band", domain: d.map(x => x.etq), padding: 0.28},
     y: {label: `↑ ${s.esMesa ? "Mesas" : "Municipios"}`, grid: true, insetTop: 26,
         tickFormat: v => cc_n(v)},
     marks: [
       Plot.barY(d, {x: "etq", y: "n", fill: "#355C7D", rx: 2, tip: true,
-        title: x => `${x.etq}\n${cc_n(x.n)} ${s.unidad}\n${cc_p(x.share)} de la votación`}),
+        title: x => `${x.etq}\n${cc_n(x.n)} ${s.unidad}\n${cc_n(x.votos)} votos (${cc_p(x.share)} de la votación)`}),
+      // Votos absolutos: debajo de la etiqueta del tramo, en formato corto y gris,
+      // para no recargar el tope de la barra.
+      Plot.text(d, {x: "etq", frameAnchor: "bottom", text: x => `${cc_corto(x.votos)} votos`,
+        dy: 30, fontSize: 10.5, fill: "#64748B"}),
       Plot.text(d, {x: "etq", y: "n", text: x => cc_n(x.n), dy: -20,
         fontSize: 12, fontWeight: "bold", fill: "#1F2D3A",
         stroke: "white", strokeWidth: 4, paintOrder: "stroke"}),
@@ -7486,7 +8118,7 @@ cc_barras = {
   });
   return html`<div style="background:#fff; border:1px solid #EAF0F6; border-radius:8px; padding:10px 12px 4px; box-shadow:0 1px 3px rgba(0,0,0,0.02);">
     <div style="font-weight:800; color:#0B2E63; font-size:12.5px; text-transform:uppercase;">${s.esMesa ? "Mesas" : "Municipios"} por rango de votación</div>
-    <div style="font-size:10.5px; color:#94A3B8; margin:2px 0 4px;">Entre paréntesis, la parte de la votación de ${s.meta.candidato} que representa cada tramo</div>
+    <div style="font-size:10.5px; color:#94A3B8; margin:2px 0 4px;">Entre paréntesis, la parte de la votación de ${s.meta.candidato} que representa cada tramo; debajo de cada tramo, esos votos</div>
     ${plot}</div>`;
 }
 ```
@@ -7508,11 +8140,12 @@ cc_tabla = {
       ${s.esMesa
         ? `<td style="padding:7px 6px; text-align:right; font-weight:700; color:#0B2E63; font-variant-numeric:tabular-nums; font-size:11.5px;">${cc_n(d.n)}</td>
            <td style="padding:7px 6px; text-align:right; color:#64748B; font-variant-numeric:tabular-nums; font-size:11px;">${cc_n(d.total)}</td>
-           <td style="padding:7px 8px; text-align:right; font-weight:600; color:#334155; font-variant-numeric:tabular-nums; font-size:11.5px;">${cc_p(d.total ? 100 * d.n / d.total : null)}</td>`
+           <td style="padding:7px 6px; text-align:right; font-weight:600; color:#334155; font-variant-numeric:tabular-nums; font-size:11.5px;">${cc_p(d.total ? 100 * d.n / d.total : null)}</td>
+           <td style="padding:7px 8px; text-align:right; color:#64748B; font-variant-numeric:tabular-nums; font-size:11px;">${cc_n(d.votos)}</td>`
         : `<td style="padding:7px 6px; text-align:right; font-weight:700; color:#0B2E63; font-variant-numeric:tabular-nums; font-size:11.5px;">${cc_p(d.pct)}</td>
-           <td style="padding:7px 8px; text-align:right; color:#64748B; font-variant-numeric:tabular-nums; font-size:11px;" colspan="2">${cc_n(d.votos)} votos</td>`}
+           <td style="padding:7px 8px; text-align:right; color:#64748B; font-variant-numeric:tabular-nums; font-size:11px;">${cc_n(d.votos)}</td>`}
     </tr>`).join("")
-    : `<tr><td colspan="4" style="padding:22px 12px; text-align:center; color:#94A3B8; font-size:12px;">
+    : `<tr><td colspan="5" style="padding:22px 12px; text-align:center; color:#94A3B8; font-size:12px;">
          Ninguna ${s.esMesa ? "mesa" : "municipio"} supera el ${cc_lim(cc_umbral)} con esta candidatura.</td></tr>`;
 
   return html`
@@ -7520,8 +8153,8 @@ cc_tabla = {
     <div style="padding:9px 13px; border-bottom:1px solid #CBD5E1; background:#F1F5F9;">
       <div style="font-weight:800; color:#0B2E63; font-size:12.5px; text-transform:uppercase;">Top 20 municipios</div>
       <div style="font-size:10px; color:#94A3B8; margin-top:1px;">${s.esMesa
-        ? "Mesas sobre el umbral y qué parte son del total de mesas del municipio"
-        : "Porcentaje del candidato sobre los votos válidos del municipio"}</div>
+        ? `Mesas sobre el umbral, qué parte son del total de mesas del municipio y votos de ${s.meta.candidato} en esas mesas`
+        : `Porcentaje de ${s.meta.candidato} sobre los votos válidos del municipio y sus votos`}</div>
     </div>
     <div style="overflow-y:auto; flex:1;">
       <table style="width:100%; border-collapse:collapse; font-family:sans-serif;">
@@ -7530,9 +8163,10 @@ cc_tabla = {
           ${s.esMesa
             ? `<th style="${th} text-align:right;">Mesas</th>
                <th style="${th} text-align:right;">Total</th>
-               <th style="${th} text-align:right;">% del mpio.</th>`
+               <th style="${th} text-align:right;">% del mpio.</th>
+               <th style="${th} text-align:right;">Votos</th>`
             : `<th style="${th} text-align:right;">% válidos</th>
-               <th style="${th} text-align:right;" colspan="2">Votos</th>`}
+               <th style="${th} text-align:right;">Votos</th>`}
         </tr></thead>
         <tbody>${cuerpo}</tbody>
       </table>
