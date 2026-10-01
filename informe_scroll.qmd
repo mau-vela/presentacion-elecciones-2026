@@ -874,9 +874,7 @@ El número de organizaciones con personería jurídica se movió en dos momentos
 ```
 
 ::: {.img-full}
-<!-- El nombre del archivo lleva un espacio y parentesis, que rompen la sintaxis
-     de markdown para imagenes; por eso va como HTML con el espacio codificado. -->
-<img src="assets/partidos_personeria_juridica_2026%20(2).png" alt="Organizaciones con personería jurídica 2026">
+<img src="assets/partidos_personeria_juridica_2026.png" alt="Organizaciones con personería jurídica 2026">
 :::
 
 
