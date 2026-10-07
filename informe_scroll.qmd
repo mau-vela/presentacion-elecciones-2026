@@ -169,7 +169,9 @@ Un recorrido por el proceso electoral de Congreso y Presidencia.
 01 · Antes de la jornada
 :::
 
-# Divipole
+<!-- Los {#nombre} de los títulos son los destinos fijos de los botones del
+     mapa interactivo (Storyline): informe_scroll.html#nombre. No cambiarlos. -->
+# Divipole {#datos-generales}
 
 ::: {.lede}
 Censo electoral, total de puestos y mesas en Colombia y en el exterior.
@@ -188,7 +190,7 @@ ojs_define(paises_ojs  = data.frame(n = datos_div$n_paises))
 ::: {.explorer}
 
 ::: {.relato}
-## Divipole
+## Divipole {#divipole}
 
 Elige la elección y el año para ver cómo cambió el tamaño del dispositivo electoral. Las cifras incluyen Colombia y el exterior.
 
@@ -558,7 +560,7 @@ leaflet(ext) %>%
 02 · Quiénes se presentaron
 :::
 
-# La inscripción de candidaturas
+# La inscripción de candidaturas {#inscripcion-candidatos}
 
 ::: {.lede}
 Cuántas candidaturas se inscribieron para el Congreso y la Presidencia, y cuándo lo hicieron.
@@ -885,7 +887,7 @@ El número de organizaciones con personería jurídica se movió en dos momentos
 03 · Elecciones a Congreso
 :::
 
-# Elecciones a Congreso 2026
+# Elecciones a Congreso 2026 {#congreso}
 
 ::: {.lede}
 Quiénes compitieron por el Congreso, resultados y cómo cambió el panorama frente a 2022.
@@ -896,7 +898,7 @@ Quiénes compitieron por el Congreso, resultados y cómo cambió el panorama fre
 ::: {.contenido-seccion}
 
 ::: {.subseccion}
-### Candidaturas
+### Candidaturas {#congreso-candidaturas}
 :::
 
 ## Por tipo de organización
@@ -1361,7 +1363,7 @@ html`${tabla_cm_render}`
 :::
 
 ::: {.subseccion}
-### Preconteo
+### Preconteo {#congreso-preconteo}
 :::
 
 ## Velocidad del preconteo
@@ -1734,7 +1736,7 @@ FIN SECCIÓN OCULTA (Congreso) -->
 
 <!-- ============ SECCIÓN 04 — ESCRUTINIO VS PRECONTEO ============ -->
 ::: {.subseccion}
-### Comparación de preconteo y escrutinio
+### Comparación de preconteo y escrutinio {#congreso-comparacion}
 :::
 
 ## Cambios generales
@@ -1956,7 +1958,7 @@ html`
 <br>
 
 ::: {.subseccion}
-### Participación Electoral
+### Participación Electoral {#congreso-participacion}
 :::
 
 ## Participación a nivel nacional
@@ -3987,7 +3989,7 @@ html`${tabla_moe_render}`
 <br>
 
 ::: {.subseccion}
-### Resultados electorales
+### Resultados electorales {#congreso-resultados}
 :::
 
 ## Votos en blanco, nulos y tarjetones no marcados
@@ -5304,7 +5306,7 @@ html`<div style="margin-top:22px; padding:14px 18px 16px; border:1px solid #EAF0
 04 · Elección presidencial
 :::
 
-# Presidencia Primera y Segunda vuelta 2026
+# Presidencia Primera y Segunda vuelta 2026 {#presidencia}
 
 ::: {.lede}
 Preconteo, resultados y participación electoral.
@@ -5315,7 +5317,7 @@ Preconteo, resultados y participación electoral.
 ::: {.contenido-seccion}
 
 ::: {.subseccion}
-### Candidaturas
+### Candidaturas {#presidencia-candidaturas}
 :::
 
 ## Candidaturas según tipo de organización política
@@ -5491,7 +5493,7 @@ qc_notas = {
 ```
 
 ::: {.subseccion}
-### Preconteo
+### Preconteo {#presidencia-preconteo}
 :::
 
 ## Velocidad del preconteo
@@ -5818,7 +5820,7 @@ FIN SECCIÓN OCULTA (Presidencia) -->
 
 
 ::: {.subseccion}
-### Comparación de preconteo y escrutinio
+### Comparación de preconteo y escrutinio {#presidencia-comparacion}
 :::
 
 ## Cambios generales
@@ -6048,7 +6050,7 @@ pe_nota_cand(pc_vuelta, pc_anno)
 ```
 
 ::: {.subseccion}
-### Participación Electoral
+### Participación Electoral {#presidencia-participacion}
 :::
 
 ## Participación a nivel nacional
@@ -7179,7 +7181,7 @@ mv_tabla(mv_vuelta, mv_grupo)
 :::::
 
 ::: {.subseccion}
-### Resultados electorales
+### Resultados electorales {#presidencia-resultados}
 :::
 
 ## Ganador por municipio
