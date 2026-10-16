@@ -31,6 +31,25 @@ En el TXT del DIVIPOL, las posiciones **93-100 son MUJERES** y **101-108 son HOM
 `leer_divipol()` las tenía invertidas y se corrigió. Comprobado contra el censo por
 puesto de enero de 2026 y contra el DIVIPOL de 2022. No volver a invertirlas.
 
+### Fuente de las candidaturas de Congreso 2026
+Para 2026 manda el **`CANDIDATOS.TXT` del día electoral** (archivos básicos del
+preconteo), no el archivo de inscripción `CANDIATURAS2026.xlsx`. El TXT trae las
+candidaturas que llegaron al tarjetón; el Excel trae las inscritas al cierre, que son
+algunas más. En el TXT, las líneas **sin cédula son las organizaciones que inscriben**,
+no personas, y por eso el filtro de género las descarta.
+
+Con ese criterio se corrigió el **desglose de CITREP por circunscripción**, que ahora
+sale del TXT (`codcorp 007`, número de circunscripción en las posiciones 9-11) y da
+**237** en 2026. Antes salía del Excel y daba 246, mientras el total de la misma sección
+decía 237.
+
+**La circunscripción internacional de Cámara no necesita tratamiento aparte.** No
+aparece en `CIRCUNSCRIPCION.TXT` ni tiene corporación propia, pero sí está en
+`CANDIDATOS.TXT` **dentro de Territorial, con territorio 88**: son 40 candidaturas, con
+códigos de candidato 401 a 403. Queda así equiparada con 2022, donde el script suma
+`DESC_CIRC == "INTERNACIONAL"` a Territorial. No agregarlas desde el archivo de
+inscripción, porque se duplican.
+
 ### Lectura de Consulados 2018
 La hoja "Consulados " de `Divipol Presidente 2018.xlsx` se lee **completa**, sin rango.
 El rango anterior `A1:L233` dejaba por fuera tres puestos de Venezuela (22.177 de censo
@@ -52,21 +71,64 @@ consola para redactar los apartados del libro. No escriben nada del proyecto.
 
 ## El libro "Balance electoral 2026"
 
-Producto aparte del informe. Por cada sección se entregan dos cosas:
+Producto aparte del informe, basado en la misma presentación. Varias personas
+entregaron textos de análisis por sección, compilados en
+`../Presentación elecciones 2026 información para compartir/Libro/Consolidado v1.docx`
+(al lado está `Libro resultados electorales.docx`, una versión anterior y corta).
 
-1. **Apartado**, máximo una página de Word, con cinco partes numeradas: título,
-   descripción de lo que muestra, comparación con 2018 y 2022, observación sobre el
-   contexto o la gestión de la Registraduría, y conclusión. Tono técnico y objetivo,
-   sin calificativos como "excelente" o "exitosa". Dentro de cada parte, los
-   indicadores van siempre en el mismo orden: primero primera vuelta y luego segunda,
-   primero municipios y luego departamentos.
-2. **Datos curiosos**, entre 25 y 45 palabras cada uno, una sola idea, sustentados en
-   la gráfica, en formato de pregunta corta y respuesta puntual. Deben aportar algo que
-   no sea evidente a simple vista en la gráfica.
+El trabajo es **revisar y corregir** esos textos, no escribirlos desde cero: sacar de
+ahí cada apartado, quitar lo que suene a IA (usar la skill `estilo-escritura`),
+corregir afirmaciones erróneas o imprecisas contra los datos, complementar lo que
+falte y agregar a cada sección una **gráfica, tabla o mapa estático** que la
+represente mejor (identidad en `registraduria-visual-identity`, diseño en
+`diseno-documentos-excel-dashboards-html`). Nunca poner en el libro avisos de datos
+incompletos o posibles errores (ver memoria y skills).
 
-Las cifras se sacan con los scripts `scripts/libro_datos_*.R`. Si falta un dato, se
-crea un script nuevo de solo lectura en esa carpeta, nunca se modifica el `.R`
-principal.
+### Formato y ubicación
+- Se trabaja en **Markdown** en la carpeta `Libro`, siguiendo los estilos, y al final
+  se genera el **Word** para entregar.
+- El libro tiene **más secciones que el informe** y la estructura exacta se va
+  definiendo a medida que se crea; no forzar un molde único.
+- El Word se arma desde `Libro/libro/` (ver la memoria del pipeline): un `.Rmd` por
+  capítulo, `_comun.R` con paleta y estilos, `datos/preparar_capNN.R` de solo lectura
+  y `generar_word.R`. El original `Consolidado v1.docx` se lee por su copia en
+  markdown en `Libro/fuente/`, nunca abriendo el `.docx`.
+
+### Reglas fijas de presentación del libro
+- **Fuente única en todo el libro**: `Fuente: Registraduría Nacional del Estado Civil.`
+  No nombrar el DIVIPOL, los `.rds` ni ningún archivo interno.
+- **Los títulos y subtítulos de cada figura y de cada tabla se escriben en el
+  markdown del capítulo, encima del elemento**, con los estilos `Titulo figura` y
+  `Subtitulo figura`, y la fuente debajo con el estilo `Fuente`. Nunca dentro del
+  `ggplot` (`labs(title=)`, `subtitle=`) ni como `fig.cap` o `tab.cap`, para que
+  quien revise pueda corregirlos sin tocar el código de R. Lo mismo con los rótulos
+  de cada panel cuando una figura tiene varios.
+- Las cifras del texto van con código en línea (`r num(...)`), no escritas a mano.
+- **El cuerpo del texto va en negro**, no en azul. El azul `#003057` queda para los
+  títulos, los encabezados y los elementos de las figuras y tablas.
+- **Las conclusiones no llevan subsecciones en la tabla de contenido.** Los títulos de
+  tema dentro de conclusiones van con el estilo `Tema conclusiones`, que no tiene nivel
+  de esquema y por eso no entra al índice.
+- **Conclusiones e introducción se van llenando con cada sección**, no al final de
+  todo. La introducción suma un párrafo introductorio por tema, sin cifras. Las
+  conclusiones suman un bloque corto con bullets por tema, con los datos a resaltar.
+  El primer párrafo de las conclusiones queda reservado para la lectura de conjunto.
+
+### Estructura de referencia de un apartado (cuando aplique)
+- **Apartado**, en torno a una página, con cinco partes numeradas: título;
+  descripción de lo que muestra; comparación con 2018 y 2022; observación sobre el
+  contexto o la gestión de la Registraduría; conclusión. Tono técnico y objetivo, sin
+  calificativos como "excelente" o "exitosa". Dentro de cada parte, los indicadores van
+  siempre en el mismo orden: primero primera vuelta y luego segunda, primero municipios
+  y luego departamentos.
+- **Datos curiosos**, entre 25 y 45 palabras cada uno, una sola idea, sustentados en
+  la gráfica, en formato de pregunta corta y respuesta puntual. Deben aportar algo que
+  no sea evidente a simple vista en la gráfica.
+
+### Datos
+Las cifras se sacan con los scripts `scripts/libro_datos_*.R` (de solo lectura; ver
+"Scripts del libro" arriba). Si falta un dato, se crea un script nuevo de solo lectura
+en esa carpeta, nunca se modifica `00_preparar_datos.R`.
 
 ## Publicación en el sitio de la RNEC
 

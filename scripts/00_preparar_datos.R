@@ -410,6 +410,10 @@ cand26 <- {
     filter(!is.na(corp), genero != "", circ %in% c("Nacional", "Territorial", "Indígena", "Afrodescendientes", "CITREP"))
 }
 
+# La circunscripcion internacional de Camara no necesita tratamiento aparte
+# en 2026: el CANDIDATOS.TXT la trae dentro de Territorial, con territorio 88
+# (40 candidaturas, renglones 401 a 403). Queda asi equiparada con 2022, donde
+# DESC_CIRC == "INTERNACIONAL" tambien se suma a Territorial.
 cand_all <- bind_rows(cand22, cand26)
 
 # --- Resumen por corp/circ + subtotales + total, ancho por año ---
@@ -638,10 +642,18 @@ map_citrep_lbl <- tibble::tribble(
   12L,"12. Cesar-Guajira-Magdalena", 13L,"13. Sur de Bolívar", 14L,"14. Sur de Córdoba",
   15L,"15. Sur de Tolima", 16L,"16. Urabá")
 
-# 2026: del TXT (codcorp 007 = CITREP); n_CITREP en el territorio (pos 5-6)
-citrep_26 <- c26_viejo %>% filter(circ == "CITREP") %>%
-  mutate(n_CITREP = as.integer(territorio_join)) %>%
-  filter(!is.na(n_CITREP)) %>% count(n_CITREP, name = "n_2026")
+# 2026: del CANDIDATOS.TXT del dia electoral, que es la fuente del total de
+# candidaturas. Las lineas sin cedula son las organizaciones que inscriben,
+# no personas, y por eso se descartan. El numero de CITREP va en 9-11.
+# Antes esto salia del archivo de inscripcion y sumaba 246, mientras el
+# total de la seccion sumaba 237.
+citrep_26 <- {
+  a <- leer_unico(ruta_basicos_cong, "^CANDIDATOS.*\\.(TXT|txt)$")
+  tibble(linea = leer_lineas_txt(a)) %>%
+    filter(fw(linea, 1, 3) == "007", chr0(fw(linea, 120, 135)) != "") %>%
+    transmute(n_CITREP = as.integer(fw(linea, 9, 11))) %>%
+    filter(!is.na(n_CITREP)) %>% count(n_CITREP, name = "n_2026")
+}
 # 2022: hoja CITREP_2022
 citrep_22 <- read_excel(file.path(ruta_inscr, "Congreso_2022.xls"), sheet = "CITREP_2022") %>%
   transmute(n_CITREP = as.integer(`N# CITREP`)) %>% filter(!is.na(n_CITREP)) %>%
