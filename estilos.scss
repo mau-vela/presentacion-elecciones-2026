@@ -1,24 +1,57 @@
 /*-- scss:defaults --*/
 // ============================================================
 //  Tema — Presentacion Elecciones 2026 (Registraduria / Observatorio)
+//
+//  Identidad visual entregada por la Registraduria: cinco rampas de seis
+//  tonos. Cada rampa es el color base mezclado con blanco en pasos de 12%
+//  (0, 12, 24, 36, 48 y 60%). Cuando hace falta un tono mas claro que el
+//  ultimo, se calcula con la misma regla, asi que sigue dentro del rango
+//  autorizado; por eso existen los pasos 70, 78, 86, 92 y 96%.
+//  Tipografia unica: Montserrat (Regular 400, Medium 500, Bold 700).
 // ============================================================
 
-$rnec-navy:  #0B2E63;
-$rnec-blue:  #1F5BA6;
-$rnec-cyan:  #38B6C4;
-$rnec-gold:  #E8A33D;
-$azul-2022:  #8BBCE0;
-$azul-2026:  #355C7D;
-$paper:      #F4F6F9;
-$ink:        #14263F;
+// --- Rampa azul: color institucional y toda la escala de grises ---
+$azul-100:   #003057;   // base  — titulos, fondos oscuros, texto principal
+$azul-88:    #1f496b;   // 12%   — texto de cuerpo, azul secundario
+$azul-76:    #3d627f;   // 24%   — texto secundario, bordes de departamento
+$azul-64:    #5c7a94;   // 36%   — texto de apoyo (limite legible sobre blanco)
+$azul-52:    #7a93a8;   // 48%   — texto tenue, series historicas
+$azul-40:    #99acbc;   // 60%   — marcas claras, categoria sin dato
+$azul-30:    #b2c1cd;   // 70%   — separadores marcados
+$azul-22:    #c7d1da;   // 78%   — bordes de control
+$azul-14:    #dbe2e7;   // 86%   — bordes suaves, fondo de pildora positiva
+$azul-08:    #ebeef2;   // 92%   — fondo de seccion, sin informacion
+$azul-04:    #f5f7f8;   // 96%   — fondo de caja
 
-$font-family-sans-serif: "Inter", system-ui, sans-serif;
-$headings-font-family: "Archivo", "Inter", sans-serif;
+// --- Rampas de acento ---
+$turquesa:   #07d0c5;   // categoria adicional (solo relleno, nunca texto)
+$verde:      #04af27;   // aumento en graficos (solo relleno, nunca texto)
+$rojo:       #af0407;   // caida, valor adverso (si sirve como texto)
+$rojo-14:    #edc8c8;   // borde de pildora negativa
+$rojo-08:    #f9ebeb;   // fondo de pildora negativa
+$naranja:    #c96807;   // acento analitico secundario
+$naranja-48: #e3b17e;   // acento sobre fondo azul oscuro
+$naranja-14: #f7eadc;   // fondo de resaltado
+$naranja-08: #fbf3eb;   // fondo de resaltado suave
+
+// --- Alias que conserva el resto de la hoja ---
+$rnec-navy:  $azul-100;
+$rnec-blue:  $azul-88;
+$rnec-cyan:  $turquesa;
+$rnec-gold:  $naranja;
+$azul-2022:  $azul-52;
+$azul-2026:  $azul-88;
+$paper:      $azul-04;
+$ink:        $azul-100;
+
+$font-family-sans-serif: "Montserrat", system-ui, sans-serif;
+$headings-font-family: "Montserrat", sans-serif;
 
 $body-color: $ink;
 $link-color: $rnec-blue;
 $headings-color: $rnec-navy;
-$headings-font-weight: 800;
+// Montserrat llega hasta Bold: el peso maximo de los titulos es 700.
+$headings-font-weight: 700;
 
 /*-- scss:rules --*/
 
@@ -32,7 +65,8 @@ h1, h2, h3 { letter-spacing: -0.01em; }
   flex-direction: column;
   justify-content: center;
   padding: 4rem clamp(1.5rem, 6vw, 8rem);
-  background: linear-gradient(160deg, #0d3572 0%, #0B2E63 55%, #071d40 100%);
+  // El degradado recorre la propia rampa azul, de claro a base.
+  background: linear-gradient(160deg, #3d627f 0%, #1f496b 45%, #003057 100%);
   color: #ffffff;
 }
 .hero .hero-kicker {
@@ -40,7 +74,8 @@ h1, h2, h3 { letter-spacing: -0.01em; }
   letter-spacing: .3em;
   text-transform: uppercase;
   font-size: .9rem;
-  color: $rnec-gold;
+  // Sobre azul oscuro el naranja base queda justo; el paso 48% se lee mejor.
+  color: $naranja-48;
   font-weight: 700;
   margin-bottom: 1.5rem;
 }
@@ -75,7 +110,7 @@ h1, h2, h3 { letter-spacing: -0.01em; }
   flex-direction: column;
   justify-content: center;
   padding: 3rem clamp(1.5rem, 5vw, 6rem);
-  background: linear-gradient(135deg, #0B2E63 0%, #071d40 100%);
+  background: linear-gradient(135deg, #1f496b 0%, #003057 100%);
   color: #ffffff;
   border-radius: 10px;
   margin: 3.5rem 0;
@@ -85,7 +120,7 @@ h1, h2, h3 { letter-spacing: -0.01em; }
   font-size: .95rem;
   letter-spacing: .25em;
   text-transform: uppercase;
-  color: $rnec-gold;
+  color: $naranja-48;
   font-weight: 700;
   margin-bottom: 1rem;
 }
@@ -117,7 +152,7 @@ h1, h2, h3 { letter-spacing: -0.01em; }
   margin: 2rem 0 3rem 0;
 }
 .explorer .relato h2 { margin-top: 0; }
-.explorer .relato p { color: #3a4a63; }
+.explorer .relato p { color: $azul-76; }
 @media (max-width: 820px) {
   .explorer { grid-template-columns: 1fr; }
 }
@@ -132,29 +167,31 @@ h1, h2, h3 { letter-spacing: -0.01em; }
 .ficha {
   flex: 1 1 150px;
   background: #ffffff;
-  border: 1px solid #e6eaf0;
+  border: 1px solid $azul-14;
   border-top: 4px solid $rnec-navy;
   border-radius: 8px;
   padding: 1.1rem 1.2rem;
-  box-shadow: 0 2px 10px rgba(11, 46, 99, .05);
+  box-shadow: 0 2px 10px rgba(0, 48, 87, .05);
 }
 .ficha .ficha-valor {
   font-family: $headings-font-family;
   font-size: 2.1rem;
-  font-weight: 800;
+  font-weight: 700;
   color: $rnec-navy;
   line-height: 1.05;
   font-variant-numeric: tabular-nums;
 }
-.ficha .ficha-label { font-size: .82rem; color: #5a6a80; margin-top: .3rem; }
+.ficha .ficha-label { font-size: .82rem; color: $azul-64; margin-top: .3rem; }
 .ficha .ficha-delta { font-size: .78rem; margin-top: .4rem; font-weight: 600; }
-.ficha .ficha-delta.up { color: #1a7f4b; }
-.ficha .ficha-delta.down { color: #b23b3b; }
-.ficha.destacada { border-top-color: $rnec-gold; }
+// El verde de la paleta no alcanza contraste como texto: el signo positivo
+// se marca con el azul institucional y el negativo con el rojo base.
+.ficha .ficha-delta.up { color: $azul-100; }
+.ficha .ficha-delta.down { color: $rojo; }
+.ficha.destacada { border-top-color: $naranja; }
 
 /* --- Mapa --- */
 .mapa-full { margin: 1.5rem 0 2.5rem 0; }
-.leaflet-container { border-radius: 10px; box-shadow: 0 6px 24px rgba(11, 46, 99, .12); }
+.leaflet-container { border-radius: 10px; box-shadow: 0 6px 24px rgba(0, 48, 87, .12); }
 .panel-tabset { margin-top: 1rem; }
 
 /* --- Aparicion al hacer scroll --- */
@@ -163,28 +200,28 @@ h1, h2, h3 { letter-spacing: -0.01em; }
 
 h2 { margin-top: 2.5rem; font-size: clamp(1.4rem, 3vw, 2rem); }
 
-.seg-control { display:inline-flex; border:1px solid #cdd6e2; border-radius:10px; overflow:hidden; margin:1rem 0 1.5rem; }
-.seg-btn { border:0; background:#fff; color:#0B2E63; font-family:"Archivo",sans-serif; font-weight:600; font-size:.98rem; padding:.6rem 1.3rem; cursor:pointer; border-right:1px solid #cdd6e2; }
+.seg-control { display:inline-flex; border:1px solid $azul-22; border-radius:10px; overflow:hidden; margin:1rem 0 1.5rem; }
+.seg-btn { border:0; background:#fff; color:#003057; font-family:"Montserrat",sans-serif; font-weight:600; font-size:.98rem; padding:.6rem 1.3rem; cursor:pointer; border-right:1px solid $azul-22; }
 .seg-btn:last-child { border-right:0; }
-.seg-btn:hover { background:#EAF0F6; }
-.seg-btn.active { background:#0B2E63; color:#fff; }
+.seg-btn:hover { background:#ebeef2; }
+.seg-btn.active { background:#003057; color:#fff; }
 
 .cand-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:12px; margin:1.2rem 0; }
-.cand-card { background:#fff; border:1px solid #e6eaf0; border-left:4px solid #0B2E63; border-radius:8px; padding:12px 14px; }
-.cand-nom { font-family:"Archivo",sans-serif; font-weight:700; color:#0B2E63; font-size:1.02rem; line-height:1.15; }
-.cand-part { color:#5a6a80; font-size:.85rem; margin:.25rem 0 .55rem; }
+.cand-card { background:#fff; border:1px solid #dbe2e7; border-left:4px solid #003057; border-radius:8px; padding:12px 14px; }
+.cand-nom { font-family:"Montserrat",sans-serif; font-weight:700; color:#003057; font-size:1.02rem; line-height:1.15; }
+.cand-part { color:#5c7a94; font-size:.85rem; margin:.25rem 0 .55rem; }
 .cand-gen { font-size:.72rem; padding:2px 9px; border-radius:20px; font-weight:600; }
-.cand-gen.f { background:#f6e6cf; color:#8a5a12; }
-.cand-gen.m { background:#dfe8f2; color:#2a4a70; }
-.img-full img { width:100%; height:auto; border-radius:8px; box-shadow:0 4px 18px rgba(11,46,99,.12); }
+.cand-gen.f { background:#f7eadc; color:#c96807; }
+.cand-gen.m { background:#dbe2e7; color:#003057; }
+.img-full img { width:100%; height:auto; border-radius:8px; box-shadow:0 4px 18px rgba(0,48,87,.12); }
 
-.subseccion { border-bottom:3px solid #0B2E63; margin:3.2rem 0 1.6rem; line-height:0; }
+.subseccion { border-bottom:3px solid #003057; margin:3.2rem 0 1.6rem; line-height:0; }
 .subseccion h1, .subseccion h2, .subseccion h3 {
-  display:inline-block; background:#0B2E63; color:#fff; font-family:"Archivo",sans-serif;
-  font-weight:800; font-size:1.4rem; padding:.55rem 1.5rem .65rem; border-radius:10px 10px 0 0;
+  display:inline-block; background:#003057; color:#fff; font-family:"Montserrat",sans-serif;
+  font-weight:700; font-size:1.4rem; padding:.55rem 1.5rem .65rem; border-radius:10px 10px 0 0;
   margin:0; line-height:1.15; }
 
 .mini-tabla { width:100%; border-collapse:collapse; font-size:12.5px; }
-.mini-tabla th { background:#1F4E79; color:#fff; font-weight:600; padding:7px 9px; text-align:center; }
-.mini-tabla td { padding:6px 9px; text-align:center; border-top:1px solid #e6eaf0; font-variant-numeric:tabular-nums; }
+.mini-tabla th { background:#003057; color:#fff; font-weight:600; padding:7px 9px; text-align:center; }
+.mini-tabla td { padding:6px 9px; text-align:center; border-top:1px solid #dbe2e7; font-variant-numeric:tabular-nums; }
 .mini-tabla td:first-child, .mini-tabla th:first-child { text-align:left; }

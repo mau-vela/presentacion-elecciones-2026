@@ -7,6 +7,164 @@ Estilos en estilos.scss. Los datos se preparan en 00_preparar_datos.R, que guard
 todo en .rds autosuficientes que el .qmd solo lee. Se publica en Posit Connect
 Cloud (tier gratuito, 4 GB) por auto-deploy de GitHub.
 
+## Estado del proyecto: hechos que NO se deben romper
+
+Esto es contexto que una sesión nueva no puede deducir leyendo el código. Antes de
+tocar el `.qmd` o el `.R`, tenerlo presente.
+
+### Anclas de las secciones (para el mapa interactivo externo)
+15 títulos del `.qmd` llevan un `{#nombre}` fijo. Son el destino de los botones de un
+mapa interactivo hecho en Articulate Storyline por un diseñador externo, que será la
+portada del sitio y enlaza con `informe_scroll.html#nombre`. **No renombrarlas ni
+quitarlas**, porque romperían los enlaces:
+`datos-generales`, `divipole`, `inscripcion-candidatos`, `congreso`, `presidencia`, y
+`{congreso|presidencia}-{candidaturas|preconteo|comparacion|participacion|resultados}`.
+
+### Secciones ocultas, no borradas
+Dos secciones de "Comparación territorial" de la velocidad del preconteo (una en
+Congreso, otra en Presidencia) están **envueltas en comentarios HTML**, no eliminadas.
+Se buscan por la marca `SECCIÓN OCULTA` en el `.qmd`. Quarto no las publica ni ejecuta
+sus celdas OJS. No "arreglarlas" ni reactivarlas sin que se pida.
+
+### Orden mujeres/hombres en el DIVIPOL 2026
+En el TXT del DIVIPOL, las posiciones **93-100 son MUJERES** y **101-108 son HOMBRES**.
+`leer_divipol()` las tenía invertidas y se corrigió. Comprobado contra el censo por
+puesto de enero de 2026 y contra el DIVIPOL de 2022. No volver a invertirlas.
+
+### Lectura de Consulados 2018
+La hoja "Consulados " de `Divipol Presidente 2018.xlsx` se lee **completa**, sin rango.
+El rango anterior `A1:L233` dejaba por fuera tres puestos de Venezuela (22.177 de censo
+y 33 mesas). La fila TOTAL del final se descarta con el filtro de `dd` numérico.
+
+### Secciones aparte del R (no alimentan el informe)
+Al final de `00_preparar_datos.R` hay dos secciones marcadas `SECCION APARTE` que
+generan archivos para uso externo en `../divipole/` (el exterior por país en
+`procesamiento/`, el DIVIPOL de Congreso 2026 en `congreso/`) y **no crean ningún
+`.rds` ni alimentan el `.qmd`**:
+- Exterior por país 2018-2022-2026. El "municipio" del DIVIPOL en el exterior es una
+  **jurisdicción consular, no un país**: Riad está dentro de EGIPTO, Dakar dentro de
+  GHANA. El país se asigna puesto por puesto con reglas explícitas.
+- DIVIPOL de Congreso 2026 en xlsx, leído del TXT.
+
+### Scripts del libro
+`scripts/libro_datos_*.R` son de **solo lectura**: leen los `.rds` y muestran cifras en
+consola para redactar los apartados del libro. No escriben nada del proyecto.
+
+## El libro "Balance electoral 2026"
+
+Producto aparte del informe. Por cada sección se entregan dos cosas:
+
+1. **Apartado**, máximo una página de Word, con cinco partes numeradas: título,
+   descripción de lo que muestra, comparación con 2018 y 2022, observación sobre el
+   contexto o la gestión de la Registraduría, y conclusión. Tono técnico y objetivo,
+   sin calificativos como "excelente" o "exitosa". Dentro de cada parte, los
+   indicadores van siempre en el mismo orden: primero primera vuelta y luego segunda,
+   primero municipios y luego departamentos.
+2. **Datos curiosos**, entre 25 y 45 palabras cada uno, una sola idea, sustentados en
+   la gráfica, en formato de pregunta corta y respuesta puntual. Deben aportar algo que
+   no sea evidente a simple vista en la gráfica.
+
+Las cifras se sacan con los scripts `scripts/libro_datos_*.R`. Si falta un dato, se
+crea un script nuevo de solo lectura en esa carpeta, nunca se modifica el `.R`
+principal.
+
+## Publicación en el sitio de la RNEC
+
+Además de Posit Connect Cloud, el informe se va a publicar en el sitio institucional.
+
+- Es un **sitio estático**: no necesita R ni base de datos en el servidor.
+- El paquete para informática se arma en
+  `../Presentación elecciones 2026 información para compartir/entrega web Registraduria/`,
+  que está **fuera del repositorio** y por eso no entra a git.
+- Lo que se entrega: el HTML renderizado, la carpeta `informe_scroll_files`, los seis
+  `.geojson`, `puestos_mapa.json` (puntos del mapa de puestos de la sección Divipole,
+  unos 2 MB) y las dos imágenes de `assets` que el informe usa.
+- Requisitos que informática debe habilitar: registrar `.geojson` como
+  `application/json`, activar compresión gzip (el HTML pesa 47 MiB y baja a 9,6 MiB) y
+  revisar los dominios externos (`server.arcgisonline.com`, `unpkg.com`,
+  `fonts.googleapis.com` y `fonts.gstatic.com`).
+- **Abrir el HTML con doble clic no funciona**: el navegador bloquea la lectura de los
+  `.geojson` y los mapas salen en blanco. Para probar hay que servirlo
+  (`python -m http.server`).
+- Ojo con el peso: el HTML está en 47 MiB y GitHub advierte desde 50 MiB.
+
+### Portada interactiva (Storyline) — pendiente de versión definitiva
+
+Un diseñador externo (Carlos Bermúdez) hizo en Articulate Storyline 360 una portada
+con introducción, un mapa de navegación con botones hacia cada sección, y un cierre.
+Va a ser la **puerta de entrada del sitio**, y el informe queda como página aparte en
+la misma carpeta. La versión recibida está en
+`../Presentación elecciones 2026 información para compartir/storyline/` y **no es
+definitiva**.
+
+Lo que estaba pendiente cuando se revisó:
+- Los textos de introducción y cierre son "Lorem ipsum".
+- Los botones del mapa **no enlazan al informe todavía**. Se le pidió configurarlos
+  como "Saltar a URL/archivo" hacia `informe_scroll.html#ancla`, en la ventana actual.
+- Falta el archivo fuente `.story`, necesario para cualquier cambio posterior.
+- Falta definir si Presidencia lleva en el mapa los mismos subtemas que el informe.
+
+Cuando llegue la versión definitiva hay que:
+1. Verificar que los 15 enlaces apunten a las anclas correctas.
+2. Renombrar su `story.html` a `index.html`, para que sea lo que se abre al entrar a
+   la carpeta. El informe conserva el nombre `informe_scroll.html`.
+3. Rehacer el paquete de `entrega web Registraduria` con las dos piezas juntas, y
+   probarlo servido en local antes de entregarlo.
+4. Actualizar la nota para informática: el Storyline agrega unos 8 MB, usa fuentes
+   `.woff` (registrar como `font/woff`) y envía estadísticas de uso a
+   `metrics.articulate.com`, que se puede bloquear sin que deje de funcionar.
+
+## Colores y tipografía: la identidad oficial manda
+
+La Registraduría entregó la paleta y la fuente que hay que usar. Están en
+`../Presentación elecciones 2026 información para compartir/Colores y fuente/`
+(`Colores Elecciones 2026.pdf` y la carpeta `Fuente Monsterrat`). El detalle
+completo está en el skill `registraduria-visual-identity`; lo esencial:
+
+- **Cinco rampas de seis tonos.** Cada rampa es el color base mezclado con
+  blanco en pasos de 12% (0, 12, 24, 36, 48, 60%). Las bases son
+  azul `#003057`, turquesa `#07d0c5`, verde `#04af27`, rojo `#af0407` y
+  naranja `#c96807`.
+- **Si hace falta un tono que no está, se calcula con esa misma regla**
+  (`canal + (255 − canal) × porcentaje`), nunca se inventa un color nuevo. Los
+  pasos adicionales que ya se usan son 70, 78, 86, 92 y 96%.
+- **La rampa azul hace de escala de grises.** En este sistema no hay grises
+  aparte: los `#334155`, `#94A3B8`, `#E2E8F0` y similares ya no existen.
+- **Verde y turquesa solo como relleno, nunca como texto**: no alcanzan
+  contraste. Por eso el cambio positivo va en azul `#003057` y el negativo en
+  rojo `#af0407`.
+- **El color más claro legible como texto sobre blanco es `#5c7a94`.**
+- **Tipografía única: Montserrat**, en Regular 400, Medium 500 y Bold 700.
+  Nunca 800 ni 900, que no se entregaron. Se carga desde Google Fonts.
+- **Excepción: los colores de partido** (`color_map` en
+  `scripts/00_preparar_datos.R`) se quedan como están. Repintarlos
+  tergiversaría a los partidos.
+
+Las constantes están definidas en dos sitios que conviene reutilizar en vez de
+escribir hex sueltos: `RNEC_AZUL`, `RNEC_SEQ`, `RNEC_SEQ_N`, `RNEC_DIV` y
+compañía en el chunk `setup` del `.qmd` para los mapas de R, y las celdas OJS
+`paleta-rnec` (`rnec_seq`, `rnec_div`) y `paleta-rnec-clases` (`rnec_part`,
+`rnec_leyenda_clases`) para las escalas de d3 y Plot.
+
+**Los coropletas necesitan la rampa ampliada, no los seis pasos publicados.**
+El más claro de los seis, `#99acbc`, ya es un tono medio: un mapa construido
+solo con ellos sale plano. Por eso `RNEC_SEQ` arranca en `#dbe2e7` (pasos 70,
+78 y 86%). Y cuando los datos se amontonan —la participación municipal vive
+entre 40% y 60%, el censo del exterior va de 11 a 405.325— la escala continua
+tampoco sirve: van clases explícitas, más finas donde están los datos
+(`RNEC_CORTES_PART` y `RNEC_CORTES_CENSO`). Los cortes de participación son los
+mismos en Senado, Cámara y las dos vueltas, para que los cuatro mapas se puedan
+comparar entre sí.
+
+**Para coropletas con muchas clases, solo sirve la rampa azul.** Medida en L*,
+la azul va de 89 a 19, unos 10 puntos por paso; la naranja se detiene en
+`#c96807` y va de 93 a 54, unos 5 puntos por paso, y por debajo de 5 dos
+rellenos contiguos se ven iguales. La naranja aguanta tres o cuatro clases; más
+allá de eso, o si hay que distinguir los valores altos entre sí, va azul. Y en
+una variable sesgada hay que cerrar las clases de arriba para que los grandes
+no queden contiguos: con los cortes del censo del exterior, Canadá cae en
+`#3d627f` y Estados Unidos en `#003057`, con Venezuela en medio.
+
 ## Diseño y Presentación Visual
 - DEBES mantener una estructura de diseño muy agradable, limpia y profesional (estilo SaaS / Dashboard moderno).
 - El informe es para proyectar en vivo: EVITA crear secciones con scroll vertical excesivo. Los bloques visuales y mapas deben caber bien en la pantalla.
@@ -16,8 +174,8 @@ Cloud (tier gratuito, 4 GB) por auto-deploy de GitHub.
 
 ## Tablas y Listados
 - NO uses colores de fondo sólidos para colorear celdas completas de datos numéricos. Usa colores en el texto o componentes sutiles.
-- Para deltas/cambios (ej. 2026 vs 2022), usa etiquetas tipo "píldora" (badges): fondos muy suaves (azul claro para +, rojo claro para -) con texto oscuro en negrita y bordes redondeados.
-- Mantén las cabeceras limpias (gris claro o fondos blancos con bordes sutiles). Reserva los colores oscuros fuertes (ej. #0B2E63) solo para las filas de "Total general".
+- Para deltas/cambios (ej. 2026 vs 2022), usa etiquetas tipo "píldora" (badges): fondo `#dbe2e7` con texto `#003057` para +, fondo `#f9ebeb` con texto `#af0407` para -, en negrita y con bordes redondeados.
+- Mantén las cabeceras limpias (`#ebeef2` o fondos blancos con bordes `#dbe2e7`). Reserva el azul fuerte `#003057` solo para las filas de "Total general".
 - Los mapas SIEMPRE van acompañados de una tabla lateral.
   - Si es departamental: Muestra todos los departamentos ordenados según la variable.
   - Si es municipal: Muestra solo un top 20 (permitiendo filtrar entre top 20 más altos o más bajos).
@@ -67,7 +225,13 @@ Cloud (tier gratuito, 4 GB) por auto-deploy de GitHub.
   cambiar el resto de la presentación, en ese caso si preguntar si lo puede modificar. 
 - Si un requisito es ambiguo, pregunta antes de escribir código.
 - Responde siempre en español.
-- Nunca agregar notas de pie de pagina si no explícitamente solicito incluirlas. 
+- Nunca agregar notas de pie de pagina si no explícitamente solicito incluirlas.
+- Los porcentajes van pegados al signo: `45%`, `12,3%`. Nunca `45 %`.
+- Después de cambiar el `.qmd` o los `.rds`, recordar que la versión publicada en
+  Posit solo se actualiza al hacer commit y push, porque despliega desde GitHub.
+- Hay otro proyecto en la carpeta vecina, `../Presentación elecciones 2026 información
+  para compartir/visor-gemini-publicacion/`, que es un visor web de otra persona con su
+  propio CLAUDE.md. No mezclar los dos.
 
 ### Comandos: formas exactas para no pedir permiso
 Las reglas de .claude/settings.json solo funcionan si el comando se escribe tal
@@ -96,6 +260,6 @@ cual. Respeta estas formas al pie de la letra.
 - PROHIBIDO el "Diseño típico de IA" (cajas grises genéricas, sombras difusas gigantes, botones azules estándar).
 - PROHIBIDO el "KPI Genérico": NUNCA uses bordes izquierdos gruesos de colores (`border-left: 4px solid...`) para decorar tarjetas o métricas.
 - Controles modernos: NUNCA uses botones de radio nativos (`<input type="radio">`). Si necesitas filtros (ej. Senado/Cámara), diseña controles segmentados (segmented controls) o botones tipo píldora (pill buttons) que cambien de fondo al estar activos.
-- Tipografía y números: Usa tipografías modernas (familia sans-serif geométrica). Los números gigantes de los KPIs deben ir alineados a la izquierda, con un tamaño masivo (ej. 40px), tracking apretado, y TODOS en el color principal (#0B2E63 o #1E293B). 
+- Tipografía y números: Montserrat, siempre. Los números gigantes de los KPIs deben ir alineados a la izquierda, con un tamaño masivo (ej. 40px), tracking apretado, en Bold 700, y TODOS en el azul principal `#003057`. 
 - Jerarquía por color: NO pongas cada número principal de un color distinto. Reserva los colores de alerta (rojo oscuro, verde oscuro, ámbar) ÚNICAMENTE para los pequeños deltas (las "píldoras" de cambio de porcentaje).
 - Separación limpia: Jerarquía visual por color y peso tipográfico, NO por cajas. Evita encerrar todo en bordes y NO uses líneas verticales para separar bloques. Usa CSS Grid con `gap` (espacios en blanco) para separar elementos.

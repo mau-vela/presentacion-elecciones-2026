@@ -300,6 +300,57 @@ datos_divipole <- list(
 saveRDS(datos_divipole, "datos_divipole.rds")
 message("Listo: datos_divipole.rds  |  paises exterior 2026 = ", n_paises_2026)
 
+# ---- (F) Puestos de votacion para el mapa de puntos ----------------3
+# Mapa de puestos urbanos y rurales de la seccion Divipole (opcion "Puestos"
+# del mapa de distribucion territorial). La ubicacion y el nombre de cada
+# puesto salen del maestro de puestos 2014-2026
+# (../divipole/procesamiento/puestos_2014_2026.rds), que tiene coordenadas
+# validadas para cada anio; el censo y las mesas, de los mismos DIVIPOL de
+# arriba, por eleccion. Solo puestos del pais. Rural = zona 99.
+# Se escribe en puestos_mapa.json y no en el .rds: el .qmd lo carga con
+# FileAttachment, igual que los geojson, asi que no engorda el HTML.
+# Formato por columnas para que pese poco: por anio, un arreglo por campo
+# (n nombre, m indice del municipio en 'mun', la/lo coordenadas, r rural,
+# cc/mc censo y mesas de Congreso, cp/mp de Presidencia; null si el puesto
+# no estuvo en esa eleccion).
+maestro_puestos <- readRDS("../divipole/procesamiento/puestos_2014_2026.rds") %>% filter(!exterior)
+clave_div <- function(dd, mm, zz, pp) str_to_upper(paste0(sprintf("%02d", as.integer(dd)), sprintf("%03d", as.integer(mm)),
+                                                          sprintf("%02d", as.integer(zz)), str_pad(pp, 2, pad = "0")))
+por_puesto <- function(df) df %>% filter(COD_DPTO != 88) %>%
+  mutate(cod = clave_div(COD_DPTO, codmun, zona, puesto)) %>%
+  group_by(cod) %>% summarise(censo = sum(censo, na.rm = TRUE), mesas = sum(n_mesas_puesto, na.rm = TRUE), .groups = "drop")
+mun_nom <- map_rnec_codmpio %>% distinct(code_RNEC, .keep_all = TRUE)
+puestos_anio <- function(anio, cong, pres) {
+  col <- paste0("cod_", anio)
+  maestro_puestos %>% filter(!is.na(.data[[col]])) %>%
+    transmute(cod = .data[[col]], n = .data[[paste0("nom_", anio)]],
+              la = round(.data[[paste0("lat_", anio)]], 4), lo = round(.data[[paste0("long_", anio)]], 4),
+              r = as.integer(substr(cod, 6, 7) == "99"), code_RNEC = as.integer(substr(cod, 1, 5))) %>%
+    distinct(cod, .keep_all = TRUE) %>%
+    left_join(por_puesto(cong) %>% rename(cc = censo, mc = mesas), by = "cod") %>%
+    left_join(por_puesto(pres) %>% rename(cp = censo, mp = mesas), by = "cod") %>%
+    filter(!is.na(cc) | !is.na(cp)) %>%
+    left_join(mun_nom %>% select(code_RNEC, Municipio, Depto), by = "code_RNEC")
+}
+pts_mapa <- list(`2018` = puestos_anio(2018, cong_2018, pres_2018),
+                 `2022` = puestos_anio(2022, cong_2022, pres_2022),
+                 `2026` = puestos_anio(2026, divipol_cong_26, divipol_pres_26))
+# Verificacion: los puestos del pais de cada eleccion deben ser los del resumen
+for (a in names(pts_mapa)) for (el in c("Congreso", "Presidencia")) {
+  n_map <- sum(!is.na(pts_mapa[[a]][[if (el == "Congreso") "cc" else "cp"]]))
+  n_res <- div_resumen %>% filter(eleccion == el, annoh == as.numeric(a), ambito == "Nacional") %>% pull(n_puestos)
+  if (n_map != n_res) stop("Mapa de puestos ", el, " ", a, ": ", n_map, " puestos y el resumen dice ", n_res)
+}
+mun_dic <- bind_rows(pts_mapa) %>% distinct(code_RNEC, Municipio, Depto) %>% arrange(code_RNEC)
+puestos_json <- list(
+  mun = lapply(seq_len(nrow(mun_dic)), function(i) c(mun_dic$Municipio[i], mun_dic$Depto[i])),
+  anios = lapply(pts_mapa, function(d) list(
+    n = d$n, m = match(d$code_RNEC, mun_dic$code_RNEC) - 1L, la = d$la, lo = d$lo, r = d$r,
+    cc = d$cc, mc = d$mc, cp = d$cp, mp = d$mp)))
+jsonlite::write_json(puestos_json, "puestos_mapa.json", auto_unbox = TRUE, na = "null", digits = 4)
+message("Listo: puestos_mapa.json | ", paste(names(pts_mapa), sapply(pts_mapa, nrow), sep = ": ", collapse = " | "),
+        " puestos | ", round(file.size("puestos_mapa.json") / 1024), " KB")
+
 
 # =====================================================================3
 #  SECCION 02 — INSCRIPCION DE CANDIDATURAS ----
@@ -4269,7 +4320,7 @@ message("Listo: datos_electos.rds (", nrow(electos_ind), " curules; ",
 #  SECCION APARTE · EXTERIOR POR PAIS 2018-2022-2026 (Excel externo) ----
 # =====================================================================3
 # Tabla para un uso fuera de este informe: no alimenta el .qmd ni genera .rds.
-# Se escribe en ../divipole/exterior_por_pais_2018_2022_2026.xlsx, una hoja por
+# Se escribe en ../divipole/procesamiento/exterior_por_pais_2018_2022_2026.xlsx, una hoja por
 # eleccion (Congreso, Presidencia 1ra y 2da vuelta).
 #
 # Pais = pais REAL donde queda cada puesto. La RNEC organiza el exterior en
@@ -4297,7 +4348,7 @@ message("Listo: datos_electos.rds (", nrow(electos_ind), " curules; ",
 # - Congreso: un elector vota Senado y Camara en la misma mesa, asi que se toma
 #   el maximo por mesa entre las dos, como en el KPI nacional de participacion.
 
-ext_carpeta_salida <- "../divipole"
+ext_carpeta_salida <- "../divipole/procesamiento"
 ext_esc_pres <- c(
   "2026_1ra" = "../Presidencia 2026/escrutinio primera vuelta/mmv/escrutinio_completo_1era.rds",
   "2026_2da" = "../Presidencia 2026/escrutinio segunda vuelta/mmv/escrutinio_completo_2da.rds")
@@ -4647,7 +4698,7 @@ if (any(!(ext_sin_votos$pais == "Israel" & ext_sin_votos$anno == 2026 & ext_sin_
 
 if (!dir.exists(ext_carpeta_salida)) dir.create(ext_carpeta_salida, recursive = TRUE)
 writexl::write_xlsx(ext_excel, file.path(ext_carpeta_salida, "exterior_por_pais_2018_2022_2026.xlsx"))
-message("Listo: ../divipole/exterior_por_pais_2018_2022_2026.xlsx | ",
+message("Listo: ../divipole/procesamiento/exterior_por_pais_2018_2022_2026.xlsx | ",
         paste(sprintf("%s: %d filas", names(ext_excel), sapply(ext_excel, nrow)), collapse = " | "))
 
 
@@ -4656,7 +4707,7 @@ message("Listo: ../divipole/exterior_por_pais_2018_2022_2026.xlsx | ",
 # =====================================================================3
 # Base de censo por puesto de Congreso 2026, para uso fuera de este informe: no
 # alimenta el .qmd ni genera .rds. Sale del TXT del DIVIPOL de los archivos
-# basicos y se escribe en ../divipole con las mismas columnas de los xlsx de la
+# basicos y se escribe en ../divipole/congreso con las mismas columnas de los xlsx de la
 # RNEC de 2018 y 2022 (el TXT no trae la direccion).
 #
 # - En el TXT las posiciones 93-100 son MUJERES y 101-108 HOMBRES (comprobado
@@ -4697,7 +4748,7 @@ if (any(div26_chk != c(div26_ref$n_puestos, div26_ref$n_mesas, div26_ref$censo))
   stop("El xlsx del DIVIPOL de Congreso 2026 no cuadra con div_resumen")
 
 writexl::write_xlsx(list("Divipol Congreso 2026" = divipol_cong_26_xlsx),
-                    "../divipole/26-Divipole_Elecciones_Congreso_08-03-2026.xlsx")
-message("Listo: ../divipole/26-Divipole_Elecciones_Congreso_08-03-2026.xlsx | ",
+                    "../divipole/congreso/26-Divipole_Elecciones_Congreso_08-03-2026.xlsx")
+message("Listo: ../divipole/congreso/26-Divipole_Elecciones_Congreso_08-03-2026.xlsx | ",
         nrow(divipol_cong_26_xlsx), " puestos | mujeres ", sum(divipol_cong_26_xlsx$mujeres),
         " | hombres ", sum(divipol_cong_26_xlsx$hombres))
