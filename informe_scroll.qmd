@@ -363,7 +363,7 @@ sel = filas.find(d => d.eleccion === eleccion && d.annoh === Number(anno) && d.a
   wrap.innerHTML = `
     <div class="fichas" style="display:grid; grid-template-columns:1fr 1fr 1.45fr; gap:.7rem; margin:0 0 .8rem;">
       <div class="ficha" style="${caja}"><div class="ficha-valor" style="${valor}">${fmt(sel.n_puestos)}</div>
-        <div class="ficha-label">Puestos de votación</div></div>
+        <div class="ficha-label">Puestos de votación, incluido el exterior</div></div>
       <div class="ficha" style="${caja}"><div class="ficha-valor" style="${valor}">${fmt(sel.n_mesas)}</div>
         <div class="ficha-label">Mesas instaladas</div></div>
       <div class="ficha destacada" style="${caja}"><div class="ficha-valor" style="${valor}">${fmt(sel.censo)}</div>
@@ -414,11 +414,13 @@ pue_capa = {
   const radio = z => z <= 6 ? 1.6 : z <= 8 ? 2.4 : z <= 10 ? 3.5 : 5;
   const rend = L_pue.canvas({ padding: 0.3 });
   const grupo = L_pue.featureGroup();
-  let nU = 0, nR = 0, sinCoord = 0;
+  let nU = 0, nR = 0;
   for (let i = 0; i < A.n.length; i++) {
     if (cen[i] == null) continue;
-    if (A.la[i] == null || A.lo[i] == null) { sinCoord++; continue; }
+    // la leyenda cuenta todos los puestos de la eleccion; el punto se dibuja
+    // solo si el puesto tiene ubicacion
     A.r[i] ? nR++ : nU++;
+    if (A.la[i] == null || A.lo[i] == null) continue;
     L_pue.circleMarker([A.la[i], A.lo[i]], { renderer: rend, radius: radio(map.getZoom()), stroke: false,
       fillColor: A.r[i] ? COL_RUR : COL_URB, fillOpacity: 0.85, idx: i }).addTo(grupo);
   }
@@ -433,8 +435,11 @@ pue_capa = {
   const ajustar = () => { const r = radio(map.getZoom()); grupo.eachLayer(l => l.setRadius(r)); };
   map.on("zoomend", ajustar);
   map._zoomFn = ajustar;
-  // Borde departamental de referencia, sin relleno (se dibuja una sola vez)
+  // Borde departamental de referencia, sin relleno (se dibuja una sola vez).
+  // Sin San Andres: el geojson lo trae ampliado y reubicado para los
+  // coropletas; aqui sus puestos se ven en su ubicacion real.
   if (!map._dep) map._dep = L_pue.geoJSON(geo_deptos_di, { interactive: false,
+    filter: f => +f.properties.coddepto !== 88,
     style: () => ({ fill: false, color: "#7a93a8", weight: 0.8, opacity: 0.7 }) }).addTo(map);
   const legend = L_pue.control({ position: "bottomleft" });
   legend.onAdd = () => {
@@ -444,8 +449,7 @@ pue_capa = {
       <span style="width:9px; height:9px; border-radius:50%; background:${c}; display:inline-block;"></span>
       <span style="color:#3d627f; flex:1;">${t}</span><b style="color:#003057;">${n.toLocaleString("es-CO")}</b></div>`;
     dv.innerHTML = `<div style="font-weight:700; color:#003057; margin-bottom:6px; font-size:12px;">Puestos en el país</div>`
-      + fila(COL_URB, "Urbanos", nU) + fila(COL_RUR, "Rurales", nR)
-      + (sinCoord ? `<div style="font-size:9.5px; color:#7a93a8; margin-top:5px;">${sinCoord} sin ubicación no aparecen</div>` : "");
+      + fila(COL_URB, "Urbanos", nU) + fila(COL_RUR, "Rurales", nR);
     return dv;
   };
   legend.addTo(map);
