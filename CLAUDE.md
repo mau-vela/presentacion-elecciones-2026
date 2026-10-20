@@ -12,12 +12,29 @@ Cloud (tier gratuito, 4 GB) por auto-deploy de GitHub.
 Esto es contexto que una sesión nueva no puede deducir leyendo el código. Antes de
 tocar el `.qmd` o el `.R`, tenerlo presente.
 
-### Anclas de las secciones (para el mapa interactivo externo)
-15 títulos del `.qmd` llevan un `{#nombre}` fijo. Son el destino de los botones de un
-mapa interactivo hecho en Articulate Storyline por un diseñador externo, que será la
-portada del sitio y enlaza con `informe_scroll.html#nombre`. **No renombrarlas ni
-quitarlas**, porque romperían los enlaces:
-`datos-generales`, `divipole`, `inscripcion-candidatos`, `congreso`, `presidencia`, y
+### Estructura del informe y anclas (para el mapa interactivo externo)
+El informe tiene **tres secciones grandes**, no cuatro. En octubre de 2026 se
+reorganizó así:
+
+1. **Infraestructura electoral** (antes "Datos generales" / "Divipole"): censo,
+   puestos, mesas, distribución territorial y exterior.
+2. **Elecciones a Congreso**: candidaturas, preconteo, comparación, participación y
+   resultados.
+3. **Presidencia**: las mismas cinco subsecciones.
+
+La antigua sección "La inscripción de candidaturas" **ya no existe como sección
+propia**. Su contenido se repartió:
+- La tabla por corporación y circunscripción se partió en dos. La parte de Congreso
+  abre `congreso-candidaturas`; las dos vueltas presidenciales abren
+  `presidencia-candidaturas`, con pestañas de primera y segunda vuelta.
+- El ritmo de inscripción y las organizaciones con personería jurídica quedaron en
+  `congreso-candidaturas`, en ese orden detrás de la tabla.
+
+Los títulos con `{#nombre}` son el destino de los botones del mapa interactivo hecho
+en Articulate Storyline por un diseñador externo, que será la portada del sitio y
+enlaza con `informe_scroll.html#nombre`. **No renombrarlas ni quitarlas** sin avisar,
+porque romperían los enlaces:
+`infraestructura-electoral`, `divipole`, `congreso`, `presidencia`, y
 `{congreso|presidencia}-{candidaturas|preconteo|comparacion|participacion|resultados}`.
 
 ### Secciones ocultas, no borradas
@@ -104,6 +121,11 @@ incompletos o posibles errores (ver memoria y skills).
   quien revise pueda corregirlos sin tocar el código de R. Lo mismo con los rótulos
   de cada panel cuando una figura tiene varios.
 - Las cifras del texto van con código en línea (`r num(...)`), no escritas a mano.
+- **Los títulos nombran el dato, no lo interpretan.** Vale para secciones, gráficas y
+  tablas: "Censo electoral en el exterior", no "Una red electoral en 81 países"; y
+  "Candidaturas a la Cámara por departamento", no "Dónde crecieron las candidaturas".
+  Nada de conclusiones ni de preguntas en los títulos. El detalle está en el skill
+  `estilo-escritura`.
 - **El cuerpo del texto va en negro**, no en azul. El azul `#003057` queda para los
   títulos, los encabezados y los elementos de las figuras y tablas.
 - **Las conclusiones no llevan subsecciones en la tabla de contenido.** Los títulos de

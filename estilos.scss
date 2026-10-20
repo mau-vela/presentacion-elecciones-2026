@@ -206,11 +206,12 @@ h2 { margin-top: 2.5rem; font-size: clamp(1.4rem, 3vw, 2rem); }
 .seg-btn:hover { background:#ebeef2; }
 .seg-btn.active { background:#003057; color:#fff; }
 
-.cand-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:12px; margin:1.2rem 0; }
-.cand-card { background:#fff; border:1px solid #dbe2e7; border-left:4px solid #003057; border-radius:8px; padding:12px 14px; }
-.cand-nom { font-family:"Montserrat",sans-serif; font-weight:700; color:#003057; font-size:1.02rem; line-height:1.15; }
-.cand-part { color:#5c7a94; font-size:.85rem; margin:.25rem 0 .55rem; }
-.cand-gen { font-size:.72rem; padding:2px 9px; border-radius:20px; font-weight:600; }
+.cand-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(188px,1fr)); gap:9px; margin:1rem 0 .6rem; }
+.cand-card { background:#fff; border:1px solid #dbe2e7; border-left:3px solid #003057; border-radius:7px; padding:8px 11px; }
+.cand-nom { font-family:"Montserrat",sans-serif; font-weight:700; color:#003057; font-size:.9rem; line-height:1.15; }
+.cand-part { color:#5c7a94; font-size:.76rem; margin:.18rem 0 .4rem; line-height:1.25; }
+.cand-nota { font-size:.76rem; color:#5c7a94; line-height:1.5; margin:.2rem 0 1.4rem; }
+.cand-gen { font-size:.68rem; padding:2px 8px; border-radius:20px; font-weight:600; }
 .cand-gen.f { background:#f7eadc; color:#c96807; }
 .cand-gen.m { background:#dbe2e7; color:#003057; }
 .img-full img { width:100%; height:auto; border-radius:8px; box-shadow:0 4px 18px rgba(0,48,87,.12); }

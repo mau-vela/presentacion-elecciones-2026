@@ -227,7 +227,7 @@ Un recorrido por el proceso electoral de Congreso y Presidencia.
 
 <!-- Los {#nombre} de los títulos son los destinos fijos de los botones del
      mapa interactivo (Storyline): informe_scroll.html#nombre. No cambiarlos. -->
-# Divipole {#datos-generales}
+# Infraestructura electoral {#infraestructura-electoral}
 
 ::: {.lede}
 Censo electoral, total de puestos y mesas en Colombia y en el exterior.
@@ -736,44 +736,29 @@ leaflet(ext) %>%
 
 
 
-<!-- ============ SECCIÓN 02 — INSCRIPCIÓN DE CANDIDATURAS ============ -->
+<!-- ============ SECCIÓN 02 — ELECCIONES A CONGRESO 2026 ============ -->
 
 ::: {.seccion-portada}
 ::: {.eyebrow}
-02 · Quiénes se presentaron
+02 · Elecciones a Congreso
 :::
 
-# La inscripción de candidaturas {#inscripcion-candidatos}
+# Elecciones a Congreso 2026 {#congreso}
 
 ::: {.lede}
-Cuántas candidaturas se inscribieron para el Congreso y la Presidencia, y cuándo lo hicieron.
+Quiénes compitieron por el Congreso, resultados y cómo cambió el panorama frente a 2022.
 :::
 :::
 
 
 ::: {.contenido-seccion}
 
-## Candidaturas por corporación, circunscripción y elección
+::: {.subseccion}
+### Candidaturas {#congreso-candidaturas}
+:::
 
-```{r}
-#| label: cand-helpers
-pctf <- function(p) if (is.na(p)) "—" else gsub("\\.", ",", sprintf("%.1f%%", 100*p))
+## Candidaturas inscritas por corporación y circunscripción
 
-tarjetas_pres <- function(vuelta_sel) {
-  d <- datos_cand$cand_presidencia %>% filter(vuelta == vuelta_sel)
-  tot <- nrow(d); muj <- sum(d$genero == "F", na.rm = TRUE)
-  cards <- paste(sprintf(
-    '<div class="cand-card"><div class="cand-nom">%s</div><div class="cand-part">%s</div><span class="cand-gen %s">%s</span></div>',
-    d$nomcandi, d$partido, ifelse(d$genero=="F","f","m"), ifelse(d$genero=="F","Mujer","Hombre")), collapse="")
-  htmltools::HTML(sprintf(
-    '<div class="fichas"><div class="ficha destacada"><div class="ficha-valor">%d</div><div class="ficha-label">Candidaturas</div></div><div class="ficha"><div class="ficha-valor">%s%%</div><div class="ficha-label">Mujeres</div></div></div><div class="cand-grid">%s</div>',
-    tot, gsub("\\.", ",", sprintf("%.1f", 100*muj/max(tot,1))), cards))
-}
-```
-
-::: {.panel-tabset}
-
-### Congreso
 ```{r}
 #| label: tabla-corpcirc
 tc <- datos_cand$tabla_corpcirc
@@ -895,20 +880,8 @@ htmltools::HTML(paste0(
 ))
 ```
 
-### Presidencia · 1ª vuelta
-```{r}
-tarjetas_pres("Presidencia 1ª vuelta")
-```
+## Ritmo de inscripción de candidaturas
 
-### Presidencia · 2ª vuelta
-```{r}
-tarjetas_pres("Presidencia 2ª vuelta")
-```
-
-:::
-
-
-## Ritmo de inscripción de candidaturas — Congreso
 
 ```{ojs}
 {
@@ -946,9 +919,8 @@ graficaAnio = (anio, titAnio, sub) => {
 html`<div>${graficaAnio(2026, "Inscripciones 2026", "Del 8 de noviembre al 8 de diciembre de 2025")}${graficaAnio(2022, "Inscripciones 2022", "Del 13 de noviembre al 13 de diciembre de 2021")}</div>`
 ```
 
-:::
-
 ## Organizaciones con personería jurídica
+
 
 El número de organizaciones con personería jurídica se movió en dos momentos: por decisiones del Consejo de Estado antes de la votación y por los reconocimientos derivados de las elecciones de 2026.
 
@@ -1060,28 +1032,6 @@ El número de organizaciones con personería jurídica se movió en dos momentos
 
 ::: {.img-full}
 <img src="assets/partidos_personeria_juridica_2026.png" alt="Organizaciones con personería jurídica 2026">
-:::
-
-
-<!-- ============ SECCIÓN 03 — ELECCIONES A CONGRESO 2026 ============ -->
-
-::: {.seccion-portada}
-::: {.eyebrow}
-03 · Elecciones a Congreso
-:::
-
-# Elecciones a Congreso 2026 {#congreso}
-
-::: {.lede}
-Quiénes compitieron por el Congreso, resultados y cómo cambió el panorama frente a 2022.
-:::
-:::
-
-
-::: {.contenido-seccion}
-
-::: {.subseccion}
-### Candidaturas {#congreso-candidaturas}
 :::
 
 ## Por tipo de organización
@@ -5492,11 +5442,11 @@ html`<div style="margin-top:22px; padding:14px 18px 16px; border:1px solid #ebee
 ```
 
 
-<!-- ============ SECCIÓN 04 — PRESIDENCIA 2026 ============ -->
+<!-- ============ SECCIÓN 03 — PRESIDENCIA 2026 ============ -->
 
 ::: {.seccion-portada}
 ::: {.eyebrow}
-04 · Elección presidencial
+03 · Elección presidencial
 :::
 
 # Presidencia Primera y Segunda vuelta 2026 {#presidencia}
@@ -5512,6 +5462,62 @@ Preconteo, resultados y participación electoral.
 ::: {.subseccion}
 ### Candidaturas {#presidencia-candidaturas}
 :::
+
+## Candidaturas inscritas en cada vuelta
+
+```{r}
+#| label: cand-helpers
+pctf <- function(p) if (is.na(p)) "—" else gsub("\\.", ",", sprintf("%.1f%%", 100*p))
+
+# Los nombres y partidos vienen en MAYÚSCULA sostenida en el TXT oficial. Las
+# tarjetas los muestran con capitalización normal para que ocupen menos y se
+# lean mejor; las siglas con puntos (F.A.M.I.L.I.A) se dejan intactas.
+title_es <- function(x) {
+  conect <- c("de","del","la","las","el","los","un","una","y","e","o","u",
+              "con","por","en","a","al","es")
+  vapply(x, function(s) {
+    pals <- strsplit(s, "\\s+")[[1]]
+    out <- vapply(seq_along(pals), function(i) {
+      p <- pals[i]
+      if (grepl("\\.", p)) return(p)                         # sigla: F.A.M.I.L.I.A
+      if (!grepl("[A-Za-zÁÉÍÓÚÑáéíóúñ]", p)) return(p)        # &, símbolos
+      lp <- tolower(p); base <- sub("[,.]$", "", lp)
+      if (i > 1 && base %in% conect) return(lp)
+      paste0(toupper(substr(lp, 1, 1)), substr(lp, 2, nchar(lp)))
+    }, character(1))
+    paste(out, collapse = " ")
+  }, character(1), USE.NAMES = FALSE)
+}
+
+tarjetas_pres <- function(vuelta_sel) {
+  d <- datos_cand$cand_presidencia %>% filter(vuelta == vuelta_sel)
+  tot <- nrow(d); muj <- sum(d$genero == "F", na.rm = TRUE)
+  cards <- paste(sprintf(
+    '<div class="cand-card"><div class="cand-nom">%s</div><div class="cand-part">%s</div><span class="cand-gen %s">%s</span></div>',
+    title_es(d$nomcandi), title_es(d$partido), ifelse(d$genero=="F","f","m"), ifelse(d$genero=="F","Mujer","Hombre")), collapse="")
+  nota <- if (grepl("1", vuelta_sel))
+    '<div class="cand-nota"><b>Luis Gilberto Murillo</b> y <b>Carlos Caicedo</b> renunciaron antes de la elección, pero se incluyen porque alcanzaron a aparecer en el tarjetón.</div>' else ""
+  htmltools::HTML(sprintf(
+    '<div class="fichas"><div class="ficha destacada"><div class="ficha-valor">%d</div><div class="ficha-label">Candidaturas</div></div><div class="ficha"><div class="ficha-valor">%s%%</div><div class="ficha-label">Mujeres</div></div></div><div class="cand-grid">%s</div>%s',
+    tot, gsub("\\.", ",", sprintf("%.1f", 100*muj/max(tot,1))), cards, nota))
+}
+```
+
+::: {.panel-tabset}
+
+### Primera vuelta
+```{r}
+tarjetas_pres("Presidencia 1ª vuelta")
+```
+
+### Segunda vuelta
+```{r}
+tarjetas_pres("Presidencia 2ª vuelta")
+```
+
+:::
+
+
 
 ## Candidaturas según tipo de organización política
 
