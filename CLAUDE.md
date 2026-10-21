@@ -37,6 +37,13 @@ porque romperían los enlaces:
 `infraestructura-electoral`, `divipole`, `congreso`, `presidencia`, y
 `{congreso|presidencia}-{candidaturas|preconteo|comparacion|participacion|resultados}`.
 
+Esas mismas diez anclas de subsección se usan dentro del informe: cada barra de
+subsección lleva en su extremo derecho un atajo pequeño (`.salto-eleccion`) que
+salta al mismo tema en la otra elección ("Ver en Presidencia" / "Ver en
+Congreso"). Si se renombra un ancla, hay que cambiar también su atajo y el de su
+par. `.subseccion` tiene `scroll-margin-top`, para que al saltar la barra no
+quede tapada por el botón fijo de volver a la portada.
+
 ### Secciones ocultas, no borradas
 Dos secciones de "Comparación territorial" de la velocidad del preconteo (una en
 Congreso, otra en Presidencia) están **envueltas en comentarios HTML**, no eliminadas.
@@ -172,31 +179,70 @@ Además de Posit Connect Cloud, el informe se va a publicar en el sitio instituc
   (`python -m http.server`).
 - Ojo con el peso: el HTML está en 47 MiB y GitHub advierte desde 50 MiB.
 
-### Portada interactiva (Storyline) — pendiente de versión definitiva
+### Portada interactiva (Storyline) — integrada el 21 de octubre de 2026
 
-Un diseñador externo (Carlos Bermúdez) hizo en Articulate Storyline 360 una portada
-con introducción, un mapa de navegación con botones hacia cada sección, y un cierre.
-Va a ser la **puerta de entrada del sitio**, y el informe queda como página aparte en
-la misma carpeta. La versión recibida está en
-`../Presentación elecciones 2026 información para compartir/storyline/` y **no es
-definitiva**.
+Un diseñador externo (Carlos Bermúdez) hizo en Articulate Storyline 360 la portada:
+introducción, un mapa de Colombia con pines de navegación, y un cierre. Es la
+**puerta de entrada del sitio**. La versión definitiva está en
+`../Presentación elecciones 2026 información para compartir/storyline/`.
 
-Lo que estaba pendiente cuando se revisó:
-- Los textos de introducción y cierre son "Lorem ipsum".
-- Los botones del mapa **no enlazan al informe todavía**. Se le pidió configurarlos
-  como "Saltar a URL/archivo" hacia `informe_scroll.html#ancla`, en la ventana actual.
-- Falta el archivo fuente `.story`, necesario para cualquier cambio posterior.
-- Falta definir si Presidencia lleva en el mapa los mismos subtemas que el informe.
+**Estado: ya está armado el paquete y probado servido en local.** Los 11 pines
+enlazan a `informe_scroll.html#ancla` y abren en la misma pestaña.
 
-Cuando llegue la versión definitiva hay que:
-1. Verificar que los 15 enlaces apunten a las anclas correctas.
-2. Renombrar su `story.html` a `index.html`, para que sea lo que se abre al entrar a
-   la carpeta. El informe conserva el nombre `informe_scroll.html`.
-3. Rehacer el paquete de `entrega web Registraduria` con las dos piezas juntas, y
-   probarlo servido en local antes de entregarlo.
-4. Actualizar la nota para informática: el Storyline agrega unos 8 MB, usa fuentes
-   `.woff` (registrar como `font/woff`) y envía estadísticas de uso a
-   `metrics.articulate.com`, que se puede bloquear sin que deje de funcionar.
+Qué se hizo y hay que saber:
+- Los enlaces venían con `"window":"_blank"` (pestaña nueva). Se cambiaron a
+  `"_self"` directamente en `html5/data/js/6jtZNr6DKwq.js`, que es donde Storyline
+  guarda las acciones. Hay respaldo en `6jtZNr6DKwq.js.bak_blank`. **Si el diseñador
+  reexporta el curso, ese cambio se pierde** y hay que repetirlo (o pedirle que
+  configure "Ventana actual del explorador" en el editor).
+- El curso corre dentro de un iframe propio de Storyline, pero `_self` sale del
+  marco correctamente. Verificado: al hacer clic el informe reemplaza la portada en
+  la misma pestaña. Si alguna vez saliera encajonado, el arreglo es `_top`.
+- Son **11 pines**, no 15: uno de infraestructura y cinco por cada elección. Ya no
+  hay pines de `divipole` ni de `inscripcion-candidatos`.
+- El rótulo de la leyenda decía "Datos generales" y ahora dice "Infraestructura
+  electoral". **Storyline guarda la posición X de cada letra por separado**, así que
+  cambiar el texto a secas descuadra el renglón: las letras sobrantes se salen hacia
+  la derecha encima del pin. Las coordenadas se recalcularon tomando las medidas del
+  rótulo del pin naranja, que ya traía ese mismo texto bien compuesto en la misma
+  fuente y tamaño (Montserrat SemiBold 26,667px), y alineando el final en `x=359`,
+  que es donde terminan "Congreso" y "Presidencia". Script en el scratchpad:
+  `fix_kerning.py`. Si hay que volver a tocar ese texto, hay que rehacer las
+  coordenadas, no solo la cadena.
+- **Arranque de la portada**, controlado por un script inyectado tras `<head>`:
+  - Entrada normal: borra el estado guardado de Storyline, así abre en la
+    introducción y no aparece la pantalla negra de "reanudar".
+  - Vuelta desde el informe (`index.html?vista=mapa`): conserva el estado y pulsa
+    solo el botón "Continuar" de esa pantalla, de modo que cae directo en el mapa
+    sin pasar por la introducción. La animación del mapa dura unos 7 segundos.
+- **Vuelta del informe a la portada**: el `.qmd` lleva, en `include-after-body`, un
+  botón fijo "Volver a portada" (`.volver-portada` en el `.scss`) que apunta a
+  `index.html?vista=mapa`. Al ser fijo acompaña a todas las secciones sin repetirlo
+  en cada una. **Arranca oculto y solo se muestra si encuentra `index.html` al
+  lado**, para que no salga un enlace roto en Posit Connect Cloud, donde el informe
+  se publica solo.
+- **Sigue faltando el archivo fuente `.story`**, necesario para cualquier cambio
+  posterior de la portada.
+- **Si el diseñador reexporta, se pierden los tres arreglos**: los enlaces `_self`,
+  el control de arranque y las coordenadas del rótulo.
+
+El paquete final quedó en `entrega web Registraduria/`: la carpeta `sitio/` (72 MB),
+el `LEEME - instrucciones de publicacion.txt` y el zip
+`sitio_elecciones2026_20261021.zip` (16,7 MB, 97 archivos, con separadores `/` para
+que se pueda descomprimir también en Linux). El zip se regenera con el script
+`entrega web Registraduria/_rehacer_zip.py` si hay que rehacerlo.
+
+**Cómo se actualiza el paquete cuando cambia el informe** (en ese orden):
+1. `quarto render informe_scroll.qmd` en el proyecto.
+2. Copiar al `sitio/` solo lo que produce Quarto: `informe_scroll.html`,
+   `informe_scroll_files/`, `assets/`, los `.geojson` y `puestos_mapa.json`.
+   **No tocar la portada** (`index.html`, `html5/`, `mobile/`, `story_content/`):
+   tiene arreglos hechos a mano que no se regeneran.
+3. Rehacer el zip y probar el sitio servido (`python -m http.server`), nunca con
+   doble clic.
+
+Ojo: `citrep_mapa.geojson` existe en el proyecto pero **ningún mapa lo usa** (lo
+reemplazó `geo_citrep.geojson`). No va al paquete; los que se entregan son 6.
 
 ## Colores y tipografía: la identidad oficial manda
 

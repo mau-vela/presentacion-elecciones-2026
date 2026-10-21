@@ -10,6 +10,28 @@ format:
           <link rel="preconnect" href="https://fonts.googleapis.com">
           <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
           <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    include-after-body:
+      - text: |
+          <!-- Regreso a la portada del sitio. Queda fuera del flujo del
+               documento para no interferir con closeread, y fijo en pantalla
+               para que sirva desde cualquier seccion.
+               Arranca oculto y solo se muestra si al lado del informe hay una
+               portada: asi no aparece un enlace roto en Posit Connect Cloud,
+               donde se publica el informe solo. -->
+          <a class="volver-portada" href="index.html?vista=mapa" hidden>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M19 12H5M12 19l-7-7 7-7"></path>
+            </svg>
+            <span>Volver a portada</span>
+          </a>
+          <script>
+            fetch("index.html", { method: "HEAD" })
+              .then(function (r) {
+                if (r.ok) document.querySelector(".volver-portada").hidden = false;
+              })
+              .catch(function () {});
+          </script>
 execute:
   echo: false
   warning: false
@@ -755,6 +777,8 @@ Quiénes compitieron por el Congreso, resultados y cómo cambió el panorama fre
 
 ::: {.subseccion}
 ### Candidaturas {#congreso-candidaturas}
+
+[Ver en Presidencia](#presidencia-candidaturas){.salto-eleccion}
 :::
 
 ## Candidaturas inscritas por corporación y circunscripción
@@ -1497,6 +1521,8 @@ html`${tabla_cm_render}`
 
 ::: {.subseccion}
 ### Preconteo {#congreso-preconteo}
+
+[Ver en Presidencia](#presidencia-preconteo){.salto-eleccion}
 :::
 
 ## Velocidad del preconteo
@@ -1870,6 +1896,8 @@ FIN SECCIÓN OCULTA (Congreso) -->
 <!-- ============ SECCIÓN 04 — ESCRUTINIO VS PRECONTEO ============ -->
 ::: {.subseccion}
 ### Comparación de preconteo y escrutinio {#congreso-comparacion}
+
+[Ver en Presidencia](#presidencia-comparacion){.salto-eleccion}
 :::
 
 ## Cambios generales
@@ -2092,6 +2120,8 @@ html`
 
 ::: {.subseccion}
 ### Participación Electoral {#congreso-participacion}
+
+[Ver en Presidencia](#presidencia-participacion){.salto-eleccion}
 :::
 
 ## Participación a nivel nacional
@@ -4133,6 +4163,8 @@ FIN SECCIÓN OCULTA (Congreso — distribución territorial) -->
 
 ::: {.subseccion}
 ### Resultados electorales {#congreso-resultados}
+
+[Ver en Presidencia](#presidencia-resultados){.salto-eleccion}
 :::
 
 ## Votos en blanco, nulos y tarjetones no marcados
@@ -5461,6 +5493,8 @@ Preconteo, resultados y participación electoral.
 
 ::: {.subseccion}
 ### Candidaturas {#presidencia-candidaturas}
+
+[Ver en Congreso](#congreso-candidaturas){.salto-eleccion}
 :::
 
 ## Candidaturas inscritas en cada vuelta
@@ -5693,6 +5727,8 @@ qc_notas = {
 
 ::: {.subseccion}
 ### Preconteo {#presidencia-preconteo}
+
+[Ver en Congreso](#congreso-preconteo){.salto-eleccion}
 :::
 
 ## Velocidad del preconteo
@@ -6020,6 +6056,8 @@ FIN SECCIÓN OCULTA (Presidencia) -->
 
 ::: {.subseccion}
 ### Comparación de preconteo y escrutinio {#presidencia-comparacion}
+
+[Ver en Congreso](#congreso-comparacion){.salto-eleccion}
 :::
 
 ## Cambios generales
@@ -6250,6 +6288,8 @@ pe_nota_cand(pc_vuelta, pc_anno)
 
 ::: {.subseccion}
 ### Participación Electoral {#presidencia-participacion}
+
+[Ver en Congreso](#congreso-participacion){.salto-eleccion}
 :::
 
 ## Participación a nivel nacional
@@ -7396,6 +7436,8 @@ FIN SECCIÓN OCULTA (Presidencia — distribución territorial) -->
 
 ::: {.subseccion}
 ### Resultados electorales {#presidencia-resultados}
+
+[Ver en Congreso](#congreso-resultados){.salto-eleccion}
 :::
 
 ## Ganador por municipio

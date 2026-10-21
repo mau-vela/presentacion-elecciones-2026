@@ -226,3 +226,100 @@ h2 { margin-top: 2.5rem; font-size: clamp(1.4rem, 3vw, 2rem); }
 .mini-tabla th { background:#003057; color:#fff; font-weight:600; padding:7px 9px; text-align:center; }
 .mini-tabla td { padding:6px 9px; text-align:center; border-top:1px solid #dbe2e7; font-variant-numeric:tabular-nums; }
 .mini-tabla td:first-child, .mini-tabla th:first-child { text-align:left; }
+
+/* --- Volver a la portada del sitio -------------------------------------
+   Va fijo sobre el documento, de modo que acompana a todas las secciones
+   sin tener que repetirlo en cada una. Solo se muestra cuando el informe
+   esta publicado al lado de la portada; el script que lo habilita esta en
+   el include-after-body del .qmd.
+   El z-index queda por encima de los controles de Leaflet, que llegan a 1000. */
+.volver-portada {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 2000;
+
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+
+  padding: .42rem .75rem;
+  border: 1px solid $azul-22;
+  border-radius: 999px;
+
+  // Translucido para que no tape del todo lo que pasa por debajo al hacer scroll.
+  background: rgba(255, 255, 255, .9);
+  backdrop-filter: blur(6px);
+
+  font-family: $headings-font-family;
+  font-size: .75rem;
+  font-weight: 700;
+  line-height: 1;
+  color: $azul-100;
+  text-decoration: none;
+  white-space: nowrap;
+
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+.volver-portada:hover,
+.volver-portada:focus-visible {
+  background: $azul-100;
+  border-color: $azul-100;
+  color: #ffffff;
+  text-decoration: none;
+}
+.volver-portada svg { flex: none; }
+.volver-portada[hidden] { display: none; }
+
+@media (max-width: 575px) {
+  .volver-portada { top: .6rem; right: .6rem; padding: .36rem .6rem; font-size: .72rem; }
+}
+
+/* --- Salto entre Congreso y Presidencia en el mismo tema ----------------
+   Va dentro de la barra de cada subseccion, en su extremo derecho, asi se
+   lee como parte del titulo y se desplaza con el documento: no flota sobre
+   graficas ni mapas y no compite con el boton fijo de volver a la portada.
+   El scroll-margin-top hace que, al saltar a una subseccion, la barra quede
+   un poco por debajo del borde superior y no la tape ese boton fijo. */
+.subseccion {
+  position: relative;
+  scroll-margin-top: 4.5rem;
+}
+.subseccion > p { margin: 0; }
+.salto-eleccion {
+  position: absolute;
+  right: 0;
+  bottom: .6rem;
+
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  padding: .3rem .65rem;
+  border: 1px solid $azul-22;
+  border-radius: 999px;
+  background: #ffffff;
+
+  font-family: $headings-font-family;
+  font-size: .7rem;
+  font-weight: 700;
+  line-height: 1;
+  color: $azul-100;
+  text-decoration: none;
+  white-space: nowrap;
+
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+.salto-eleccion::after { content: "\2192"; font-size: .8rem; }
+.salto-eleccion:hover,
+.salto-eleccion:focus-visible {
+  background: $azul-100;
+  border-color: $azul-100;
+  color: #ffffff;
+  text-decoration: none;
+}
+
+// En pantallas angostas el titulo de la pestana puede llegar al extremo
+// derecho; ahi el atajo baja y queda justo debajo de la linea.
+@media (max-width: 700px) {
+  .salto-eleccion { bottom: auto; top: calc(100% + .45rem); }
+}
