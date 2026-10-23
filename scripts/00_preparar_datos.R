@@ -2080,10 +2080,18 @@ calc_total_congreso_mesa <- function(anno_val) {
       ctp <- readRDS("../Congreso 2026/datos/2022/esc_ctp_2022.rds") %>% mutate(grupo_total = "CITREP")
       df <- bind_rows(df, ctp)
     }
-    
+
+    # Las circunscripciones especiales de Camara 2022 (codcirc 4 y 5) traen
+    # coddepto 0 y el departamento real en coddepto2. Hay que recuperarlo ANTES
+    # de armar la llave: con el 0 la llave empieza en "00", no empareja con el
+    # Senado de la misma mesa y esos 800.977 votos se suman al total en vez de
+    # quedar absorbidos por el maximo. Inflaba 2022 en 1,91 pp (51,57 vs 49,66).
+    if (!"coddepto2" %in% names(df)) df$coddepto2 <- NA_real_
+
     df <- df %>%
       mutate(
-        c_dpto = if("COD_DPTO" %in% names(.)) COD_DPTO else coddepto,
+        c_dpto = if_else(coddepto == 0 & !is.na(coddepto2),
+                         as.numeric(coddepto2), as.numeric(coddepto)),
         c_mpio = if("codmun" %in% names(.)) codmun else codmpio,
         c_mesa = if("nummesa" %in% names(.)) nummesa else mesa,
         llave_mesa = paste0(
@@ -2236,14 +2244,18 @@ cong_dep_mesa <- function(anno_val) {
     if (!"coddepto2" %in% names(df)) df$coddepto2 <- NA_real_
     df <- df %>%
       mutate(
-        llave_mesa = paste0(str_pad(as.character(coddepto), 2, pad = "0"),
+        # Las circunscripciones especiales de Camara 2022 vienen con coddepto 0;
+        # el departamento real esta en coddepto2. Se recupera ANTES de armar la
+        # llave: con el 0 la mesa no empareja con su Senado y los votos
+        # especiales se suman al total en vez de quedar bajo el maximo.
+        cd_real = if_else(coddepto == 0 & !is.na(coddepto2),
+                          as.numeric(coddepto2), as.numeric(coddepto)),
+        llave_mesa = paste0(str_pad(as.character(cd_real),  2, pad = "0"),
                             str_pad(as.character(codmpio),  3, pad = "0"),
                             str_pad(as.character(zona),     2, pad = "0"),
                             str_pad(as.character(puesto),   2, pad = "0"),
                             str_pad(as.character(nummesa),  4, pad = "0")),
-        # Las circunscripciones especiales de Camara 2022 vienen con coddepto 0;
-        # el departamento real esta en coddepto2.
-        dep_rnec = as.integer(if_else(coddepto == 0 & !is.na(coddepto2), coddepto2, coddepto)))
+        dep_rnec = as.integer(cd_real))
 
   } else if (anno_val == 2018) {
     sen <- readRDS("../Congreso 2026/datos/2018/ESCRUTINIO/escrutinio_2018_sen_partido.rds") %>% mutate(grupo_total = "Senado")
@@ -2257,8 +2269,9 @@ cong_dep_mesa <- function(anno_val) {
              dep_rnec = as.integer(COD_DPTO))
   }
 
-  # Agrupar por (departamento, mesa) no altera el total nacional: las llaves
-  # colapsadas de 2022 solo existen en Camara, donde el maximo es la suma.
+  # Agrupar por (departamento, mesa) no altera el total nacional: con el
+  # coddepto ya recuperado, cada mesa tiene una sola llave y Senado, Camara
+  # (territorial + especiales) y CITREP caen en la misma fila.
   v <- df %>%
     mutate(dep_key = rnec_a_dep(dep_rnec)) %>%
     filter(!is.na(dep_key)) %>%
