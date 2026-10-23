@@ -244,6 +244,29 @@ que se pueda descomprimir también en Linux). El zip se regenera con el script
 Ojo: `citrep_mapa.geojson` existe en el proyecto pero **ningún mapa lo usa** (lo
 reemplazó `geo_citrep.geojson`). No va al paquete; los que se entregan son 6.
 
+Dos detalles que salieron al publicarlo en `balanceelectoral2026.registraduria.gov.co`
+(red interna), el 22 de octubre de 2026:
+- La extensión closeread mete en el HTML un `<link>` a
+  `_extensions/qmd-lab/closeread/closeread.css`, con la ruta del proyecto, y Quarto
+  no lo copia a `informe_scroll_files/`. **Hay que llevarlo al paquete con esa misma
+  ruta**, o da 404 en el servidor. El informe no usa bloques de closeread, así que no
+  cambia lo que se ve, pero el error aparece en cada visita.
+- **El firewall (WAF) del sitio rechaza las peticiones HEAD** y marca al visitante
+  como sospechoso. Por eso el script del botón "Volver a portada" comprueba la
+  portada con `GET`, no con `HEAD`. No volver a usar HEAD.
+
+El script que lleva lo renderizado al `sitio/` (copia lo de Quarto, el CSS de
+closeread y los 6 geojson, sin tocar la portada) está en el scratchpad como
+`actualizar_sitio.py`. Las instrucciones para informática ahora se llaman
+`Instrucciones.txt`.
+
+### Ritmo de inscripción de candidaturas
+El porcentaje de cada día se calcula **sobre el total definitivo de candidaturas de
+la tabla de arriba** (3.081 en 2026, 2.824 en 2022), no sobre la suma de días del
+archivo de inscripción, que incluye inscripciones revocadas después (3.136 y 2.817).
+Se recalcula en el chunk `fechas-ojs` del `.qmd`; el `.rds` trae el `pct` viejo y no
+se usa. La suma de los días no tiene por qué dar el total.
+
 ## Colores y tipografía: la identidad oficial manda
 
 La Registraduría entregó la paleta y la fuente que hay que usar. Están en

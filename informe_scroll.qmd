@@ -26,7 +26,8 @@ format:
             <span>Volver a portada</span>
           </a>
           <script>
-            fetch("index.html", { method: "HEAD" })
+            // GET y no HEAD: el firewall del sitio de la Registraduria rechaza HEAD.
+            fetch("index.html", { method: "GET", cache: "no-store" })
               .then(function (r) {
                 if (r.ok) document.querySelector(".volver-portada").hidden = false;
               })
@@ -916,7 +917,17 @@ htmltools::HTML(paste0(
 
 ```{r}
 #| label: fechas-ojs
-ojs_define(fechas_ojs = datos_cand$conteo_fechas)
+# El porcentaje de cada dia va sobre el total definitivo de candidaturas (el de la
+# tabla de arriba), no sobre la suma de dias del archivo de inscripcion: ese archivo
+# incluye inscripciones que despues se revocaron. Por eso la suma de los dias no
+# tiene que coincidir con el total.
+tot_cand <- datos_cand$tabla_corpcirc
+tot_cand <- tot_cand[tot_cand$circ == "Total general", ]
+fechas_den <- datos_cand$conteo_fechas
+fechas_den$pct <- fechas_den$n / ifelse(fechas_den$annoh == 2026,
+                                        tot_cand$candidatos_2026,
+                                        tot_cand$candidatos_2022)
+ojs_define(fechas_ojs = fechas_den)
 ```
 
 ```{ojs}
@@ -4675,9 +4686,26 @@ ve_esp_layer_update = {
   }).addTo(map);
   map._dl = layer;
 
-  // Nombres de los departamentos, siempre visibles (el hover sigue dando el detalle)
+  // Nombres siempre visibles (el hover sigue dando el detalle). En CITREP se
+  // rotula cada circunscripción sobre su propio polígono, igual que en el mapa
+  // de participación de las circunscripciones especiales.
   if (map._nom) { map.removeLayer(map._nom); map._nom = null; }
-  if (!isCitrep) map._nom = nombresDep(L_ve_esp).addTo(map);
+  if (!isCitrep) {
+    map._nom = nombresDep(L_ve_esp).addTo(map);
+  } else {
+    const etiquetas = [];
+    layer.eachLayer(l => {
+      const d = lookup.get(+l.feature.properties[codeProp]);
+      if (!d || !d.nombre_region) return;
+      const c = l.getBounds().getCenter();
+      etiquetas.push(L_ve_esp.marker(c, {
+        interactive: false, keyboard: false,
+        icon: L_ve_esp.divIcon({ className: "", iconSize: [0, 0],
+          html: `<div style="${estiloDep}font-size:9.5px;transform:translate(-50%,-50%);">${d.nombre_region}</div>` })
+      }));
+    });
+    map._nom = L_ve_esp.layerGroup(etiquetas).addTo(map);
+  }
 
   const legend = L_ve_esp.control({ position: "bottomleft" });
   legend.onAdd = () => {
