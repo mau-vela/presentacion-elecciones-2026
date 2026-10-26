@@ -2172,7 +2172,7 @@ html`
     <div style="font-size:24px; font-weight:700; color:${part_cong_26 > part_cong_22 ? '#003057' : '#af0407'};">${fmtCambio(part_cong_26 - part_cong_22)}</div>
   </div>
   <div style="flex:0 1 400px; margin-left:auto; border-left:1px solid #c7d1da; padding-left:30px; font-size:11.5px; color:#7a93a8; font-style:italic; line-height:1.35;">
-    * Calculado considerando el máximo de votos emitidos por mesa entre Senado y Cámara para evitar el doble conteo de electores.
+    * Calculado considerando el máximo de votos emitidos por mesa entre Senado, Cámara y CITREP para evitar el doble conteo de electores. Incluye el censo y los votos del exterior.
   </div>
 </div>
 `
@@ -3294,7 +3294,7 @@ html`${tabla_brecha_render}`
 
 ## Participación rural y urbana
 
-La participación rural sigue siendo más alta que la urbana en todos los años y corporaciones. En 2026 ambas zonas se recuperan frente a 2022 con aumentos muy similares (alrededor de +3 pp), manteniendo un patrón estable donde la brecha a favor de lo rural persiste de forma constante. CITREP mantiene niveles más bajos de participación que Senado y Cámara, incluso analizando exclusivamente el ámbito rural.
+La participación rural sigue siendo más alta que la urbana en todos los años y corporaciones. En 2026 ambas zonas se recuperan frente a 2022, con un aumento cercano a +3,3 pp en lo rural y a +2,5 pp en lo urbano, lo que amplía levemente la brecha a favor de lo rural. CITREP mantiene niveles más bajos de participación que Senado y Cámara, incluso analizando exclusivamente el ámbito rural.
 
 :::: {style="display: flex; gap: 24px; align-items: stretch; margin-top: 24px;"}
 

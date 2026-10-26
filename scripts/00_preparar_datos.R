@@ -2005,16 +2005,28 @@ base_dep_part <- base_congreso %>%
   filter(!is.na(corp_mapa))
 
 # Censo Nacional, Departamental y Municipal (Convirtiendo código RNEC a código DANE)
-censo_divipol_hist <- bind_rows(
+censo_divipol_full <- bind_rows(
   cong_2018 %>% mutate(annoh = 2018),
   cong_2022 %>% mutate(annoh = 2022),
   divipol_cong_26 %>% mutate(annoh = 2026)
-) %>%
+)
+
+# Censo territorial: exige codmpio para cruzar con la geometria DANE, asi que
+# el exterior (COD_DPTO 88, sin codigo DANE) se cae. Es el denominador correcto
+# de las tablas departamental y municipal, cuyos votos tampoco traen exterior.
+censo_divipol_hist <- censo_divipol_full %>%
   left_join(map_rnec_codmpio %>% select(code_RNEC, codmpio), by = "code_RNEC") %>%
   mutate(coddepto = floor(codmpio / 1000)) %>%
   filter(!is.na(codmpio))
 
-censo_nac <- censo_divipol_hist %>%
+# Censo nacional: INCLUYE el exterior, porque los votos de las cifras
+# nacionales (part_nac y el KPI de Congreso) tambien lo incluyen. Calcularlo
+# sobre censo_divipol_hist dejaba el exterior en el numerador y fuera del
+# denominador, e inflaba la participacion 0,4 pp en 2018 y 2022 y 0,6 pp en
+# 2026, donde el voto en el exterior casi se duplico.
+# Los puestos 81-86 del exterior ya vienen con censo NA por
+# corregir_censo_exterior(): son dias de votacion anticipada con censo repetido.
+censo_nac <- censo_divipol_full %>%
   group_by(annoh) %>%
   summarise(censo_total = sum(censo, na.rm = TRUE), .groups = "drop")
 
@@ -3022,8 +3034,13 @@ censo_citrep_hist <- censo_citrep_mun %>%
   summarise(censo = sum(censo, na.rm=TRUE), .groups="drop")
 
 # Votos por zona
+# Se excluye el exterior (COD_DPTO 88): no es ni rural ni urbano y su censo no
+# esta en censo_rb_hist, que sale de censo_divipol_hist. Sin este filtro sus
+# votos caian enteros en "Urbano" -todos los puestos del exterior tienen zona
+# distinta de 99- contra un censo urbano que no los incluia, e inflaban la
+# participacion urbana 0,4 pp en 2018 y 2022 y 0,7 pp en 2026.
 votos_rb_nac <- base_congreso %>%
-  filter(annoh %in% c(2018, 2022, 2026)) %>%
+  filter(annoh %in% c(2018, 2022, 2026), COD_DPTO != 88) %>%
   mutate(
     zona_rb = if_else(zona == 99, "Rural", "Urbano"),
     Eleccion = case_when(
