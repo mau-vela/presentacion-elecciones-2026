@@ -93,6 +93,49 @@ generan archivos para uso externo en `../divipole/` (el exterior por país en
 `scripts/libro_datos_*.R` son de **solo lectura**: leen los `.rds` y muestran cifras en
 consola para redactar los apartados del libro. No escriben nada del proyecto.
 
+### `coddepto = 0` en las especiales de Cámara 2022
+En `esc_cam_2022.rds` las circunscripciones especiales traen **`coddepto = 0`**: todas
+las filas de `codcirc 4` (indígena) y `codcirc 5` (afro), 430.672 filas y 800.977 votos.
+El departamento real está en **`coddepto2`**, poblado en todas las filas del archivo (en
+territorial coincide con `coddepto`). **Usar siempre `coddepto2` en ese archivo.**
+
+Hay que recuperarlo **antes de armar la llave de mesa, no solo para agrupar**. Con el 0
+la llave empieza en `00…`, no empareja con el Senado de la misma mesa y esos votos se
+suman al total en vez de quedar absorbidos por el máximo por mesa. Síntomas: las mesas de
+2022 pasan de 112.000 a 162.000 y la participación de Congreso se infla 1,9 pp.
+
+`esc_sen_2022.rds` y `esc_ctp_2022.rds` no tienen el problema ni traen `coddepto2`. Los
+archivos de 2018 usan `COD_DPTO`, sin ceros. El `escrutinio_definitivo` de 2026 trae
+`llave_mesa` ya armada y sus únicos `coddepto` en NA son el exterior.
+
+Ojo: en estos archivos `coddepto` lleva el código **RNEC**, no el DANE (Bogotá 16, Cauca
+11), al contrario de la convención general de más abajo.
+
+### Dos universos de censo: `censo_nac` SÍ incluye exterior, `censo_divipol_hist` no
+Son distintos **a propósito** y mezclarlos ya produjo un error publicado.
+
+- **`censo_divipol_hist`** exige `codmpio` para cruzar con la geometría DANE, así que
+  pierde el exterior (COD_DPTO 88, sin código DANE). Es el denominador correcto de las
+  tablas **departamental y municipal**, cuyos votos tampoco traen exterior.
+- **`censo_nac`** se calcula sobre `censo_divipol_full` e **incluye el exterior**, porque
+  los votos de las cifras **nacionales** (`part_nac` y el KPI de Congreso) también lo
+  incluyen.
+
+Calcular `censo_nac` sobre `censo_divipol_hist` dejaba el exterior en el numerador y fuera
+del denominador: inflaba la participación 1,0 pp en 2018, 1,2 pp en 2022 y 1,6 pp en 2026.
+**Antes de tocar cualquier participación, verificar que numerador y denominador sean el
+mismo universo.** Ya están verificadas como correctas: presidencial (con exterior en ambos
+lados), Presidencia vs Congreso (igual, con fila "Exterior"), exterior (solo exterior) y
+departamental y municipal (sin exterior en ambos lados).
+
+Caso aparte: en **rural/urbano** el exterior se excluye del numerador. No es ni rural ni
+urbano, su censo no está en `censo_rb_hist`, y como todos sus puestos tienen zona distinta
+de 99 sus votos caían enteros en "Urbano" contra un censo que no los incluía.
+
+Los puestos **81-86 del exterior** son días de votación anticipada con censo repetido:
+`corregir_censo_exterior()` les deja el censo en NA, así que no inflan el denominador,
+pero **sus votos sí cuentan**.
+
 ## El libro "Balance electoral 2026"
 
 Producto aparte del informe, basado en la misma presentación. Varias personas
