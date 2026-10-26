@@ -3081,6 +3081,77 @@ saveRDS(list(
 message("Listo: datos_rural_urbano.rds generados con éxito")
 
 # =====================================================================3
+#  SECCION 03-7b PARTICIPACION RURAL/URBANA PRESIDENCIAL ----
+# =====================================================================3
+# Mismo criterio que la de Congreso: censo por zona del DIVIPOL presidencial
+# (rural = zona 99) y votos del escrutinio, que es el conteo definitivo.
+# El exterior (COD_DPTO 88) se excluye de los dos lados: no es ni rural ni
+# urbano y su censo no entra en censo_rb_pres. Sin ese filtro sus votos
+# caerian enteros en "Urbano" contra un censo que no los incluye.
+
+censo_rb_pres <- bind_rows(
+  pres_2018       %>% mutate(annoh = 2018),
+  pres_2022       %>% mutate(annoh = 2022),
+  divipol_pres_26 %>% mutate(annoh = 2026)
+) %>%
+  filter(COD_DPTO != 88) %>%
+  mutate(zona_rb = if_else(zona == 99, "Rural", "Urbano")) %>%
+  group_by(annoh, zona_rb) %>%
+  summarise(censo = sum(censo, na.rm = TRUE), .groups = "drop")
+
+votos_rb_pres_df <- function(df, anno_val, vuelta_val) {
+  df %>%
+    filter(COD_DPTO != 88, !is.na(votos)) %>%
+    mutate(zona_rb = if_else(zona == 99, "Rural", "Urbano")) %>%
+    group_by(zona_rb) %>%
+    summarise(votos = sum(as.numeric(votos), na.rm = TRUE), .groups = "drop") %>%
+    mutate(annoh = anno_val, vuelta = vuelta_val)
+}
+
+pres_arm_rb <- readRDS(file.path(ruta_pres_pasadas,
+  "presidencia_preconteo_escrutinio_armonizado.rds"))$presidencia_mesa_candidato %>%
+  filter(anno %in% c(2018, 2022), vuelta %in% c("1ra", "2da"), fuente == "escrutinio")
+
+votos_rb_pres <- bind_rows(
+  votos_rb_pres_df(pres_arm_rb %>% filter(anno == 2018, vuelta == "1ra"), 2018, "Primera vuelta"),
+  votos_rb_pres_df(pres_arm_rb %>% filter(anno == 2018, vuelta == "2da"), 2018, "Segunda vuelta"),
+  votos_rb_pres_df(pres_arm_rb %>% filter(anno == 2022, vuelta == "1ra"), 2022, "Primera vuelta"),
+  votos_rb_pres_df(pres_arm_rb %>% filter(anno == 2022, vuelta == "2da"), 2022, "Segunda vuelta"),
+  votos_rb_pres_df(readRDS(file.path(ruta_esc_1v, "mmv", "escrutinio_completo_1era.rds")),
+                   2026, "Primera vuelta"),
+  votos_rb_pres_df(readRDS(file.path(ruta_esc_2v, "mmv", "escrutinio_completo_2da.rds")),
+                   2026, "Segunda vuelta")
+)
+rm(pres_arm_rb); invisible(gc())
+
+part_rb_pres <- votos_rb_pres %>%
+  left_join(censo_rb_pres, by = c("annoh", "zona_rb")) %>%
+  mutate(part = if_else(censo > 0, 100 * votos / censo, NA_real_)) %>%
+  arrange(vuelta, annoh, zona_rb)
+
+part_rb_pres_wide <- part_rb_pres %>%
+  select(vuelta, annoh, zona_rb, part) %>%
+  pivot_wider(names_from = zona_rb, values_from = part) %>%
+  mutate(brecha = Rural - Urbano)
+
+# Brecha de Congreso 2026 para poder contrastarla en el informe: alla es
+# positiva (rural mas alta) y en Presidencia sale negativa.
+brecha_rb_congreso <- part_rb_nac %>%
+  filter(annoh == 2026, Eleccion %in% c("Senado", "Cámara")) %>%
+  select(Eleccion, zona_rb, part) %>%
+  pivot_wider(names_from = zona_rb, values_from = part) %>%
+  mutate(brecha = Rural - Urbano)
+
+saveRDS(list(part_rb_pres = part_rb_pres,
+             part_rb_pres_wide = part_rb_pres_wide,
+             brecha_congreso = brecha_rb_congreso),
+        "datos_rural_urbano_presidencia.rds")
+
+message("Listo: datos_rural_urbano_presidencia.rds | brecha 2026 1v = ",
+        sprintf("%.2f pp", part_rb_pres_wide$brecha[part_rb_pres_wide$annoh == 2026 &
+                  part_rb_pres_wide$vuelta == "Primera vuelta"]))
+
+# =====================================================================3
 #  SECCION 03-8 IMPACTO NUEVOS PUESTOS RURALES ----
 # =====================================================================3
 

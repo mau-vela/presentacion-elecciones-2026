@@ -56,6 +56,7 @@ datos_part <- readRDS("datos_participacion_final.rds")
 datos_ext <- readRDS("datos_exterior_part.rds")
 datos_esp <- readRDS("datos_especiales_part.rds")
 datos_rb <- readRDS("datos_rural_urbano.rds")
+datos_rbp <- readRDS("datos_rural_urbano_presidencia.rds")
 datos_r <- readRDS("datos_riesgo.rds")
 
 # --- Paleta institucional ---------------------------------------------------
@@ -7461,6 +7462,208 @@ mv_tabla(mv_vuelta, mv_grupo)
 :::::
 
 FIN SECCIÓN OCULTA (Presidencia — distribución territorial) -->
+
+## Participación rural y urbana
+
+```{r}
+#| label: datos-rb-pres-ojs
+ojs_define(rbp_long_ojs = datos_rbp$part_rb_pres)
+ojs_define(rbp_wide_ojs = datos_rbp$part_rb_pres_wide)
+ojs_define(rbp_cong_ojs = datos_rbp$brecha_congreso)
+```
+
+```{ojs}
+rbp_long = transpose(rbp_long_ojs)
+rbp_wide = transpose(rbp_wide_ojs)
+rbp_cong = transpose(rbp_cong_ojs)
+
+viewof rbp_vuelta = filtroSegmentado(["Primera vuelta", "Segunda vuelta"], {value: "Primera vuelta", label: "Vuelta"})
+html`<div class="filtro-caja">${viewof rbp_vuelta}</div>`
+```
+
+```{ojs}
+rbp_texto = {
+  const w = rbp_wide.filter(d => d.vuelta === rbp_vuelta).sort((a, b) => a.annoh - b.annoh);
+  const a26 = w.find(d => +d.annoh === 2026);
+  const a18 = w.find(d => +d.annoh === 2018);
+  if (!a26) return md``;
+
+  const pp = x => Math.abs(x).toFixed(1).replace(".", ",");
+  const pc = x => x.toFixed(1).replace(".", ",") + "%";
+
+  // La brecha de Congreso es positiva (rural mas alta) y la presidencial
+  // negativa: el texto nombra la inversion solo si de verdad se da.
+  const cong = rbp_cong.reduce((s, d) => s + d.brecha, 0) / rbp_cong.length;
+  const invierte = (cong > 0 && a26.brecha < 0) || (cong < 0 && a26.brecha > 0);
+  // Dos formas del adjetivo: femenina para "la participación ___" y neutra
+  // para "en lo ___". Y el orden sigue a la zona con mayor participación.
+  const urbMayor = a26.brecha < 0;
+  const mayorF = urbMayor ? "urbana" : "rural";
+  const mayorN = urbMayor ? "urbano" : "rural";
+  const menorN = urbMayor ? "rural" : "urbano";
+  const altoPct = urbMayor ? a26.Urbano : a26.Rural;
+  const bajoPct = urbMayor ? a26.Rural : a26.Urbano;
+
+  const cierre = a18
+    ? ` La brecha se ha reducido: pasó de ${pp(a18.brecha)} pp en 2018 a ${pp(a26.brecha)} pp en 2026.`
+    : "";
+
+  const contraste = invierte
+    ? ` El patrón es inverso al de Congreso, donde en 2026 la participación rural superó a la urbana por ${pp(cong)} pp en promedio entre Senado y Cámara.`
+    : "";
+
+  return md`En la **${rbp_vuelta.toLowerCase()} de 2026** la participación **${mayorF}** fue más alta:
+**${pc(altoPct)}** en lo ${mayorN} frente a **${pc(bajoPct)}** en lo ${menorN}, una diferencia de
+**${pp(a26.brecha)} pp**.${contraste}${cierre}`;
+}
+```
+
+:::: {style="display: flex; gap: 24px; align-items: stretch; margin-top: 24px;"}
+
+::: {style="flex: 1.1; width: 55%;"}
+```{ojs}
+grafica_rbp = {
+  const wrap = document.createElement("div");
+  wrap.style = "background:#fff; border:1px solid #ebeef2; border-radius:8px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.02); display:flex; flex-direction:column; height:100%; width:100%;";
+
+  const header = document.createElement("div");
+  header.innerHTML = `
+    <div style="font-weight:700; color:#003057; margin-bottom:16px; text-align:center; font-size:14.5px; text-transform:uppercase;">
+      Histórico Rural vs Urbano · ${rbp_vuelta}
+    </div>
+    <div style="display:flex; justify-content:flex-start; gap:24px; margin-bottom:16px; margin-left:70px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <div style="width:14px; height:14px; border-radius:50%; background:#003057;"></div>
+        <span style="font-size:13px; font-weight:700; color:#1f496b;">Urbano</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <div style="width:14px; height:14px; border-radius:50%; background:#c96807;"></div>
+        <span style="font-size:13px; font-weight:700; color:#1f496b;">Rural</span>
+      </div>
+    </div>
+  `;
+  wrap.appendChild(header);
+
+  const years = [2018, 2022, 2026];
+  years.forEach((yr, idx) => {
+    const fila = rbp_long.filter(d => d.vuelta === rbp_vuelta && +d.annoh === yr);
+    const filaW = rbp_wide.filter(d => d.vuelta === rbp_vuelta && +d.annoh === yr);
+    const dRural  = fila.filter(d => d.zona_rb === "Rural");
+    const dUrbano = fila.filter(d => d.zona_rb === "Urbano");
+
+    const p = Plot.plot({
+      marginLeft: 30, marginRight: 50, marginTop: 15,
+      marginBottom: idx === 2 ? 40 : 15,
+      height: idx === 2 ? 108 : 78,
+      style: { fontFamily: "Montserrat, sans-serif", fontSize: "12.5px" },
+      x: {
+        label: idx === 2 ? "Participación electoral (%) →" : null,
+        grid: true, domain: [0, 75],
+        tickFormat: idx === 2 ? d => d + "%" : () => "",
+        tickSize: idx === 2 ? 6 : 0
+      },
+      // Una sola categoria: el rotulo "Presidencia" en cada fila seria ruido,
+      // el año ya va en el recuadro gris de la izquierda.
+      y: { label: null, domain: ["Presidencia"], tickSize: 0, tickFormat: () => "", padding: 0.5 },
+      marks: [
+        Plot.link(filaW, {
+          x1: "Urbano", y1: () => "Presidencia", x2: "Rural", y2: () => "Presidencia",
+          stroke: "#c7d1da", strokeWidth: 3.5
+        }),
+        Plot.dot(fila, {
+          x: "part", y: () => "Presidencia",
+          fill: d => d.zona_rb === "Rural" ? "#c96807" : "#003057",
+          r: 7.5, stroke: "white", strokeWidth: 1.5, tip: true,
+          title: d => `Presidencia ${d.annoh} · ${d.vuelta}\nZona: ${d.zona_rb}\nParticipación: ${d.part.toFixed(1).replace(".", ",")}%`
+        }),
+        Plot.text(dUrbano, {
+          x: "part", y: () => "Presidencia",
+          text: d => d.part.toFixed(1).replace(".", ",") + "%",
+          textAnchor: "start", dx: 15, fill: "#003057", fontSize: 12, fontWeight: "bold"
+        }),
+        Plot.text(dRural, {
+          x: "part", y: () => "Presidencia",
+          text: d => d.part.toFixed(1).replace(".", ",") + "%",
+          textAnchor: "end", dx: -15, fill: "#c96807", fontSize: 12, fontWeight: "bold"
+        })
+      ]
+    });
+
+    const rowCont = document.createElement("div");
+    rowCont.style = "display:flex; align-items:stretch; border:1px solid #dbe2e7; border-bottom:" + (idx === 2 ? "1px solid #dbe2e7" : "none") + ";";
+
+    const greyBox = document.createElement("div");
+    greyBox.style = "background:#f5f7f8; width:60px; display:flex; align-items:center; justify-content:center; font-weight:700; color:#003057; font-size:14.5px; border-right:1px solid #dbe2e7;";
+    greyBox.innerText = yr;
+
+    const plotCont = document.createElement("div");
+    plotCont.style = "flex:1;";
+    plotCont.appendChild(p);
+
+    rowCont.appendChild(greyBox);
+    rowCont.appendChild(plotCont);
+    wrap.appendChild(rowCont);
+  });
+
+  return wrap;
+}
+```
+
+```{ojs}
+html`${grafica_rbp}`
+```
+
+```{ojs}
+html`<div style="margin-top:16px; font-size:13.5px; color:#1f496b; line-height:1.5;">${rbp_texto}</div>`
+```
+:::
+
+::: {style="flex: 0.9; width: 45%; display:flex; flex-direction:column;"}
+```{ojs}
+tabla_rbp_render = {
+  const data = rbp_long
+    .filter(d => d.vuelta === rbp_vuelta)
+    .sort((a, b) => b.annoh - a.annoh || a.zona_rb.localeCompare(b.zona_rb));
+
+  const th = "padding:12px 10px; background:#5c7a94; color:#ffffff; font-weight:600; font-size:12px; position:sticky; top:0; z-index:2; border-bottom:2px solid #3d627f;";
+
+  const cuerpo = data.map((d, i) => `
+    <tr style='border-bottom:1px solid #dbe2e7; background:${i % 2 ? '#f5f7f8' : '#ffffff'};'>
+      <td style='padding:10px; text-align:center; font-weight:700; color:#003057; font-size:12.5px;'>${d.annoh}</td>
+      <td style='padding:10px; text-align:left; font-weight:600; color:${d.zona_rb === "Rural" ? "#c96807" : "#003057"}; font-size:12.5px;'>${d.zona_rb}</td>
+      <td style='padding:10px 6px; text-align:right; font-variant-numeric:tabular-nums; font-size:12.5px;'>${d.votos.toLocaleString("es-CO")}</td>
+      <td style='padding:10px 6px; text-align:right; font-variant-numeric:tabular-nums; font-size:12.5px;'>${d.censo.toLocaleString("es-CO")}</td>
+      <td style='padding:10px 8px; text-align:right; font-weight:700; color:${d.zona_rb === "Rural" ? "#c96807" : "#003057"}; font-variant-numeric:tabular-nums; font-size:13px;'>${d.part.toFixed(1).replace(".", ",")}%</td>
+    </tr>
+  `).join('');
+
+  return html`<div style="display:flex; flex-direction:column; height:100%; background:#fff; border:1px solid #ebeef2; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.02);">
+    <div style="padding:10px 16px; border-bottom:1px solid #c7d1da; background:#ebeef2; font-weight:700; color:#003057; font-size:13px; text-transform:uppercase;">
+      Detalle · ${rbp_vuelta}
+    </div>
+    <div style="overflow-y:auto; flex:1;">
+      <table style="width:100%; border-collapse:collapse;">
+        <thead><tr>
+          <th style="${th} text-align:center;">Año</th>
+          <th style="${th} text-align:left;">Zona</th>
+          <th style="${th} text-align:right;">Votos</th>
+          <th style="${th} text-align:right;">Censo</th>
+          <th style="${th} text-align:right;">Participación</th>
+        </tr></thead>
+        <tbody>${cuerpo}</tbody>
+      </table>
+    </div>
+  </div>`;
+}
+```
+
+```{ojs}
+html`${tabla_rbp_render}`
+```
+:::
+
+::::
+
 
 ::: {.subseccion}
 ### Resultados electorales {#presidencia-resultados}
