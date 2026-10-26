@@ -136,6 +136,45 @@ Los puestos **81-86 del exterior** son días de votación anticipada con censo r
 `corregir_censo_exterior()` les deja el censo en NA, así que no inflan el denominador,
 pero **sus votos sí cuentan**.
 
+### El 2018 de `base_congreso` sale del escrutinio, no de `elecciones_2018.rda`
+`base_congreso_2018_2026.rds` se construye en
+`../Congreso 2026/datos/boletin_escrutinio - definitivo.Rmd`, en el bloque "HISTÓRICOS
+2018 y 2022". **Todo ese bloque está comentado a propósito**: se corre una vez y después
+el Rmd solo lee el `.rds`, para no regenerar 2 GB en cada ejecución. Si hay que rehacerlo,
+se descomenta, se corre y se vuelve a comentar.
+
+Hasta octubre de 2026 ese bloque armaba 2018 con
+`load("../../Participación electoral/datos/elecciones_2018.rda")`, y **ese archivo no es
+el escrutinio definitivo**: conserva las 14 organizaciones de Negritudes a las que les
+anularon la votación (439.740 votos con 43 organizaciones, cuando el escrutinio cerró en
+397.054 con 29) y queda por encima del escrutinio en todas las circunscripciones, Senado
+Nacional +53.245 incluido. Inflaba 2018 en 53.300 votos de Senado y 43.446 de Cámara.
+
+Ahora 2018 se arma desde `2018/ESCRUTINIO/escrutinio_2018_base_sen.rds` y
+`escrutinio_2018_base_cam.rds`, que además traen `genero`, `cedula` y `tipo_preferente`
+poblados. **No volver a `elecciones_2018.rda`.** Dos cuidados al tocar ese bloque:
+
+- Esos archivos vienen **por mesa** y el `censo` es el del **puesto repetido en cada una
+  de sus mesas**. El `censo` va dentro del `group_by`, nunca en un `sum()`.
+- Los 679 puestos 81-86 del exterior (450.600 de censo repetido) los consolida el bloque
+  `exterior_2018` que ya existe más abajo. No duplicar esa lógica.
+
+Hay dos chequeos dentro del Rmd que deben dar `TRUE`: Senado 2018 = 17.794.321 y Cámara
+2018 = 17.806.912. **2022 y 2026 nunca tuvieron el problema**: ahí `base_congreso` cuadra
+al voto con los archivos de escrutinio.
+
+### Cuando dos cifras del informe no concuerdan, una está mal
+Los tres errores de datos de octubre de 2026 —el `coddepto 0` de 2022, el universo del
+censo y los votos de 2018— se delataron igual: **dos secciones calculaban lo mismo desde
+fuentes o universos distintos**. El KPI de participación de Congreso mostraba 52,4% y la
+sección Presidencia vs Congreso 50,8%; el KPI de 2018 daba 49,74% y la participación por
+corporación 49,54%.
+
+Antes de dar por buena una cifra principal, comprobar que la misma magnitud dé lo mismo
+en todas las secciones donde aparece. Hoy esas comprobaciones pasan: el KPI de Congreso
+coincide al cuarto decimal con Presidencia vs Congreso en los tres años, y los votos de
+`part_nac` coinciden con los subtotales de `datos_escrutinio_gral.rds`.
+
 ## El libro "Balance electoral 2026"
 
 Producto aparte del informe, basado en la misma presentación. Varias personas
